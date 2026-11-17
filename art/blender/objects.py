@@ -95,6 +95,12 @@ def build(kind, variant=""):
     elif kind == "pierre":
         rock = bg.blob("Stone", (0, 0, 0.09), (0.15, 0.11, 0.1), bg.material("Stone", (0.42, 0.4, 0.37), 0.85, 6, 0.3, (0.22, 0.21, 0.2)), 0.05, 0.15, 2)
         rock.name = "Stone"
+    elif kind == "oeuf":
+        shell = glossy("Shell", (0.86, 0.84, 0.78), 0.35, 0.6, 0.3, 30, (0.55, 0.5, 0.45))
+        ellipsoid("Egg", (0, 0, 0.13), (0.1, 0.1, 0.13), shell)
+        spots = glossy("EggGlow", (0.3, 0.95, 0.75), 0.2, 1.0, emit=2.5)
+        for i, (x, z) in enumerate([(0.07, 0.17), (-0.05, 0.08), (0.02, 0.22), (0.08, 0.07), (-0.08, 0.16)]):
+            ellipsoid(f"Spot{i}", (x, -0.07, z), (0.014, 0.01, 0.014), spots)
     elif kind == "distributeur":
         metal = glossy("Metal", (0.32, 0.34, 0.38), 0.35, 0.3, 0, 8, (0.18, 0.19, 0.22))
         metal.node_tree.nodes["Principled BSDF"].inputs["Metallic"].default_value = 0.8
@@ -113,7 +119,7 @@ def build(kind, variant=""):
 
 
 SPRITES = [("fruit", "", 64), ("graine", "", 48), ("baie", "", 48), ("balle", "", 64),
-           ("pierre", "", 64), ("distributeur", "on", 160), ("distributeur", "off", 160)]
+           ("pierre", "", 64), ("oeuf", "", 64), ("distributeur", "on", 160), ("distributeur", "off", 160)]
 
 if __name__ == "__main__":
     OUT.mkdir(parents=True, exist_ok=True)

@@ -39,6 +39,14 @@
 		],
 		"scale": 0.5
 	},
+	"oeuf": {
+		"size": 128,
+		"anchor": [
+			64,
+			115.2
+		],
+		"scale": 0.5
+	},
 	"distributeur_on": {
 		"size": 320,
 		"anchor": [

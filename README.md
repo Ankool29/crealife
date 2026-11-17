@@ -3,33 +3,34 @@
 Jeu de vie artificielle inspiré de la série *Creatures*, conçu pour le mobile (Godot 4, GDScript).
 Tout le contenu est original : aucun fichier ni code du jeu Creatures n'est utilisé.
 
-## État actuel : phase 2 (cerveau et monde)
+## État actuel : phase 3 (reproduction et observation)
 
-- **Monde** : arbres à fruits, buissons à baies violettes (toxiques),
-  distributeur de graines, balle, pierres. Chaque objet décrit sa réaction
-  aux verbes dans `data/objects.json`.
-- **Cerveau à lobes** : pulsions, vision par catégorie d'objet, attention,
-  concepts « pulsion × objet », décision parmi 14 verbes (approcher, fuir,
-  examiner, prendre, lâcher, manger, pousser, tirer, frapper, parler,
-  dormir, explorer...). Il apprend par récompense et punition, avec une
-  mémoire à court et à long terme, et naît avec quelques instincts écrits
-  dans ses gènes.
-- **Elle découvre seule** que les graines se mangent, que les baies font
-  mal et que pousser le distributeur donne des graines.
-- **Biologie** (phase 1) : 36 substances, 6 organes, cycle de vie de 10 h.
-- **Graphismes** rendus en 3D avec Blender (voir `art/`).
+- **Population** : deux fondateurs au départ, jusqu'à 10 créatures. Elles
+  se voient, se parlent contre la solitude, se bousculent, s'accouplent
+  entre adultes consentants. La femelle pond un œuf qui éclot 10 min plus
+  tard : le bébé hérite d'un mélange des gènes de ses parents, avec
+  quelques mutations (couleurs comprises).
+- **Observer** : chimie en direct, cerveau (pulsions, ce qu'elle voit,
+  envie de chaque verbe, associations apprises), liste des gènes, arbre
+  généalogique.
+- **Sauvegarde automatique** toutes les 2 minutes et quand l'appli passe en
+  arrière-plan ; le jeu est en pause quand l'appli est fermée.
+- Phases précédentes : cerveau à lobes qui apprend (phase 2), 36 substances
+  et 6 organes, vie d'environ 10 h (phase 1), graphismes rendus en 3D.
 
 ### Commandes
 
 | Geste | Effet |
 |---|---|
-| Toucher la créature / bouton **Caresser** | Récompense ce qu'elle est en train de faire |
+| Toucher une créature | La sélectionner (la caméra la suit) |
+| Toucher la créature sélectionnée / **Caresser** | Récompense ce qu'elle est en train de faire |
+| **Suivante** | Sélectionne la créature suivante |
+| **Observer** | Chimie, cerveau, gènes, famille de la créature sélectionnée |
 | Bouton **Gronder** | Punit ce qu'elle fait (elle le fera moins dans cette situation) |
 | Toucher le décor / bouton **Fruit** | Fait tomber un fruit |
 | Glisser | Déplace la caméra (**Suivre** pour la recentrer) |
 | **x1 / x2 / x4 / x16** | Vitesse du temps |
-| **Chimie** | Affiche les substances et la santé des organes |
-| **Nouvelle créature** | Apparaît quand la créature est morte |
+| **Nouvelle lignée** | Apparaît si toutes les créatures sont mortes |
 
 ## Jouer sur Android (Galaxy S25 Ultra)
 
@@ -47,10 +48,11 @@ git clone https://github.com/Ankool29/crealife.git
 Puis dans l'appli **Godot Editor** (Play Store) : *Importer* → dossier
 `Godot/crealife` → `project.godot`, et appuyer sur ▶.
 
-Pour récupérer les mises à jour :
+Pour récupérer les mises à jour (projet fermé dans Godot), avec la
+commande `majcl` installée dans Termux :
 
 ```sh
-cd ~/storage/shared/Godot/crealife && git pull
+majcl
 ```
 
 ## Architecture

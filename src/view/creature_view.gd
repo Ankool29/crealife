@@ -16,6 +16,9 @@ var creature: CreatureSim:
 		creature = value
 		_t = 0.0
 
+## Créature sélectionnée : un repère s'affiche au-dessus d'elle.
+var selected := false
+
 var _sprite := Sprite2D.new()
 var _material := ShaderMaterial.new()
 var _t := 0.0
@@ -75,6 +78,15 @@ func _draw() -> void:
 	var c := creature
 	var sz := c.body_size()
 	var font := ThemeDB.fallback_font
+	# Nom au-dessus de la tête (et repère si sélectionnée)
+	var top := -215.0 * sz - 18.0
+	var name_col := Color(1, 1, 1, 0.95) if selected else Color(1, 1, 1, 0.55)
+	draw_string(font, Vector2(-100, top), c.creature_name, HORIZONTAL_ALIGNMENT_CENTER, 200, 20 if selected else 16, name_col)
+	if selected:
+		var p := Vector2(0, top - 34)
+		draw_colored_polygon(PackedVector2Array([p + Vector2(-11, -12), p + Vector2(11, -12), p + Vector2(0, 2)]), Color(1, 0.9, 0.3))
+	if c.alive and c.pregnant_time >= 0.0:
+		draw_string(font, Vector2(-100, top + 22), "attend un œuf", HORIZONTAL_ALIGNMENT_CENTER, 200, 14, Color(1, 0.85, 0.9, 0.9))
 	if c.is_asleep():
 		var zy := -150.0 - fmod(_t * 20.0, 30.0)
 		draw_string(font, Vector2(40, zy) * sz, "z z", HORIZONTAL_ALIGNMENT_LEFT, -1, 32, Color(1, 1, 1, 0.9))
