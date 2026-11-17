@@ -11,6 +11,7 @@ signal follow_pressed
 signal new_creature_pressed
 signal next_creature_pressed
 signal say_pressed(text: String)
+signal new_game_confirmed
 
 const MARGIN := 40  # marge pour l'encoche / les bords arrondis
 const BAR_LABELS: Array[String] = ["Faim", "Soif", "Fatigue", "Ennui", "Solitude", "Désir", "Santé"]
@@ -31,6 +32,7 @@ var _follow_button: Button
 var _new_button: Button
 var _speech_panel: PanelContainer
 var _speech_line: LineEdit
+var _menu_button: Button
 
 ## Mots proposés sous forme de boutons (on peut aussi taper la phrase).
 const CHIPS := [
@@ -139,6 +141,7 @@ func _ready() -> void:
 	_speed_button = _add_button(buttons, "x1", speed_pressed)
 	_follow_button = _add_button(buttons, "Suivre", follow_pressed)
 	_build_speech_panel(root)
+	_build_menu(root)
 	buttons.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, MARGIN * 0.5)
 	buttons.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	buttons.grow_vertical = Control.GROW_DIRECTION_BEGIN
@@ -193,6 +196,55 @@ func _build_speech_panel(root: Control) -> void:
 			flow.add_child(chip)
 
 
+## Bouton « Menu » en haut à droite : recommencer une partie (avec confirmation).
+func _build_menu(root: Control) -> void:
+	var menu := Button.new()
+	menu.text = "Menu"
+	menu.focus_mode = Control.FOCUS_NONE
+	menu.custom_minimum_size = Vector2(110, 64)
+	menu.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE, 16)
+	menu.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	root.add_child(menu)
+	_menu_button = menu
+
+	var dim := ColorRect.new()          # fond assombri, bloque les touches
+	dim.color = Color(0, 0, 0, 0.55)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.visible = false
+	root.add_child(dim)
+	var panel := _panel()
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER, Control.PRESET_MODE_MINSIZE)
+	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
+	dim.add_child(panel)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 16)
+	panel.add_child(box)
+	var title := Label.new()
+	title.text = "Nouvelle partie"
+	title.add_theme_font_size_override("font_size", 30)
+	box.add_child(title)
+	var msg := Label.new()
+	msg.text = "Recommencer avec deux nouvelles créatures ?\nLa partie actuelle sera définitivement perdue."
+	box.add_child(msg)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 16)
+	row.alignment = BoxContainer.ALIGNMENT_END
+	box.add_child(row)
+	for pair in [["Annuler", func() -> void: dim.visible = false],
+			["Recommencer", func() -> void:
+				dim.visible = false
+				new_game_confirmed.emit()]]:
+		var b := Button.new()
+		b.text = pair[0]
+		b.focus_mode = Control.FOCUS_NONE
+		b.custom_minimum_size = Vector2(200, 80)
+		b.pressed.connect(pair[1])
+		row.add_child(b)
+	menu.pressed.connect(func() -> void: dim.visible = true)
+
+
 func _send_speech() -> void:
 	var t := _speech_line.text.strip_edges()
 	if t != "":
@@ -225,6 +277,7 @@ func _add_button(parent: Control, text: String, sig: Signal) -> Button:
 func update_from(c: CreatureSim, world: WorldSim, event_text: String, sim_speed: float, following: bool) -> void:
 	observe.creature = c
 	observe.world = world
+	_menu_button.visible = not observe.visible     # sinon il cache le bouton de fermeture
 	_event_label.text = event_text
 	_speed_button.text = "x%d" % int(sim_speed)
 	_follow_button.modulate = Color.WHITE if following else Color(1, 1, 1, 0.5)

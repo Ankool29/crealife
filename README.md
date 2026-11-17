@@ -36,6 +36,7 @@ Tout le contenu est original : aucun fichier ni code du jeu Creatures n'est util
 | Glisser | Déplace la caméra (**Suivre** pour la recentrer) |
 | **x1 / x2 / x4 / x16** | Vitesse du temps |
 | **Nouvelle lignée** | Apparaît si toutes les créatures sont mortes |
+| **Menu** → **Recommencer** | Efface la partie et repart avec deux nouvelles créatures |
 
 ## Jouer sur Android (Galaxy S25 Ultra)
 

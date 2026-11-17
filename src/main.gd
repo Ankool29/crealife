@@ -35,7 +35,7 @@ func _ready() -> void:
 	RenderingServer.set_default_clear_color(Color(0.62, 0.82, 0.95))
 	world = _load_game()
 	if world == null:
-		world = WorldSim.new(0, "normal", 2)
+		world = WorldSim.new(randi(), "normal", 2)
 
 	world_view = WorldView.new()
 	world_view.world = world
@@ -61,6 +61,7 @@ func _ready() -> void:
 	hud.speed_pressed.connect(func() -> void: _speed_index = (_speed_index + 1) % SPEEDS.size())
 	hud.follow_pressed.connect(func() -> void: _follow = true)
 	hud.next_creature_pressed.connect(_select_next)
+	hud.new_game_confirmed.connect(new_game)
 	hud.say_pressed.connect(func(text: String) -> void:
 		var c := _selected()
 		if c == null:
@@ -191,6 +192,27 @@ func _on_tap(screen_pos: Vector2) -> void:
 
 
 # ---------------------------------------------------------- sauvegarde --
+
+## Efface la sauvegarde et recommence avec deux nouveaux fondateurs.
+func new_game() -> void:
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
+	world = WorldSim.new(randi(), "normal", 2)
+	world_view.world = world
+	for v in _views.values():
+		v.queue_free()
+	_views.clear()
+	_selected_uid = 0
+	_speed_index = 0
+	_accumulator = 0.0
+	_last_world_event = ""
+	_select_next()
+	var c := _selected()
+	camera.position.x = c.x if c else world.width * 0.5
+	_follow = true
+	_event_text = "Nouvelle partie : %s et %s viennent de naître." % [world.creatures[0].creature_name, world.creatures[1].creature_name]
+	_event_timer = EVENT_DURATION
+	save_game()
+
 
 func save_game() -> void:
 	_autosave = 0.0
