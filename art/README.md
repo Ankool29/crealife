@@ -16,5 +16,8 @@ python art/blender/background.py <dossier> near    # sol, arbres, buissons
 - La créature est rendue avec une seule teinte ; chaque individu reçoit la
   sienne en jeu par un shader (`src/view/shaders/creature.gdshader`) selon
   son gène d'apparence.
+- La queue et les antennes existent en trois variantes chacune, rendues
+  dans des couches séparées (`*_queueN.png`, `*_antennesN.png`), le corps
+  servant de masque ; le jeu superpose les couches choisies par les gènes.
 - Les positions des arbres et buissons dans `background.py` doivent
   correspondre à `src/sim/world_sim.gd`.

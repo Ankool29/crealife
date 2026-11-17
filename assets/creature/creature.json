@@ -47,5 +47,15 @@
 		"mort": [
 			"mort_0.png"
 		]
-	}
+	},
+	"tails": [
+		"courte",
+		"longue",
+		"massue"
+	],
+	"antennae": [
+		"courtes",
+		"longues",
+		"ramifiees"
+	]
 }

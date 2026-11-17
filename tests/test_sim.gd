@@ -17,6 +17,8 @@ func _init() -> void:
 	_test_full_life()
 	_test_save_load()
 	_test_generations()
+	_test_language()
+	_test_appearance_genes()
 	print("RÉSULTAT : %s" % ("OK" if _failures == 0 else "%d échec(s)" % _failures))
 	quit(_failures)
 
@@ -246,6 +248,84 @@ func _test_generations() -> void:
 			g3_ok = true
 	_check(g3_ok, "un membre de la 3e génération vit plus de 30 min")
 	_check(max_pop <= WorldSim.MAX_POPULATION, "la population reste plafonnée à %d" % WorldSim.MAX_POPULATION)
+
+
+func _test_language() -> void:
+	print("Critère phase 4 : le langage :")
+	# 1. Apprendre un nom en regardant l'objet
+	var w := WorldSim.new(41, "vide")
+	var c := w.creatures[0]
+	var jouet := ObjectCatalog.categories.find("jouet")
+	_check(c.language.pronounce("nom", jouet) != "jouet", "au début elle babille (« %s »)" % c.language.pronounce("nom", jouet))
+	var t := 0.0
+	while t < 600.0:
+		w.objects.filter(func(o): return o.type_name == "balle").map(func(o): o.x = c.x + 40.0)
+		if w.objects.filter(func(o): return o.type_name == "balle").is_empty():
+			w.add_object("balle", c.x + 40.0)
+		if int(t / STEP) % 75 == 0:
+			w.say("balle", c)
+		w.tick(STEP)
+		t += STEP
+	print("    connaissance de « jouet » après 10 min de leçons : %.2f, dit « %s »" % [c.language.nouns[jouet], c.language.pronounce("nom", jouet)])
+	_check(c.language.nouns[jouet] > 0.8, "elle apprend un nom en voyant l'objet")
+	_check(c.language.pronounce("nom", jouet) == "jouet", "elle prononce correctement un mot bien appris")
+	_check(c.language.nouns[ObjectCatalog.categories.find("fruit")] < 0.05, "elle n'apprend pas les mots qu'on ne lui dit pas")
+
+	# 2. Obéir à un ordre (même monde, avec et sans ordres)
+	var pushes := []
+	for ordered in [false, true]:
+		var w2 := WorldSim.new(43, "vide")
+		var c2 := w2.creatures[0]
+		c2.language.verbs[Brain.Verb.POUSSER] = 1.0
+		c2.language.nouns[jouet] = 1.0
+		w2.add_object("balle", c2.x + 150.0)
+		w2.add_object("pierre", c2.x - 150.0)
+		var n := 0
+		t = 0.0
+		while t < 1200.0:
+			if int(t / STEP) % 150 == 0:
+				for o in w2.objects:     # la balle reste à portée de vue
+					if o.type_name == "balle" and o.holder == null:
+						o.x = clampf(c2.x + 200.0, 100.0, w2.width - 100.0)
+				if ordered:
+					w2.say("pousse la balle", c2)
+			w2.tick(STEP)
+			t += STEP
+			if c2.acted and c2.brain.verb == Brain.Verb.POUSSER and c2.target is WorldObject and c2.target.type_name == "balle":
+				n += 1
+		pushes.append(n)
+	print("    balle poussée en 20 min : %d fois sans ordre, %d fois avec l'ordre « pousse la balle »" % pushes)
+	_check(pushes[1] >= 2 * pushes[0] + 5, "elle obéit à un ordre qu'elle comprend")
+
+	# 3. Transmission entre créatures
+	var w3 := WorldSim.new(47, "vide", 2)
+	var a := w3.creatures[0]
+	var b := w3.creatures[1]
+	a.language.nouns.fill(1.0)
+	for i in 30:
+		a._act_on_creature(b, Brain.Verb.PARLER, w3)
+	var learnt := 0
+	for k in b.language.nouns:
+		if k > 0.3:
+			learnt += 1
+	print("    après 30 échanges, %s connaît %d noms appris de %s (dernière phrase : « %s »)" % [b.creature_name, learnt, a.creature_name, a.language.speech])
+	_check(learnt >= 4, "les mots se transmettent en parlant")
+
+	# 4. Sauvegarde
+	var w4 := WorldSim.from_dict(JSON.parse_string(JSON.stringify(w3.to_dict())))
+	_check(is_equal_approx(w4.creatures[1].language.nouns[jouet], b.language.nouns[jouet]), "le vocabulaire est sauvegardé")
+
+
+func _test_appearance_genes() -> void:
+	print("Silhouette génétique :")
+	var w := WorldSim.new(5, "normal", 10)
+	var tails := {}
+	var ants := {}
+	for c in w.creatures:
+		tails[c.tail] = true
+		ants[c.antennae] = true
+	print("    variantes de queue : %s, d'antennes : %s" % [tails.keys(), ants.keys()])
+	_check(tails.size() >= 2 and ants.size() >= 2, "les fondateurs ont des silhouettes variées")
 
 
 func _hm(t: float) -> String:

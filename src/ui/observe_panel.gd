@@ -1,9 +1,9 @@
 class_name ObservePanel
 extends PanelContainer
 ## Outils d'observation (façon « Science Kit ») sur la créature sélectionnée :
-## Chimie, Cerveau, Gènes, Famille. Lecture seule : rien n'est modifié.
+## Chimie, Cerveau, Mots, Gènes, Famille. Lecture seule : rien n'est modifié.
 
-const TABS: Array[String] = ["Chimie", "Cerveau", "Gènes", "Famille"]
+const TABS: Array[String] = ["Chimie", "Cerveau", "Mots", "Gènes", "Famille"]
 const FONT_SIZE := 18
 
 var creature: CreatureSim
@@ -32,7 +32,7 @@ func _ready() -> void:
 	for i in TABS.size():
 		var b := Button.new()
 		b.text = TABS[i]
-		b.custom_minimum_size = Vector2(120, 64)
+		b.custom_minimum_size = Vector2(104, 64)
 		b.focus_mode = Control.FOCUS_NONE
 		b.toggle_mode = true
 		b.pressed.connect(_select_tab.bind(i))
@@ -42,8 +42,8 @@ func _ready() -> void:
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bar.add_child(spacer)
 	var close := Button.new()
-	close.text = "Fermer"
-	close.custom_minimum_size = Vector2(120, 64)
+	close.text = "×"
+	close.custom_minimum_size = Vector2(64, 64)
 	close.focus_mode = Control.FOCUS_NONE
 	close.pressed.connect(func() -> void: visible = false)
 	bar.add_child(close)
@@ -93,9 +93,37 @@ func _update_text() -> void:
 	if creature == null or world == null:
 		return
 	if _tab == 2:
-		_text.text = _genes_text(creature)
+		_text.text = _words_text(creature)
 	elif _tab == 3:
+		_text.text = _genes_text(creature)
+	elif _tab == 4:
 		_text.text = _family_text()
+
+
+func _words_text(c: CreatureSim) -> String:
+	var L := c.language
+	var t := "[b]%s connaît %d mots[/b]" % [c.creature_name, L.vocabulary_size()]
+	if L.last_heard != "":
+		t += "   [color=#9fb3c8]a entendu : « %s »[/color]" % L.last_heard
+	t += "\n[color=#9fb3c8]Dites un nom quand elle regarde l'objet, un verbe pendant qu'elle fait l'action, "
+	t += "un besoin quand elle le ressent. Caressez-la quand elle obéit.[/color]\n"
+	for group in [["Noms", "nom", ObjectCatalog.categories.size()], ["Verbes", "verbe", Language.VERB_WORDS.size()],
+			["Besoins", "besoin", Language.DRIVE_WORDS.size()]]:
+		var lines := ""
+		for i in group[2]:
+			if group[1] == "verbe" and i == 0:
+				continue
+			var k := L.knowledge(group[1], i)
+			if k < 0.02:
+				continue
+			var filled := int(round(k * 10.0))
+			var bar := "[color=#7fd6c2]%s[/color][color=#3a4652]%s[/color]" % ["█".repeat(filled), "█".repeat(10 - filled)]
+			var line := "%s  %s  dit « %s »" % [bar, Language.word_of(group[1], i), L.pronounce(group[1], i)]
+			if group[1] == "verbe":
+				line += "  [color=#9fb3c8]obéissance %.1f[/color]" % c.brain.obedience(i)
+			lines += line + "\n"
+		t += "\n[b]%s[/b]\n%s" % [group[0], lines if lines != "" else "[color=#6b7785]aucun pour l'instant[/color]\n"]
+	return t
 
 
 func _genes_text(c: CreatureSim) -> String:
@@ -135,14 +163,22 @@ func _gene_summary(g: Gene) -> String:
 		Gene.Type.ORGAN:
 			return "%s, longévité %.1f h" % [p.organ, float(p.longevity_h)]
 		Gene.Type.LOBE:
-			return "lobe %s, curiosité %.2f, apprentissage %.2f" % [p.lobe, float(p.noise), float(p.learning_rate)]
+			if str(p.lobe) == "langage":
+				return "lobe langage, apprentissage %.2f, bavardage %.2f, obéissance %.2f" % [
+					float(p.get("learning_rate", 0)), float(p.get("talk", 0)), float(p.get("obey", 0))]
+			return "lobe %s, curiosité %.2f, apprentissage %.2f" % [p.lobe, float(p.get("noise", 0)), float(p.learning_rate)]
 		Gene.Type.INSTINCT:
 			var cat := str(p.category) if str(p.category) != "" else "rien"
 			return "%s + %s → %s  (%+.1f)" % [p.drive, cat, p.verb, float(p.reward)]
 		Gene.Type.APPEARANCE:
-			return "teinte %.2f, 2e teinte %.2f, saturation %.2f, taille %.2f, vitesse %.2f" % [
+			if str(p.get("part", "")) == "silhouette":
+				return "queue %s, antennes %s, corpulence %.2f" % [
+					["courte", "longue", "massue"][clampi(int(float(p.get("tail", 0.5)) * 3.0), 0, 2)],
+					["courtes", "longues", "ramifiées"][clampi(int(float(p.get("antennae", 0.5)) * 3.0), 0, 2)],
+					float(p.get("corpulence", 0.5))]
+			return "teinte %.2f, 2e teinte %.2f, saturation %.2f, lumière %.2f (force %.2f), taille %.2f, vitesse %.2f" % [
 				float(p.get("hue", 0)), float(p.get("hue2", 0)), float(p.get("saturation", 0)),
-				float(p.get("size", 0)), float(p.get("speed", 0))]
+				float(p.get("glow", 0)), float(p.get("glow_power", 0.5)), float(p.get("size", 0)), float(p.get("speed", 0))]
 	return str(p)
 
 

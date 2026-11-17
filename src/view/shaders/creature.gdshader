@@ -8,6 +8,7 @@ uniform vec3 col_dark : source_color = vec3(0.1, 0.05, 0.2);
 uniform vec3 col_mid : source_color = vec3(0.2, 0.6, 0.6);
 uniform vec3 col_light : source_color = vec3(0.8, 0.9, 0.8);
 uniform float glow_shift = 0.0;     // rotation de teinte des parties lumineuses (en tours)
+uniform float glow_power = 1.0;     // intensité des parties lumineuses
 uniform float desaturate = 0.0;     // 1 = gris (créature morte)
 
 vec3 rotate_hue(vec3 c, float turns) {
@@ -27,7 +28,8 @@ void fragment() {
 	// Reflets très clairs : on garde un peu de blanc pour l'aspect brillant
 	tinted = mix(tinted, vec3(1.0), smoothstep(0.85, 1.0, lum) * 0.6);
 	float k = 1.0 - smoothstep(0.18, 0.35, sat);
-	vec3 rgb = mix(rotate_hue(c.rgb, glow_shift), tinted, k);
+	vec3 glow = clamp(rotate_hue(c.rgb, glow_shift) * glow_power, 0.0, 1.0);
+	vec3 rgb = mix(glow, tinted, k);
 	float grey = dot(rgb, vec3(0.299, 0.587, 0.114));
 	rgb = mix(rgb, vec3(grey) * 0.8, desaturate);
 	COLOR = vec4(rgb, c.a) * COLOR;

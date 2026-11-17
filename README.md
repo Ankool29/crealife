@@ -3,20 +3,24 @@
 Jeu de vie artificielle inspiré de la série *Creatures*, conçu pour le mobile (Godot 4, GDScript).
 Tout le contenu est original : aucun fichier ni code du jeu Creatures n'est utilisé.
 
-## État actuel : phase 3 (reproduction et observation)
+## État actuel : phase 4 (langage et apparence)
 
-- **Population** : deux fondateurs au départ, jusqu'à 10 créatures. Elles
-  se voient, se parlent contre la solitude, se bousculent, s'accouplent
-  entre adultes consentants. La femelle pond un œuf qui éclot 10 min plus
-  tard : le bébé hérite d'un mélange des gènes de ses parents, avec
-  quelques mutations (couleurs comprises).
-- **Observer** : chimie en direct, cerveau (pulsions, ce qu'elle voit,
-  envie de chaque verbe, associations apprises), liste des gènes, arbre
-  généalogique.
-- **Sauvegarde automatique** toutes les 2 minutes et quand l'appli passe en
-  arrière-plan ; le jeu est en pause quand l'appli est fermée.
-- Phases précédentes : cerveau à lobes qui apprend (phase 2), 36 substances
-  et 6 organes, vie d'environ 10 h (phase 1), graphismes rendus en 3D.
+- **Langage** : chaque créature a un vocabulaire (8 noms d'objets, 13
+  verbes, 12 besoins). Elle apprend un nom quand on le prononce pendant
+  qu'elle regarde l'objet, un verbe pendant qu'elle fait l'action, un
+  besoin quand elle le ressent. Elle comprend les ordres (« pousse la
+  balle ») à proportion de ce qu'elle connaît des mots ; obéir reste une
+  tendance, renforcée par les caresses. Elle dit ce qu'elle ressent
+  (« faim ! ») dans une bulle, en babillant au début puis en écorchant
+  les mots, et transmet son vocabulaire aux autres en leur parlant.
+- **Apparence** : en plus des couleurs, chaque créature hérite d'une forme
+  de queue (courte, longue, massue), d'antennes (courtes, longues,
+  ramifiées), d'une corpulence et d'une couleur et intensité de lumière
+  des antennes et des taches.
+- Phases précédentes : population et reproduction, observation et
+  sauvegarde (phase 3), cerveau à lobes qui apprend (phase 2), 36
+  substances et 6 organes, vie d'environ 10 h (phase 1), graphismes
+  rendus en 3D.
 
 ### Commandes
 
@@ -25,7 +29,8 @@ Tout le contenu est original : aucun fichier ni code du jeu Creatures n'est util
 | Toucher une créature | La sélectionner (la caméra la suit) |
 | Toucher la créature sélectionnée / **Caresser** | Récompense ce qu'elle est en train de faire |
 | **Suivante** | Sélectionne la créature suivante |
-| **Observer** | Chimie, cerveau, gènes, famille de la créature sélectionnée |
+| **Parler** | Écrire une phrase ou toucher des mots, puis **Dire** : la créature sélectionnée (et ses voisines) l'entend |
+| **Observer** | Chimie, cerveau, mots connus, gènes, famille de la créature sélectionnée |
 | Bouton **Gronder** | Punit ce qu'elle fait (elle le fera moins dans cette situation) |
 | Toucher le décor / bouton **Fruit** | Fait tomber un fruit |
 | Glisser | Déplace la caméra (**Suivre** pour la recentrer) |
@@ -62,7 +67,7 @@ data/                 Catalogue des substances, souche de départ
 src/sim/genetics/     Gènes typés, génome, croisement, mutations
 src/sim/biology/      Substances, réactions, émetteurs, récepteurs,
                       organes, cycle de vie
-src/sim/brain.gd      Cerveau provisoire (phase 1)
+src/sim/brain/        Cerveau à lobes, langage
 src/sim/creature_sim.gd  Assemble corps, chimie et cerveau
 src/sim/world_sim.gd  Monde, arbres, fruits
 src/view/, src/ui/    Affichage et interface tactile

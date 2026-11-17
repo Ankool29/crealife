@@ -280,7 +280,7 @@ def build_creature():
         ((0.03, 0, 0.9), (0.14, 0.14, 0.15), 15),      # poitrine
         ((0.07, 0, 1.0), (0.1, 0.13, 0.08), 0),        # épaules
         ((0.1, 0, 1.08), (0.05, 0.05, 0.1), -15),      # base du cou
-    ] + _seg((-0.1, 0, 0.66), (-0.32, 0, 0.55), 0.065, 0.025), skin, root, smooth=12)
+    ], skin, root, smooth=12)
 
     head = organic("Head", NECK, [
         ((0.12, 0, 1.15), (0.05, 0.05, 0.09), -20),    # cou
@@ -288,13 +288,6 @@ def build_creature():
         ((0.21, 0, 1.27), (0.1, 0.1, 0.09), 0),        # face
         ((0.3, 0, 1.22), (0.06, 0.06, 0.05), 10),      # petit museau
     ], skin, root, smooth=12)
-    # Antennes (pièce à part, peu lissée pour rester fines)
-    organic("Antennae", NECK,
-            _seg((0.1, -0.045, 1.44), (0.05, -0.06, 1.57), 0.026, 0.02)
-            + _seg((0.05, -0.06, 1.57), (-0.03, -0.07, 1.67), 0.02, 0.016)
-            + _seg((0.1, 0.045, 1.44), (0.05, 0.06, 1.57), 0.026, 0.02)
-            + _seg((0.05, 0.06, 1.57), (-0.03, 0.07, 1.67), 0.02, 0.016),
-            skin, head, voxel=0.004, smooth=2).location = (0, 0, 0)
     parts["head"] = head
     for side, y in (("L", -1), ("R", 1)):
         eye = (0.25, 0.085 * y, 1.3)
@@ -305,7 +298,6 @@ def build_creature():
         lid = sphere("Lid" + side, eye, 0.075, skin, head, (1.05, 0.62, 1.3), NECK)
         lid.rotation_euler = e.rotation_euler
         lid.hide_render = True
-        sphere("Bulb" + side, (-0.04, 0.07 * y, 1.7), 0.038, bulb_mat, head, pivot=NECK)
 
     for key, y in (("l", -LEG_Y), ("r", LEG_Y)):
         hip = (HIP[0], y, HIP[2])
@@ -332,7 +324,59 @@ def build_creature():
                          ((0.24, y + 0.012, 0.545), (0.012, 0.012, 0.04), 15)],
                       skin, root, voxel=0.006, smooth=14)
         parts["arm_" + key] = arm
+    _build_variants(root, head, skin, bulb_mat)
     return root, parts
+
+
+# ------------------------------------------------------ variantes génétiques --
+# Chaque variante est rendue dans sa propre couche ; le jeu les superpose
+# selon les gènes de la créature.
+TAILS = ["courte", "longue", "massue"]
+ANTENNAE = ["courtes", "longues", "ramifiees"]
+
+
+def _into_collection(objs, name):
+    col = bpy.data.collections.get(name) or bpy.data.collections.new(name)
+    if col.name not in bpy.context.scene.collection.children:
+        bpy.context.scene.collection.children.link(col)
+    for o in objs:
+        for c in list(o.users_collection):
+            c.objects.unlink(o)
+        col.objects.link(o)
+
+
+def _build_variants(root, head, skin, bulb_mat):
+    tails = [
+        _seg((-0.1, 0, 0.66), (-0.25, 0, 0.6), 0.06, 0.03),
+        _seg((-0.1, 0, 0.66), (-0.48, 0, 0.5), 0.065, 0.022)
+        + _seg((-0.48, 0, 0.5), (-0.62, 0, 0.6), 0.022, 0.014),
+        _seg((-0.1, 0, 0.66), (-0.4, 0, 0.57), 0.055, 0.03)
+        + [((-0.46, 0, 0.57), (0.085, 0.075, 0.075), 0)],
+    ]
+    for i, elems in enumerate(tails):
+        t = organic(f"Tail{i}", HIP, elems, skin, root, smooth=10)
+        _into_collection([t], f"Queue{i}")
+    for i in range(3):
+        objs = []
+        for side, y in (("L", -1), ("R", 1)):
+            if i == 0:      # courtes
+                elems = _seg((0.1, 0.045 * y, 1.44), (0.05, 0.06 * y, 1.54), 0.026, 0.02)
+                tips = [((0.04, 0.062 * y, 1.565), 0.032)]
+            elif i == 1:    # longues
+                elems = (_seg((0.1, 0.045 * y, 1.44), (0.05, 0.06 * y, 1.57), 0.026, 0.02)
+                         + _seg((0.05, 0.06 * y, 1.57), (-0.03, 0.07 * y, 1.67), 0.02, 0.016))
+                tips = [((-0.04, 0.07 * y, 1.7), 0.038)]
+            else:           # ramifiées
+                elems = (_seg((0.1, 0.045 * y, 1.44), (0.05, 0.06 * y, 1.57), 0.026, 0.02)
+                         + _seg((0.05, 0.06 * y, 1.57), (-0.03, 0.07 * y, 1.67), 0.02, 0.016)
+                         + _seg((0.06, 0.06 * y, 1.56), (0.14, 0.08 * y, 1.64), 0.016, 0.012))
+                tips = [((-0.04, 0.07 * y, 1.7), 0.033), ((0.155, 0.082 * y, 1.66), 0.024)]
+            a = organic(f"Ant{i}{side}", NECK, elems, skin, head, voxel=0.004, smooth=2)
+            a.location = (0, 0, 0)
+            objs.append(a)
+            for k, (pos, r) in enumerate(tips):
+                objs.append(sphere(f"Bulb{i}{side}{k}", pos, r, bulb_mat, head, pivot=NECK))
+        _into_collection(objs, f"Antennes{i}")
 
 
 # ---------------------------------------------------------------- poses ----
@@ -404,16 +448,29 @@ ANIMATIONS = {
 }
 
 
+def _layers(show):
+    """show : None = corps seul ; sinon nom de la collection de variante à rendre,
+    le corps servant de masque (holdout) pour les parties cachées derrière lui."""
+    vl = bpy.context.view_layer.layer_collection
+    for lc in vl.children:
+        if lc.name.startswith(("Queue", "Antennes")):
+            lc.exclude = lc.name != show
+            lc.holdout = False
+    # le corps (collection de la scène) : masque quand on rend une variante
+    for o in bpy.context.scene.collection.objects:
+        o.is_holdout = show is not None
+
+
 def render_sprites(out):
     scene = bpy.context.scene
     scene.render.resolution_x = SPRITE_RES
     scene.render.resolution_y = SPRITE_RES
-    scene.cycles.samples = 40
+    scene.cycles.samples = 32
     cam = scene.camera
     ppu = SPRITE_RES / cam.data.ortho_scale
     manifest = {"size": SPRITE_RES, "px_per_unit": ppu,
                 "anchor": [SPRITE_RES / 2 - cam.location.x * ppu, SPRITE_RES / 2 + cam.location.z * ppu],
-                "animations": {}}
+                "animations": {}, "tails": TAILS, "antennae": ANTENNAE}
     _, parts = build_creature()
     for name, poses in ANIMATIONS.items():
         frames = []
@@ -432,7 +489,14 @@ def render_sprites(out):
             else:
                 pose(parts, **p)
             fname = f"{name}_{i}.png"
+            _layers(None)
             render(out / fname)
+            for k in range(len(TAILS)):
+                _layers(f"Queue{k}")
+                render(out / f"{name}_{i}_queue{k}.png")
+            for k in range(len(ANTENNAE)):
+                _layers(f"Antennes{k}")
+                render(out / f"{name}_{i}_antennes{k}.png")
             frames.append(fname)
         manifest["animations"][name] = frames
     (out / "creature.json").write_text(json.dumps(manifest, indent="\t"))
@@ -446,6 +510,17 @@ if __name__ == "__main__":
         render_sprites(OUT)
         sys.exit(0)
     root, parts = build_creature()
+    if MODE == "layers":
+        bpy.context.scene.render.resolution_x = SPRITE_RES
+        bpy.context.scene.render.resolution_y = SPRITE_RES
+        bpy.context.scene.cycles.samples = 16
+        pose(parts, thighs=(-15, 12), knees=(5, -4), arms=(18, -14), head=(0, 0))
+        _layers(None)
+        render(OUT / "base.png")
+        for k in range(3):
+            _layers(f"Queue{k}"); render(OUT / f"queue{k}.png")
+            _layers(f"Antennes{k}"); render(OUT / f"antennes{k}.png")
+        sys.exit(0)
     if MODE == "test":
         pose(parts, thighs=(-15, 12), knees=(5, -4), arms=(18, -14), head=(0, 0))
         render(OUT / "test_creature.png")

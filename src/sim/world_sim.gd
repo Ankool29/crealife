@@ -65,8 +65,12 @@ func add_founders(count: int) -> void:
 		g.mutate(rng, 0.05)
 		var look := g.find(Gene.Type.APPEARANCE, "part", "corps")
 		if look:
-			for k in ["hue", "hue2", "saturation", "brightness", "glow", "size", "speed"]:
+			for k in ["hue", "hue2", "saturation", "brightness", "glow", "glow_power", "size", "speed"]:
 				look.params[k] = rng.randf()
+		var shape := g.find(Gene.Type.APPEARANCE, "part", "silhouette")
+		if shape:
+			for k in ["tail", "antennae", "corpulence"]:
+				shape.params[k] = rng.randf()
 		var sex := first_sex if i % 2 == 0 else (Gene.Sex.FEMALE if first_sex == Gene.Sex.MALE else Gene.Sex.MALE)
 		_add_creature(g, width * 0.5 + (i - (count - 1) * 0.5) * 200.0, sex, 1, "", "")
 
@@ -83,6 +87,21 @@ func _add_creature(g: Genome, at_x: float, sex: int, generation: int, mother: St
 		"mother": mother, "father": father, "born_at": time, "alive": true, "cause": "", "age": 0.0,
 		"hue": c.hue})
 	return c
+
+
+## Le joueur parle à une créature ; celles qui sont proches entendent aussi.
+const HEARING_RANGE := 500.0
+
+func say(text: String, to: CreatureSim) -> Array:
+	var found := []
+	for c in creatures:
+		if not c.alive:
+			continue
+		if c == to:
+			found = c.hear(text, 1.0)
+		elif absf(c.x - to.x) < HEARING_RANGE:
+			c.hear(text, 0.5 * (1.0 - absf(c.x - to.x) / HEARING_RANGE))
+	return found
 
 
 ## Nom unique fait de deux ou trois syllabes.

@@ -24,6 +24,7 @@ var genome: Genome
 var sex: int
 var biochem: Biochemistry
 var brain: Brain
+var language: Language
 
 var x: float
 var facing := 1.0
@@ -53,6 +54,11 @@ var hue2 := 0.6
 var saturation := 0.7
 var brightness := 0.7
 var glow := 0.47
+var glow_power := 0.5
+## Silhouette : variantes de queue et d'antennes (0, 1, 2), corpulence [0, 1].
+var tail := 1
+var antennae := 1
+var corpulence := 0.5
 var _size_gene := 0.5
 var _speed := 100.0
 
@@ -93,7 +99,8 @@ func _init(p_name: String, p_genome: Genome, p_x: float, p_sex: int) -> void:
 		_drive_loci.append(l.id_of("pulsion." + d))
 	_prev_drives.resize(Brain.DRIVE_COUNT)
 	_express(true)
-	brain = Brain.new(genome.expressed(stage, sex))
+	language = Language.new(genome.expressed(stage, sex), hash(p_name))
+	brain = Brain.new(genome.expressed(stage, sex), language)
 
 
 ## Exprime les gènes du stade actuel (naissance, puis à chaque changement de stade).
@@ -108,6 +115,12 @@ func _express(first_time: bool) -> void:
 		glow = float(look.params.get("glow", 0.47))
 		_size_gene = float(look.params.get("size", 0.5))
 		_speed = lerpf(60.0, 150.0, float(look.params.get("speed", 0.5)))
+		glow_power = float(look.params.get("glow_power", 0.5))
+	var shape := genome.find(Gene.Type.APPEARANCE, "part", "silhouette")
+	if shape:
+		tail = clampi(int(float(shape.params.get("tail", 0.5)) * 3.0), 0, 2)
+		antennae = clampi(int(float(shape.params.get("antennae", 0.5)) * 3.0), 0, 2)
+		corpulence = float(shape.params.get("corpulence", 0.5))
 
 
 func get_verb() -> int:
@@ -173,6 +186,7 @@ func tick(dt: float, world: WorldSim, rng: RandomNumberGenerator) -> void:
 		last_event = "%s est maintenant %s." % [creature_name, Lifecycle.STAGE_LABELS[stage].to_lower()]
 
 	_perceive(world)
+	language.tick(dt)
 	_gestation(dt, world)
 	_action_time -= dt
 	is_moving = false
@@ -247,6 +261,7 @@ func _decide(world: WorldSim, rng: RandomNumberGenerator) -> void:
 	if v in Brain.OBJECT_VERBS and target == null:
 		brain.verb = Verb.RIEN
 	_done = false
+	_maybe_talk(rng)
 	match brain.verb:
 		Verb.RIEN:
 			_action_time = rng.randf_range(2.0, 4.0)
@@ -333,6 +348,13 @@ func _act_on_creature(other: CreatureSim, v: int, world: WorldSim) -> void:
 	acted = true
 	match v:
 		Verb.PARLER:
+			var w := language.favourite_word(world.rng)
+			if w.is_empty():
+				language.speech = "bibou"
+				language.speech_left = Language.SAY_TIME
+			else:
+				language.say([w])
+				other.language.learn_from(w[0], w[1], language.knowledge(w[0], w[1]))
 			biochem.add(_chem["Solitude"], -0.3)
 			other.biochem.add(other._chem["Solitude"], -0.3)
 			biochem.add(_chem["Ennui"], -0.05)
@@ -384,6 +406,42 @@ func _gestation(dt: float, world: WorldSim) -> void:
 		_father_genome = null
 
 
+## Elle dit parfois ce qu'elle ressent, ou ce qu'elle va faire.
+func _maybe_talk(rng: RandomNumberGenerator) -> void:
+	if language.speech_left > 0.0 or is_asleep() or stage == Lifecycle.Stage.BABY and rng.randf() < 0.5:
+		return
+	if rng.randf() > 0.08 + 0.25 * language.talk:
+		return
+	var strongest := -1
+	var best := 0.45
+	for d in Brain.DRIVE_COUNT:
+		if brain.drives[d] > best:
+			best = brain.drives[d]
+			strongest = d
+	if strongest >= 0 and rng.randf() < 0.6:
+		language.say([["besoin", strongest]])
+	elif brain.verb in Brain.OBJECT_VERBS and brain.attention >= 0:
+		language.say([["verbe", brain.verb], ["nom", brain.attention]])
+
+
+## Le joueur (ou une autre créature) lui parle. closeness : 1 si c'est à elle
+## qu'on s'adresse, moins pour celles qui entendent de loin.
+func hear(text: String, closeness: float) -> Array:
+	if not alive or is_asleep():
+		return []
+	var found := language.hear(text, brain, closeness)
+	if closeness >= 1.0 and not found.is_empty():
+		var understood := false
+		for w in found:
+			if language.knowledge(w[0], w[1]) > 0.3:
+				understood = true
+		# un ordre compris interrompt doucement ce qu'elle fait
+		if understood and language.obeying() and brain.verb != Verb.DORMIR:
+			_action_time = minf(_action_time, 0.5)
+		last_event = "%s a entendu « %s »." % [creature_name, text.strip_edges()]
+	return found
+
+
 ## L'objet répond au verbe : substances, consommation, coup de pied, apparition.
 func _act_on(o: WorldObject, v: int, world: WorldSim) -> void:
 	acted = true
@@ -415,6 +473,8 @@ func _act_on(o: WorldObject, v: int, world: WorldSim) -> void:
 
 
 func _finish() -> void:
+	if language.obeying() and language.heard_verb[brain.verb] > 0.0:
+		language.clear_order()
 	_done = true
 	_action_time = AFTER_ACTION
 
@@ -484,7 +544,7 @@ func to_dict() -> Dictionary:
 		"meals": meals, "naps": naps, "eaten": eaten,
 		"pregnant_time": pregnant_time, "father_genome": _father_genome.to_dict() if _father_genome else null,
 		"father_name": _father_name,
-		"biochem": biochem.to_dict(), "brain": brain.to_dict(),
+		"biochem": biochem.to_dict(), "brain": brain.to_dict(), "language": language.to_dict(),
 	}
 
 
@@ -509,6 +569,7 @@ static func from_dict(d: Dictionary) -> CreatureSim:
 	c._father_name = str(d.father_name)
 	c.biochem.load_dict(d.biochem)
 	c.brain.load_dict(d.brain)
+	c.language.load_dict(d.get("language", {}))
 	return c
 
 

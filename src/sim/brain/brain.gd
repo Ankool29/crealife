@@ -12,6 +12,11 @@ extends RefCounted
 ## Chaque connexion a un poids à court terme (modifié par récompense et punition)
 ## et un poids à long terme qui le suit lentement (plus vite pendant le sommeil).
 ## Les instincts génétiques pré-câblent des associations avant la naissance.
+##
+## Langage (phase 4) : un nom entendu attire l'attention vers l'objet nommé ;
+## chaque verbe entendu active un concept « on m'a dit de… », relié de façon
+## innée au verbe correspondant (gène « obey »). Ces liens apprennent comme
+## les autres : obéir et être caressée renforce l'obéissance.
 
 enum Verb { RIEN, APPROCHER, FUIR, EXAMINER, PRENDRE, LACHER, MANGER, POUSSER, TIRER, FRAPPER, PARLER, DORMIR, EXPLORER, ACCOUPLER }
 const VERB_COUNT := 14
@@ -52,6 +57,8 @@ var _lr := 0.3
 var _ltw_rate := 0.0005
 var _stw_relax := 0.002
 var _relax_timer := 0.0
+var _heard_base := 0
+var lang: Language = null
 
 # Trace de la dernière décision (ce que le renforcement va modifier)
 var _elig := PackedFloat32Array()
@@ -59,10 +66,13 @@ var _elig_drives := PackedFloat32Array()
 var _elig_cat := -1
 
 
-func _init(genes: Array[Gene]) -> void:
+func _init(genes: Array[Gene], p_lang: Language = null) -> void:
+	lang = p_lang
 	_cats = ObjectCatalog.category_count()
-	# Concepts : pulsion × (catégorie ou rien), puis objet seul, puis situations
-	_concept_count = DRIVE_COUNT * (_cats + 1) + (_cats + 1) + SITUATION_COUNT
+	# Concepts : pulsion × (catégorie ou rien), puis objet seul, puis
+	# situations, puis verbes entendus
+	_heard_base = DRIVE_COUNT * (_cats + 1) + (_cats + 1) + SITUATION_COUNT
+	_concept_count = _heard_base + VERB_COUNT
 	drives.resize(DRIVE_COUNT)
 	vision.resize(_cats)
 	situation.resize(SITUATION_COUNT)
@@ -90,6 +100,11 @@ func _init(genes: Array[Gene]) -> void:
 				_lr = lerpf(0.1, 0.6, float(p.get("learning_rate", 0.5)))
 				_ltw_rate = float(p.get("ltw_rate", 0.0005))
 				_stw_relax = float(p.get("stw_relax", 0.002))
+	var obey := lang.obey if lang else 0.5
+	for v in VERB_COUNT:
+		var i := (_heard_base + v) * VERB_COUNT + v
+		stw[i] = lerpf(0.5, 1.6, obey)
+		ltw[i] = stw[i]
 	for g in genes:
 		if g.type == Gene.Type.INSTINCT:
 			for i in int(round(float(g.params.get("repeat", 1.0)))):
@@ -134,6 +149,8 @@ func _choose_attention(rng: RandomNumberGenerator) -> void:
 		if vision[c] <= 0.0:
 			continue
 		var s := 0.3 * vision[c] + attn_bias[c] + rng.randfn(0.0, _attn_noise)
+		if lang:
+			s += 2.0 * lang.heard_noun[c] * lang.heard_strength()
 		for d in DRIVE_COUNT:
 			s += attn_w[d * _cats + c] * drives[d]
 		if s > best:
@@ -150,6 +167,10 @@ func _compute_concepts() -> void:
 	var base := DRIVE_COUNT * (_cats + 1) + _cats + 1
 	for s in SITUATION_COUNT:
 		concepts[base + s] = situation[s]
+	if lang and lang.obeying():
+		var f := lang.heard_strength()
+		for v in VERB_COUNT:
+			concepts[_heard_base + v] = lang.heard_verb[v] * f
 
 
 ## Renforcement de la dernière décision : r > 0 récompense, r < 0 punition.
@@ -165,7 +186,7 @@ func reinforce(r: float) -> void:
 		var a := _elig[k]
 		if a > 0.01:
 			var i := k * VERB_COUNT + verb
-			var rate := _lr if k < drive_part else _lr * CONTEXT_LEARNING
+			var rate := _lr if k < drive_part or k >= _heard_base else _lr * CONTEXT_LEARNING
 			stw[i] = clampf(stw[i] + rate * r * a, -3.0, 3.0)
 	if _elig_cat >= 0:
 		for d in DRIVE_COUNT:
@@ -235,6 +256,11 @@ func weight(drive_name: String, category: int, v: int) -> float:
 	return stw[(d * (_cats + 1) + slot) * VERB_COUNT + v]
 
 
+## Force du lien « on m'a dit de v » -> v (tendance à obéir à ce verbe).
+func obedience(v: int) -> float:
+	return stw[(_heard_base + v) * VERB_COUNT + v]
+
+
 ## Mémoire du cerveau pour la sauvegarde.
 func to_dict() -> Dictionary:
 	return {"stw": Array(stw), "ltw": Array(ltw), "attn_w": Array(attn_w),
@@ -245,5 +271,12 @@ func load_dict(d: Dictionary) -> void:
 	for key in ["stw", "ltw", "attn_w", "attn_bias", "verb_bias"]:
 		var src: Array = d.get(key, [])
 		var dst: PackedFloat32Array = get(key)
-		if src.size() == dst.size():     # sinon : cerveau d'une autre version, on garde l'inné
+		if src.size() == dst.size():
 			set(key, PackedFloat32Array(src))
+		elif key in ["stw", "ltw"] and src.size() < dst.size() and src.size() % VERB_COUNT == 0:
+			# sauvegarde d'avant le langage : les nouveaux concepts sont à la fin,
+			# on garde l'acquis et les liens innés des verbes entendus
+			for i in src.size():
+				dst[i] = float(src[i])
+			set(key, dst)
+		# sinon : cerveau d'une autre version, on garde l'inné

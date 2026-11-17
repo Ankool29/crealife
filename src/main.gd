@@ -61,6 +61,17 @@ func _ready() -> void:
 	hud.speed_pressed.connect(func() -> void: _speed_index = (_speed_index + 1) % SPEEDS.size())
 	hud.follow_pressed.connect(func() -> void: _follow = true)
 	hud.next_creature_pressed.connect(_select_next)
+	hud.say_pressed.connect(func(text: String) -> void:
+		var c := _selected()
+		if c == null:
+			return
+		var found := world.say(text, c)
+		if not c.alive or c.is_asleep():
+			c.last_event = "%s dort et ne vous entend pas." % c.creature_name
+		elif found.is_empty():
+			c.last_event = "%s ne reconnaît aucun mot dans « %s »." % [c.creature_name, text]
+		_event_text = c.last_event
+		_event_timer = 0.0)
 	hud.new_creature_pressed.connect(func() -> void:
 		world.restart_lineage()
 		_select_next())

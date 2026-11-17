@@ -1585,6 +1585,22 @@
 		},
 		{
 			"id": 94,
+			"type": "lobe",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"lobe": "langage",
+				"learning_rate": 0.5,
+				"talk": 0.5,
+				"obey": 0.5
+			}
+		},
+		{
+			"id": 95,
 			"type": "instinct",
 			"stage": "bebe",
 			"sex": "tous",
@@ -1601,7 +1617,7 @@
 			}
 		},
 		{
-			"id": 95,
+			"id": 96,
 			"type": "instinct",
 			"stage": "bebe",
 			"sex": "tous",
@@ -1618,7 +1634,7 @@
 			}
 		},
 		{
-			"id": 96,
+			"id": 97,
 			"type": "instinct",
 			"stage": "bebe",
 			"sex": "tous",
@@ -1635,7 +1651,7 @@
 			}
 		},
 		{
-			"id": 97,
+			"id": 98,
 			"type": "instinct",
 			"stage": "bebe",
 			"sex": "tous",
@@ -1652,7 +1668,7 @@
 			}
 		},
 		{
-			"id": 98,
+			"id": 99,
 			"type": "instinct",
 			"stage": "bebe",
 			"sex": "tous",
@@ -1669,7 +1685,7 @@
 			}
 		},
 		{
-			"id": 99,
+			"id": 100,
 			"type": "instinct",
 			"stage": "bebe",
 			"sex": "tous",
@@ -1686,7 +1702,7 @@
 			}
 		},
 		{
-			"id": 100,
+			"id": 101,
 			"type": "instinct",
 			"stage": "bebe",
 			"sex": "tous",
@@ -1703,7 +1719,7 @@
 			}
 		},
 		{
-			"id": 101,
+			"id": 102,
 			"type": "instinct",
 			"stage": "bebe",
 			"sex": "tous",
@@ -1720,7 +1736,7 @@
 			}
 		},
 		{
-			"id": 102,
+			"id": 103,
 			"type": "instinct",
 			"stage": "bebe",
 			"sex": "tous",
@@ -1737,7 +1753,7 @@
 			}
 		},
 		{
-			"id": 103,
+			"id": 104,
 			"type": "instinct",
 			"stage": "adulte",
 			"sex": "tous",
@@ -1754,7 +1770,7 @@
 			}
 		},
 		{
-			"id": 104,
+			"id": 105,
 			"type": "apparence",
 			"stage": "bebe",
 			"sex": "tous",
@@ -1769,8 +1785,25 @@
 				"saturation": 0.7,
 				"brightness": 0.7,
 				"glow": 0.47,
+				"glow_power": 0.5,
 				"size": 0.5,
 				"speed": 0.5
+			}
+		},
+		{
+			"id": 106,
+			"type": "apparence",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"part": "silhouette",
+				"tail": 0.5,
+				"antennae": 0.5,
+				"corpulence": 0.5
 			}
 		}
 	]

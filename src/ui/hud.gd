@@ -10,6 +10,7 @@ signal speed_pressed
 signal follow_pressed
 signal new_creature_pressed
 signal next_creature_pressed
+signal say_pressed(text: String)
 
 const MARGIN := 40  # marge pour l'encoche / les bords arrondis
 const BAR_LABELS: Array[String] = ["Faim", "Soif", "Fatigue", "Ennui", "Solitude", "Désir", "Santé"]
@@ -28,6 +29,15 @@ var _bars: Array[ProgressBar] = []
 var _speed_button: Button
 var _follow_button: Button
 var _new_button: Button
+var _speech_panel: PanelContainer
+var _speech_line: LineEdit
+
+## Mots proposés sous forme de boutons (on peut aussi taper la phrase).
+const CHIPS := [
+	["fruit", "graine", "baie", "balle", "machine", "pierre", "créature", "œuf"],
+	["viens", "mange", "pousse", "prends", "lâche", "examine", "tire", "frappe", "parle", "dors", "explore", "repose"],
+	["faim", "soif", "fatigue", "ennui", "solitude", "douleur", "peur", "désir"],
+]
 
 
 func _ready() -> void:
@@ -110,6 +120,15 @@ func _ready() -> void:
 	_add_button(buttons, "Caresser", caress_pressed)
 	_add_button(buttons, "Gronder", scold_pressed)
 	_add_button(buttons, "Fruit", fruit_pressed)
+	var talk := Button.new()
+	talk.text = "Parler"
+	talk.custom_minimum_size = Vector2(130, 90)
+	talk.focus_mode = Control.FOCUS_NONE
+	talk.pressed.connect(func() -> void:
+		_speech_panel.visible = not _speech_panel.visible
+		if not _speech_panel.visible:
+			_speech_line.release_focus())
+	buttons.add_child(talk)
 	_add_button(buttons, "Suivante", next_creature_pressed)
 	var obs := Button.new()
 	obs.text = "Observer"
@@ -119,9 +138,67 @@ func _ready() -> void:
 	buttons.add_child(obs)
 	_speed_button = _add_button(buttons, "x1", speed_pressed)
 	_follow_button = _add_button(buttons, "Suivre", follow_pressed)
+	_build_speech_panel(root)
 	buttons.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, MARGIN * 0.5)
 	buttons.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	buttons.grow_vertical = Control.GROW_DIRECTION_BEGIN
+
+
+## Panneau « Parler » : une ligne de texte et des mots à toucher.
+func _build_speech_panel(root: Control) -> void:
+	_speech_panel = _panel()
+	_speech_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	_speech_panel.visible = false
+	_speech_panel.anchor_left = 0.0
+	_speech_panel.anchor_right = 0.62
+	_speech_panel.anchor_top = 1.0
+	_speech_panel.anchor_bottom = 1.0
+	_speech_panel.offset_left = MARGIN
+	_speech_panel.offset_bottom = -126
+	_speech_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	root.add_child(_speech_panel)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 8)
+	_speech_panel.add_child(box)
+	var row := HBoxContainer.new()
+	box.add_child(row)
+	_speech_line = LineEdit.new()
+	_speech_line.placeholder_text = "ex. : mange la graine"
+	_speech_line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_speech_line.custom_minimum_size = Vector2(0, 64)
+	_speech_line.text_submitted.connect(func(_t: String) -> void: _send_speech())
+	row.add_child(_speech_line)
+	for pair in [["Effacer", func() -> void: _speech_line.text = ""], ["Dire", _send_speech]]:
+		var b := Button.new()
+		b.text = pair[0]
+		b.custom_minimum_size = Vector2(110, 64)
+		b.focus_mode = Control.FOCUS_NONE
+		b.pressed.connect(pair[1])
+		row.add_child(b)
+	var colors := [Color(0.75, 0.95, 0.85), Color(1.0, 0.9, 0.7), Color(0.95, 0.8, 0.95)]
+	for g in CHIPS.size():
+		var flow := HFlowContainer.new()
+		flow.add_theme_constant_override("h_separation", 6)
+		flow.add_theme_constant_override("v_separation", 6)
+		box.add_child(flow)
+		for w in CHIPS[g]:
+			var chip := Button.new()
+			chip.text = w
+			chip.focus_mode = Control.FOCUS_NONE
+			chip.custom_minimum_size = Vector2(0, 52)
+			chip.add_theme_font_size_override("font_size", 20)
+			chip.modulate = colors[g]
+			chip.pressed.connect(func() -> void:
+				_speech_line.text = (_speech_line.text + " " + w).strip_edges())
+			flow.add_child(chip)
+
+
+func _send_speech() -> void:
+	var t := _speech_line.text.strip_edges()
+	if t != "":
+		say_pressed.emit(t)
+	_speech_line.text = ""
+	_speech_line.release_focus()
 
 
 func _panel() -> PanelContainer:

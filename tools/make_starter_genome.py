@@ -139,6 +139,8 @@ for d in DRIVES:
 gene("lobe", {"lobe": "attention", "noise": 0.4, "learning_rate": 0.5})
 gene("lobe", {"lobe": "decision", "noise": 0.4, "learning_rate": 0.5,
               "ltw_rate": 0.0005, "stw_relax": 0.002})
+# Langage : vitesse d'apprentissage des mots, envie de parler, tendance à obéir.
+gene("lobe", {"lobe": "langage", "learning_rate": 0.5, "talk": 0.5, "obey": 0.5})
 
 
 def instinct(drive, category, verb, reward=1.0, repeat=6):
@@ -162,7 +164,10 @@ instinct("Désir", "créature", "accoupler", 1.0, 6)                       # act
 # Couleurs : teinte principale, teinte secondaire (ventre, reflets),
 # saturation, luminosité et couleur des parties lumineuses. Tirées au hasard pour chaque nouvelle créature.
 gene("apparence", {"part": "corps", "hue": 0.5, "hue2": 0.6, "saturation": 0.7,
-                   "brightness": 0.7, "glow": 0.47, "size": 0.5, "speed": 0.5})
+                   "brightness": 0.7, "glow": 0.47, "glow_power": 0.5, "size": 0.5, "speed": 0.5})
+# Silhouette : forme de la queue (courte, longue, massue), des antennes
+# (courtes, longues, ramifiées) et corpulence (fine à trapue).
+gene("apparence", {"part": "silhouette", "tail": 0.5, "antennae": 0.5, "corpulence": 0.5})
 
 catalog = [{"id": i + 1, "name": n, "family": f} for i, (n, f, _h, _v) in enumerate(CHEMICALS)]
 (ROOT / "data").mkdir(exist_ok=True)
