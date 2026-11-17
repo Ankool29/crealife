@@ -12,7 +12,7 @@ enum Sex { BOTH, MALE, FEMALE }
 const SEX_KEYS: Array[String] = ["tous", "male", "femelle"]
 
 ## Paramètres dont la valeur peut être minuscule : ils mutent en proportion.
-const RELATIVE_KEYS: Array[String] = ["half_life", "rate", "gain", "repair", "longevity_h"]
+const RELATIVE_KEYS: Array[String] = ["half_life", "rate", "gain", "repair", "longevity_h", "ltw_rate", "stw_relax"]
 
 var type: int = Type.SUBSTANCE
 var id: int = 0
@@ -33,7 +33,8 @@ static func ranges_for(t: int) -> Dictionary:
 		Type.EMITTER: return {"threshold": [0.0, 1.0], "gain": [-1.0, 1.0]}
 		Type.RECEPTOR: return {"threshold": [0.0, 1.0], "gain": [0.0, 10.0]}
 		Type.ORGAN: return {"longevity_h": [0.5, 40.0], "repair": [0.0, 0.01], "health": [0.0, 1.0]}
-		Type.LOBE: return {"noise": [0.0, 1.0], "learning_rate": [0.0, 1.0]}
+		Type.LOBE: return {"noise": [0.0, 1.0], "learning_rate": [0.0, 1.0], "ltw_rate": [0.0, 0.05], "stw_relax": [0.0, 0.05]}
+		Type.INSTINCT: return {"reward": [-2.0, 2.0], "repeat": [0.0, 20.0]}
 		Type.APPEARANCE: return {"hue": [0.0, 1.0], "size": [0.0, 1.0], "speed": [0.0, 1.0]}
 	return {}
 

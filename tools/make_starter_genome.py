@@ -127,8 +127,34 @@ receptor("Eau", "organe.Coeur.degats", 0.02, threshold=0.97, invert=True)       
 receptor("Toxines", "organe.Coeur.degats", 0.003, threshold=0.6)
 receptor("Adrénaline", "corps.vitesse_bonus", 1.0, threshold=0.1)
 
-# Cerveau (phase 1 : réglages du lobe de décision) et apparence
-gene("lobe", {"lobe": "decision", "noise": 0.5, "learning_rate": 0.5})
+# Punition : la douleur est désagréable
+emitter("chem:Douleur", "Punition", 0.5, threshold=0.05)
+
+# Cerveau : les pulsions arrivent au lobe des pulsions par des récepteurs
+DRIVES = ["Faim", "Soif", "Fatigue", "Sommeil", "Douleur", "Peur", "Ennui",
+          "Solitude", "Surpopulation", "Froid", "Chaud", "Désir"]
+for d in DRIVES:
+    receptor(d, f"pulsion.{d}", 1.0)
+gene("lobe", {"lobe": "attention", "noise": 0.4, "learning_rate": 0.5})
+gene("lobe", {"lobe": "decision", "noise": 0.4, "learning_rate": 0.5,
+              "ltw_rate": 0.0005, "stw_relax": 0.002})
+
+
+def instinct(drive, category, verb, reward=1.0, repeat=6):
+    gene("instinct", {"drive": drive, "category": category, "verb": verb,
+                      "reward": reward, "repeat": repeat})
+
+
+# Instincts : réflexes appris avant la naissance (catégorie "" = aucun objet).
+# Rien sur les graines, les baies ou la machine : elle doit les découvrir.
+instinct("Faim", "fruit", "manger")
+instinct("Soif", "fruit", "manger", repeat=4)
+instinct("Faim", "", "explorer", 0.6, 3)
+instinct("Fatigue", "", "dormir")
+instinct("Sommeil", "", "dormir")
+instinct("Ennui", "jouet", "pousser", 1.0, 4)
+instinct("Ennui", "", "explorer", 0.8, 3)
+instinct("Douleur", "", "rien", 0.5, 2)
 gene("apparence", {"part": "corps", "hue": 0.5, "size": 0.5, "speed": 0.5})
 
 catalog = [{"id": i + 1, "name": n, "family": f} for i, (n, f, _h, _v) in enumerate(CHEMICALS)]

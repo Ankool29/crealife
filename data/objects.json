@@ -1,0 +1,67 @@
+{
+	"categories": ["fruit", "graine", "baie", "jouet", "machine", "pierre", "créature"],
+	"types": {
+		"fruit": {
+			"category": "fruit",
+			"label": "fruit",
+			"carry": true,
+			"verbs": {
+				"manger": {"chems": {"Glucides (estomac)": 0.3, "Protéines (estomac)": 0.05, "Eau": 0.25, "Faim": -0.3, "Soif": -0.3}, "consume": true},
+				"examiner": {"chems": {"Ennui": -0.03}}
+			}
+		},
+		"graine": {
+			"category": "graine",
+			"label": "graine",
+			"carry": true,
+			"verbs": {
+				"manger": {"chems": {"Glucides (estomac)": 0.2, "Protéines (estomac)": 0.15, "Graisses (estomac)": 0.1, "Eau": 0.1, "Faim": -0.35, "Soif": -0.1}, "consume": true},
+				"examiner": {"chems": {"Ennui": -0.03}}
+			}
+		},
+		"baie": {
+			"category": "baie",
+			"label": "baie violette",
+			"carry": true,
+			"verbs": {
+				"manger": {"chems": {"Glucides (estomac)": 0.05, "Eau": 0.05, "Toxines": 0.45, "Faim": -0.05, "Douleur": 0.4}, "consume": true},
+				"examiner": {"chems": {"Ennui": -0.03}}
+			}
+		},
+		"balle": {
+			"category": "jouet",
+			"label": "balle",
+			"carry": true,
+			"verbs": {
+				"pousser": {"chems": {"Ennui": -0.25}, "kick": 420},
+				"tirer": {"chems": {"Ennui": -0.15}, "kick": -200},
+				"frapper": {"chems": {"Ennui": -0.2}, "kick": 600},
+				"examiner": {"chems": {"Ennui": -0.05}},
+				"manger": {"chems": {"Douleur": 0.1}}
+			}
+		},
+		"distributeur": {
+			"category": "machine",
+			"label": "distributeur de graines",
+			"carry": false,
+			"verbs": {
+				"pousser": {"chems": {"Ennui": -0.1}, "spawn": "graine", "cooldown": 15},
+				"tirer": {"chems": {"Ennui": -0.05}},
+				"frapper": {"chems": {"Douleur": 0.15}},
+				"examiner": {"chems": {"Ennui": -0.05}},
+				"manger": {"chems": {"Douleur": 0.25}}
+			}
+		},
+		"pierre": {
+			"category": "pierre",
+			"label": "pierre",
+			"carry": true,
+			"verbs": {
+				"manger": {"chems": {"Douleur": 0.3}},
+				"frapper": {"chems": {"Douleur": 0.1}},
+				"pousser": {"kick": 60},
+				"examiner": {"chems": {"Ennui": -0.03}}
+			}
+		}
+	}
+}

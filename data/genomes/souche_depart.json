@@ -1301,6 +1301,255 @@
 		},
 		{
 			"id": 78,
+			"type": "emetteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"source": "chem:Douleur",
+				"invert": false,
+				"threshold": 0.05,
+				"gain": 0.5,
+				"chem": "Punition",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 79,
+			"type": "recepteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"chem": "Faim",
+				"invert": false,
+				"threshold": 0.0,
+				"gain": 1.0,
+				"locus": "pulsion.Faim",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 80,
+			"type": "recepteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"chem": "Soif",
+				"invert": false,
+				"threshold": 0.0,
+				"gain": 1.0,
+				"locus": "pulsion.Soif",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 81,
+			"type": "recepteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"chem": "Fatigue",
+				"invert": false,
+				"threshold": 0.0,
+				"gain": 1.0,
+				"locus": "pulsion.Fatigue",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 82,
+			"type": "recepteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"chem": "Sommeil",
+				"invert": false,
+				"threshold": 0.0,
+				"gain": 1.0,
+				"locus": "pulsion.Sommeil",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 83,
+			"type": "recepteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"chem": "Douleur",
+				"invert": false,
+				"threshold": 0.0,
+				"gain": 1.0,
+				"locus": "pulsion.Douleur",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 84,
+			"type": "recepteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"chem": "Peur",
+				"invert": false,
+				"threshold": 0.0,
+				"gain": 1.0,
+				"locus": "pulsion.Peur",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 85,
+			"type": "recepteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"chem": "Ennui",
+				"invert": false,
+				"threshold": 0.0,
+				"gain": 1.0,
+				"locus": "pulsion.Ennui",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 86,
+			"type": "recepteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"chem": "Solitude",
+				"invert": false,
+				"threshold": 0.0,
+				"gain": 1.0,
+				"locus": "pulsion.Solitude",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 87,
+			"type": "recepteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"chem": "Surpopulation",
+				"invert": false,
+				"threshold": 0.0,
+				"gain": 1.0,
+				"locus": "pulsion.Surpopulation",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 88,
+			"type": "recepteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"chem": "Froid",
+				"invert": false,
+				"threshold": 0.0,
+				"gain": 1.0,
+				"locus": "pulsion.Froid",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 89,
+			"type": "recepteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"chem": "Chaud",
+				"invert": false,
+				"threshold": 0.0,
+				"gain": 1.0,
+				"locus": "pulsion.Chaud",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 90,
+			"type": "recepteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"chem": "Désir",
+				"invert": false,
+				"threshold": 0.0,
+				"gain": 1.0,
+				"locus": "pulsion.Désir",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 91,
+			"type": "lobe",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"lobe": "attention",
+				"noise": 0.4,
+				"learning_rate": 0.5
+			}
+		},
+		{
+			"id": 92,
 			"type": "lobe",
 			"stage": "bebe",
 			"sex": "tous",
@@ -1310,12 +1559,150 @@
 			"silent": false,
 			"p": {
 				"lobe": "decision",
-				"noise": 0.5,
-				"learning_rate": 0.5
+				"noise": 0.4,
+				"learning_rate": 0.5,
+				"ltw_rate": 0.0005,
+				"stw_relax": 0.002
 			}
 		},
 		{
-			"id": 79,
+			"id": 93,
+			"type": "instinct",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"drive": "Faim",
+				"category": "fruit",
+				"verb": "manger",
+				"reward": 1.0,
+				"repeat": 6
+			}
+		},
+		{
+			"id": 94,
+			"type": "instinct",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"drive": "Soif",
+				"category": "fruit",
+				"verb": "manger",
+				"reward": 1.0,
+				"repeat": 4
+			}
+		},
+		{
+			"id": 95,
+			"type": "instinct",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"drive": "Faim",
+				"category": "",
+				"verb": "explorer",
+				"reward": 0.6,
+				"repeat": 3
+			}
+		},
+		{
+			"id": 96,
+			"type": "instinct",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"drive": "Fatigue",
+				"category": "",
+				"verb": "dormir",
+				"reward": 1.0,
+				"repeat": 6
+			}
+		},
+		{
+			"id": 97,
+			"type": "instinct",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"drive": "Sommeil",
+				"category": "",
+				"verb": "dormir",
+				"reward": 1.0,
+				"repeat": 6
+			}
+		},
+		{
+			"id": 98,
+			"type": "instinct",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"drive": "Ennui",
+				"category": "jouet",
+				"verb": "pousser",
+				"reward": 1.0,
+				"repeat": 4
+			}
+		},
+		{
+			"id": 99,
+			"type": "instinct",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"drive": "Ennui",
+				"category": "",
+				"verb": "explorer",
+				"reward": 0.8,
+				"repeat": 3
+			}
+		},
+		{
+			"id": 100,
+			"type": "instinct",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"drive": "Douleur",
+				"category": "",
+				"verb": "rien",
+				"reward": 0.5,
+				"repeat": 2
+			}
+		},
+		{
+			"id": 101,
 			"type": "apparence",
 			"stage": "bebe",
 			"sex": "tous",

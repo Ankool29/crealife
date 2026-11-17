@@ -3,7 +3,7 @@ extends Node2D
 ## Dessine une créature à partir de son état de simulation (formes procédurales,
 ## aucune image nécessaire pour l'instant).
 
-const Action = Brain.Action
+const Verb = Brain.Verb
 
 var creature: CreatureSim
 var _t := 0.0
@@ -14,7 +14,7 @@ func _process(delta: float) -> void:
 		return
 	_t += delta
 	var hop := 0.0
-	if creature.alive and creature.get_action() == Action.PLAY:
+	if creature.alive and creature.get_verb() in [Verb.POUSSER, Verb.FRAPPER]:
 		hop = -absf(sin(_t * 7.0)) * 35.0
 	position = Vector2(creature.x, hop)
 	queue_redraw()
@@ -34,7 +34,7 @@ func _draw() -> void:
 	if not c.alive:
 		col = col.lerp(Color(0.55, 0.55, 0.55), 0.7)   # morte : couleurs éteintes
 	var dark := col.darkened(0.25)
-	var sleeping := c.alive and c.get_action() == Action.SLEEP
+	var sleeping := c.alive and c.get_verb() == Verb.DORMIR
 	# Morte : couchée sur le flanc
 	var rot := -PI / 2.0 * c.facing if not c.alive else 0.0
 	var base := Vector2(0, -14 * sz) if not c.alive else Vector2.ZERO
@@ -72,10 +72,10 @@ func _draw() -> void:
 	if sleeping:
 		var zy := -100.0 - fmod(_t * 20.0, 30.0)
 		draw_string(font, Vector2(30, zy) * sz, "z z", HORIZONTAL_ALIGNMENT_LEFT, -1, 30, Color(1, 1, 1, 0.9))
-	if c.reward_level() > 0.05:
-		_draw_heart(Vector2(0, -120) * sz, Color(0.95, 0.25, 0.4, c.reward_level()))
-	if c.punishment_level() > 0.05:
-		draw_string(font, Vector2(-8, -110) * sz, "!", HORIZONTAL_ALIGNMENT_LEFT, -1, 48, Color(0.9, 0.1, 0.1, c.punishment_level()))
+	if c.level("Récompense") > 0.05:
+		_draw_heart(Vector2(0, -120) * sz, Color(0.95, 0.25, 0.4, c.level("Récompense")))
+	if c.level("Punition") > 0.05:
+		draw_string(font, Vector2(-8, -110) * sz, "!", HORIZONTAL_ALIGNMENT_LEFT, -1, 48, Color(0.9, 0.1, 0.1, c.level("Punition")))
 
 
 func _draw_heart(p: Vector2, col: Color) -> void:

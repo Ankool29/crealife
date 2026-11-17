@@ -140,7 +140,7 @@ func update_from(c: CreatureSim, sim_speed: float, following: bool) -> void:
 		chem[Chemicals.id_of("Fatigue")], chem[Chemicals.id_of("Ennui")], c.heart_health()]
 	for i in _bars.size():
 		_bars[i].value = values[i]
-	_action_label.text = Brain.ACTION_LABELS[c.get_action()] if c.alive else "Morte"
+	_action_label.text = c.action_text()
 	_event_label.text = c.last_event
 	_speed_button.text = "x%d" % int(sim_speed)
 	_follow_button.modulate = Color.WHITE if following else Color(1, 1, 1, 0.5)

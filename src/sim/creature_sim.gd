@@ -1,11 +1,16 @@
 class_name CreatureSim
 extends RefCounted
 ## Une créature : génome, biochimie, cerveau et corps. Aucun affichage ici.
+## Le corps perçoit le monde, le cerveau choisit (objet, verbe), le corps
+## exécute ; les effets viennent de l'objet visé (data/objects.json).
 
-const EAT_DISTANCE := 24.0
-const MIN_HUNGER_TO_EAT := 0.15
-const MIN_FATIGUE_TO_SLEEP := 0.35
-const Action = Brain.Action
+const Verb = Brain.Verb
+const VISION_RANGE := 700.0
+const REACH := 30.0
+const AFTER_ACTION := 1.5        # pause après une action, le temps que la récompense arrive
+const MIN_FATIGUE_TO_SLEEP := 0.2
+const DRIVE_REWARD_GAIN := 3.0   # baisse d'une pulsion -> récompense
+const ACTIVITY: Array[float] = [0.1, 0.5, 0.8, 0.2, 0.3, 0.1, 0.3, 0.5, 0.5, 0.6, 0.2, 0.0, 0.5, 0.4]
 
 var creature_name: String
 var genome: Genome
@@ -20,9 +25,14 @@ var stage: int = Lifecycle.Stage.BABY
 var alive := true
 var death_cause := ""
 var is_moving := false
+var held: WorldObject = null
+var target: WorldObject = null
+## Instant où l'action en cours a produit son effet (pour l'animation).
+var acted := false
 var meals := 0
 var naps := 0
-## Dernier message à afficher au joueur.
+## Repas par type d'objet (statistiques et tests).
+var eaten := {}
 var last_event := ""
 
 # Apparence (gène Apparence « corps »)
@@ -30,18 +40,8 @@ var hue := 0.5
 var _size_gene := 0.5
 var _speed := 100.0
 
-# Numéros des substances et loci utilisés directement par le corps
-var _faim: int
-var _soif: int
-var _fatigue: int
-var _ennui: int
-var _glucides_e: int
-var _proteines_e: int
-var _eau: int
-var _recompense: int
-var _punition: int
-var _glucose: int
-var _toxines: int
+var _chem := {}          # nom -> numéro des substances utilisées par le corps
+var _drive_loci := PackedInt32Array()
 var _l_meta: int
 var _l_act: int
 var _l_dort: int
@@ -49,8 +49,10 @@ var _l_ennui: int
 var _l_speed: int
 
 var _action_time := 0.0
-var _target_x := 0.0
-var _drives_at_choice := 0.0
+var _done := false
+var _goal_x := 0.0
+var _prev_drives := PackedFloat32Array()
+var _instinct_timer := 0.0
 
 
 func _init(p_name: String, p_genome: Genome, p_x: float, p_sex: int) -> void:
@@ -58,30 +60,21 @@ func _init(p_name: String, p_genome: Genome, p_x: float, p_sex: int) -> void:
 	genome = p_genome
 	sex = p_sex
 	x = p_x
-	_target_x = p_x
+	_goal_x = p_x
 	biochem = Biochemistry.new()
-	_faim = Chemicals.id_of("Faim")
-	_soif = Chemicals.id_of("Soif")
-	_fatigue = Chemicals.id_of("Fatigue")
-	_ennui = Chemicals.id_of("Ennui")
-	_glucides_e = Chemicals.id_of("Glucides (estomac)")
-	_proteines_e = Chemicals.id_of("Protéines (estomac)")
-	_eau = Chemicals.id_of("Eau")
-	_recompense = Chemicals.id_of("Récompense")
-	_punition = Chemicals.id_of("Punition")
-	_glucose = Chemicals.id_of("Glucose")
-	_toxines = Chemicals.id_of("Toxines")
+	for n in ["Faim", "Soif", "Fatigue", "Ennui", "Douleur", "Eau", "Glucose", "Toxines", "Récompense", "Punition"]:
+		_chem[n] = Chemicals.id_of(n)
 	var l := biochem.loci
 	_l_meta = l.id_of("corps.metabolisme")
 	_l_act = l.id_of("corps.activite")
 	_l_dort = l.id_of("corps.dort")
 	_l_ennui = l.id_of("corps.ennui")
 	_l_speed = l.id_of("corps.vitesse_bonus")
+	for d in Brain.DRIVE_NAMES:
+		_drive_loci.append(l.id_of("pulsion." + d))
+	_prev_drives.resize(Brain.DRIVE_COUNT)
 	_express(true)
-	var lobe := genome.find(Gene.Type.LOBE, "lobe", "decision")
-	var noise := float(lobe.params.get("noise", 0.5)) if lobe else 0.5
-	var learning := float(lobe.params.get("learning_rate", 0.5)) if lobe else 0.5
-	brain = Brain.new(noise, learning)
+	brain = Brain.new(genome.expressed(stage, sex))
 
 
 ## Exprime les gènes du stade actuel (naissance, puis à chaque changement de stade).
@@ -94,8 +87,12 @@ func _express(first_time: bool) -> void:
 		_speed = lerpf(60.0, 150.0, float(look.params.get("speed", 0.5)))
 
 
-func get_action() -> int:
-	return brain.current_action
+func get_verb() -> int:
+	return brain.verb
+
+
+func is_asleep() -> bool:
+	return alive and brain.verb == Verb.DORMIR
 
 
 ## Taille affichée : gène de taille × stade de vie.
@@ -103,9 +100,8 @@ func body_size() -> float:
 	return lerpf(0.8, 1.25, _size_gene) * Lifecycle.STAGE_SIZE[stage]
 
 
-func drives() -> PackedFloat32Array:
-	var c := biochem.conc
-	return PackedFloat32Array([maxf(c[_faim], c[_soif]), c[_fatigue], c[_ennui]])
+func level(chem_name: String) -> float:
+	return biochem.conc[_chem[chem_name]]
 
 
 func heart_health() -> float:
@@ -113,12 +109,14 @@ func heart_health() -> float:
 	return h.health if h else 1.0
 
 
-func reward_level() -> float:
-	return biochem.conc[_recompense]
-
-
-func punishment_level() -> float:
-	return biochem.conc[_punition]
+## Ce que fait la créature, en mots (« Mange : graine »).
+func action_text() -> String:
+	if not alive:
+		return "Morte"
+	var t := Brain.VERB_LABELS[brain.verb]
+	if target != null and brain.verb in Brain.OBJECT_VERBS:
+		t += " : " + ObjectCatalog.label_of(target.type_name)
+	return t
 
 
 func tick(dt: float, world: WorldSim, rng: RandomNumberGenerator) -> void:
@@ -131,49 +129,34 @@ func tick(dt: float, world: WorldSim, rng: RandomNumberGenerator) -> void:
 		_express(false)
 		last_event = "%s est maintenant %s." % [creature_name, Lifecycle.STAGE_LABELS[stage].to_lower()]
 
+	_perceive(world)
 	_action_time -= dt
 	is_moving = false
-	var activity := 0.2
-	var asleep := false
-	var playing := false
-
-	match brain.current_action:
-		Action.IDLE:
-			activity = 0.1
-		Action.WANDER:
-			activity = 0.5
-			playing = true
-			biochem.add(_ennui, -0.02 * dt)
-			if _move_towards(_target_x, dt):
-				_target_x = _random_target(world, rng, 500.0)
-		Action.EAT:
-			activity = 0.5
-			var food := world.nearest_food(x)
-			if food.is_empty():
-				_action_time = 0.0
-			elif _move_towards(food.x, dt) or absf(food.x - x) < EAT_DISTANCE:
-				world.remove_food(food.id)
-				_eat_fruit()
-				_action_time = 0.0
-		Action.SLEEP:
-			activity = 0.0
-			asleep = true
-			if biochem.conc[_fatigue] <= 0.03:
-				naps += 1
-				_action_time = 0.0
-		Action.PLAY:
-			activity = 0.8
-			playing = true
-			biochem.add(_ennui, -0.05 * dt)
-			if _move_towards(_target_x, dt * 1.3):
-				_target_x = _random_target(world, rng, 150.0)
+	acted = false
+	if not _done:
+		_execute(dt, world, rng)
+	if held != null:
+		held.x = x + facing * 22.0 * body_size()
+		held.h = 30.0 * body_size()
 
 	var l := biochem.loci.values
 	l[_l_meta] = 1.0
-	l[_l_act] = activity
-	l[_l_dort] = 1.0 if asleep else 0.0
-	l[_l_ennui] = 0.0 if playing else 1.0
+	l[_l_act] = ACTIVITY[brain.verb]
+	l[_l_dort] = 1.0 if brain.verb == Verb.DORMIR else 0.0
+	l[_l_ennui] = 0.0 if brain.verb == Verb.EXPLORER else 1.0
 	biochem.step(dt, age)
+
+	# Récompense naturelle : sentir un besoin diminuer est agréable, et c'est
+	# ce besoin-là qui apprend. Caresses et punitions agissent sur tout.
+	for d in Brain.DRIVE_COUNT:
+		var now := biochem.loci.values[_drive_loci[d]]
+		if now < _prev_drives[d] - 0.0001:
+			brain.reinforce_drive(d, (_prev_drives[d] - now) * DRIVE_REWARD_GAIN)
+		_prev_drives[d] = now
+	brain.reinforce((level("Récompense") - level("Punition")) * dt)
+	brain.relax(dt, is_asleep())
+	if is_asleep():
+		_replay_instincts(dt, rng)
 
 	if not biochem.organ("Coeur").is_alive():
 		_die()
@@ -182,81 +165,178 @@ func tick(dt: float, world: WorldSim, rng: RandomNumberGenerator) -> void:
 		_decide(world, rng)
 
 
-## Effet d'un fruit (sera porté par l'objet lui-même en phase 2).
-func _eat_fruit() -> void:
-	biochem.add(_glucides_e, 0.3)
-	biochem.add(_proteines_e, 0.05)
-	biochem.add(_eau, 0.25)
-	biochem.add(_faim, -0.3)
-	biochem.add(_soif, -0.3)
-	meals += 1
-
-
-## Le joueur caresse la créature : récompense l'action en cours.
-func caress() -> void:
-	if not alive:
-		return
-	brain.reinforce(1.0)
-	biochem.conc[_recompense] = 1.0
-	biochem.add(_ennui, -0.1)
-	last_event = "%s a été caressée pendant qu'elle voulait %s." % [creature_name, Brain.ACTION_NOUNS[get_action()]]
-
-
-## Le joueur gronde la créature : punit l'action en cours et l'interrompt.
-func scold() -> void:
-	if not alive:
-		return
-	brain.reinforce(-1.0)
-	biochem.conc[_punition] = 1.0
-	last_event = "%s a été grondée pendant qu'elle voulait %s." % [creature_name, Brain.ACTION_NOUNS[get_action()]]
-	_action_time = 0.0
-
-
-func _drive_total() -> float:
-	var s := 0.0
-	for v in drives():
-		s += v
-	return s
+## Remplit les lobes d'entrée : pulsions, vision, situation.
+func _perceive(world: WorldSim) -> void:
+	for d in Brain.DRIVE_COUNT:
+		brain.drives[d] = clampf(biochem.loci.values[_drive_loci[d]], 0.0, 1.0)
+	brain.vision.fill(0.0)
+	for o in world.objects:
+		var dist := absf(o.x - x) if o.holder != self else 0.0
+		if dist < VISION_RANGE and (o.holder == null or o.holder == self) and o.category >= 0:
+			brain.vision[o.category] = maxf(brain.vision[o.category], 1.0 - dist / VISION_RANGE)
+	brain.situation[0] = 1.0 if held != null else 0.0
+	brain.situation[1] = 1.0 if target != null and absf(target.x - x) < REACH * 2.0 else 0.0
+	brain.situation[2] = clampf(level("Récompense"), 0.0, 1.0)
+	brain.situation[3] = 1.0 if world.creatures.size() <= 1 else 0.0
 
 
 func _decide(world: WorldSim, rng: RandomNumberGenerator) -> void:
-	# Récompense naturelle : avoir fait baisser ses besoins, c'est agréable.
-	var relief := _drives_at_choice - _drive_total()
-	if absf(relief) > 0.02:
-		brain.reinforce(clampf(relief, -0.5, 0.5), false)
-
-	var d := drives()
-	var allowed: Array[bool] = [true, true, true, true, true]
-	allowed[Action.EAT] = world.has_food() and d[0] >= MIN_HUNGER_TO_EAT
-	allowed[Action.SLEEP] = d[1] >= MIN_FATIGUE_TO_SLEEP
-	var a := brain.decide(d, rng, allowed)
-	_drives_at_choice = _drive_total()
-	match a:
-		Action.IDLE:
+	var allowed: Array[bool] = []
+	allowed.resize(Brain.VERB_COUNT)
+	allowed.fill(true)
+	allowed[Verb.LACHER] = held != null
+	allowed[Verb.DORMIR] = level("Fatigue") >= MIN_FATIGUE_TO_SLEEP
+	allowed[Verb.ACCOUPLER] = false    # phase 3
+	var v := brain.decide(rng, allowed)
+	target = _nearest(world, brain.attention) if brain.attention >= 0 else null
+	if v in Brain.OBJECT_VERBS and target == null:
+		brain.verb = Verb.RIEN
+	_done = false
+	match brain.verb:
+		Verb.RIEN:
 			_action_time = rng.randf_range(2.0, 4.0)
-		Action.WANDER:
+		Verb.EXPLORER:
 			_action_time = rng.randf_range(4.0, 8.0)
-			_target_x = _random_target(world, rng, 500.0)
-		Action.EAT:
-			_action_time = 25.0
-		Action.SLEEP:
+			_goal_x = _random_goal(world, rng, 500.0)
+		Verb.DORMIR:
 			_action_time = 400.0
-		Action.PLAY:
-			_action_time = rng.randf_range(4.0, 6.0)
-			_target_x = _random_target(world, rng, 150.0)
+		Verb.FUIR:
+			_action_time = 6.0
+			_goal_x = clampf(x + signf(x - target.x + 0.01) * 300.0, 60.0, world.width - 60.0)
+		_:
+			_action_time = 20.0
+
+
+func _nearest(world: WorldSim, category: int) -> WorldObject:
+	if held != null and held.category == category:
+		return held
+	var best: WorldObject = null
+	var best_d := VISION_RANGE
+	for o in world.objects:
+		if o.category == category and o.holder == null:
+			var d := absf(o.x - x)
+			if d < best_d:
+				best_d = d
+				best = o
+	return best
+
+
+func _execute(dt: float, world: WorldSim, rng: RandomNumberGenerator) -> void:
+	var v := brain.verb
+	match v:
+		Verb.RIEN:
+			pass
+		Verb.EXPLORER:
+			biochem.add(_chem["Ennui"], -0.02 * dt)
+			if _move_towards(_goal_x, dt):
+				_goal_x = _random_goal(world, rng, 500.0)
+		Verb.DORMIR:
+			if level("Fatigue") <= 0.03 or level("Douleur") > 0.5:
+				naps += 1
+				_finish()
+		Verb.FUIR:
+			if _move_towards(_goal_x, dt * 1.4):
+				_finish()
+		Verb.LACHER:
+			drop_held()
+			_finish()
+		_:
+			if target == null or not (target in world.objects):
+				_action_time = 0.0       # l'objet a disparu : on change d'idée
+				return
+			if target != held and absf(target.x - x) > REACH:
+				_move_towards(target.x, dt)      # d'abord s'approcher de l'objet
+				return
+			if v != Verb.APPROCHER:
+				_act_on(target, v, world)
+			_finish()
+
+
+## L'objet répond au verbe : substances, consommation, coup de pied, apparition.
+func _act_on(o: WorldObject, v: int, world: WorldSim) -> void:
+	acted = true
+	if v == Verb.PRENDRE:
+		if held == null and ObjectCatalog.can_carry(o.type_name):
+			held = o
+			o.holder = self
+			o.vx = 0.0
+		return
+	var r := ObjectCatalog.response(o.type_name, Brain.VERB_KEYS[v])
+	for chem_name in r.get("chems", {}):
+		biochem.add(Chemicals.id_of(chem_name), float(r.chems[chem_name]))
+	if r.has("kick"):
+		if o == held:
+			drop_held()
+		o.vx = facing * float(r.kick)
+		o.vy = -150.0
+		o.h = 1.0
+	if r.has("spawn") and o.cooldown <= 0.0:
+		world.add_object(str(r.spawn), o.x + facing * 40.0, 60.0)
+		o.cooldown = float(r.get("cooldown", 10.0))
+	if r.get("consume", false):
+		if o == held:
+			held = null
+		world.remove_object(o)
+		target = null
+		meals += 1
+		eaten[o.type_name] = eaten.get(o.type_name, 0) + 1
+
+
+func _finish() -> void:
+	_done = true
+	_action_time = AFTER_ACTION
+
+
+func drop_held() -> void:
+	if held != null:
+		held.holder = null
+		held.h = 30.0
+		held = null
+
+
+## Le joueur caresse la créature : récompense ce qu'elle vient de faire.
+func caress() -> void:
+	if not alive:
+		return
+	biochem.add(_chem["Récompense"], 1.0)
+	biochem.add(_chem["Ennui"], -0.1)
+	last_event = "%s a été caressée pendant qu'elle : %s." % [creature_name, action_text().to_lower()]
+
+
+## Le joueur gronde la créature : punit ce qu'elle vient de faire et l'interrompt.
+func scold() -> void:
+	if not alive:
+		return
+	biochem.add(_chem["Punition"], 1.0)
+	last_event = "%s a été grondée pendant qu'elle : %s." % [creature_name, action_text().to_lower()]
+	_action_time = minf(_action_time, AFTER_ACTION)
+
+
+## Pendant le sommeil, les instincts sont rejoués de temps en temps.
+func _replay_instincts(dt: float, rng: RandomNumberGenerator) -> void:
+	_instinct_timer += dt
+	if _instinct_timer < 30.0:
+		return
+	_instinct_timer = 0.0
+	var instincts := []
+	for g in genome.expressed(stage, sex):
+		if g.type == Gene.Type.INSTINCT:
+			instincts.append(g)
+	if not instincts.is_empty():
+		brain.train_instinct(instincts[rng.randi_range(0, instincts.size() - 1)].params, 0.3)
 
 
 func _die() -> void:
 	alive = false
 	is_moving = false
-	var c := biochem.conc
+	drop_held()
 	if age > biochem.organ("Coeur").longevity_s:
 		death_cause = "de vieillesse"
-	elif c[_glucose] < 0.05:
+	elif level("Glucose") < 0.05:
 		death_cause = "de faim"
-	elif c[_eau] < 0.05:
+	elif level("Eau") < 0.05:
 		death_cause = "de soif"
-	elif c[_toxines] > 0.5:
+	elif level("Toxines") > 0.5:
 		death_cause = "empoisonnée"
 	else:
 		death_cause = "d'épuisement"
@@ -280,5 +360,5 @@ func _move_towards(tx: float, dt: float) -> bool:
 	return false
 
 
-func _random_target(world: WorldSim, rng: RandomNumberGenerator, radius: float) -> float:
+func _random_goal(world: WorldSim, rng: RandomNumberGenerator, radius: float) -> float:
 	return clampf(x + rng.randf_range(-radius, radius), 60.0, world.width - 60.0)
