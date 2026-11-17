@@ -154,10 +154,11 @@ func _build_speech_panel(root: Control) -> void:
 	_speech_panel = _panel()
 	_speech_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	_speech_panel.visible = false
-	# Bandeau compact en haut à gauche : le décor reste visible et touchable
-	# en dessous (toucher un objet le montre à la créature).
-	_speech_panel.position = Vector2(MARGIN, 16)
-	_speech_panel.custom_minimum_size = Vector2(760, 0)
+	# Bandeau compact en haut à droite : l'état de la créature reste visible à
+	# gauche, le décor en dessous reste touchable (toucher un objet le lui montre).
+	_speech_panel.custom_minimum_size = Vector2(780, 0)
+	_speech_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE, 16)
+	_speech_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	root.add_child(_speech_panel)
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 6)
@@ -285,8 +286,8 @@ func _add_button(parent: Control, text: String, sig: Signal) -> Button:
 func update_from(c: CreatureSim, world: WorldSim, event_text: String, sim_speed: float, following: bool) -> void:
 	observe.creature = c
 	observe.world = world
-	_menu_button.visible = not observe.visible     # sinon il cache le bouton de fermeture
-	_state_panel.visible = not _speech_panel.visible
+	# le Menu se cache derrière les panneaux ouverts (bouton de fermeture, bandeau)
+	_menu_button.visible = not observe.visible and not _speech_panel.visible
 	_event_label.position.y = 282 if _speech_panel.visible else 20
 	_event_label.text = event_text
 	_speed_button.text = "x%d" % int(sim_speed)
