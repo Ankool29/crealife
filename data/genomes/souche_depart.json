@@ -1,0 +1,1334 @@
+{
+	"format": "crealife-genome",
+	"version": 2,
+	"name": "Souche de départ",
+	"genes": [
+		{
+			"id": 1,
+			"type": "substance",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"chem": "Glucose",
+				"half_life": 0,
+				"initial": 0.6
+			}
+		},
+		{
+			"id": 2,
+			"type": "substance",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"chem": "Glycogène",
+				"half_life": 0,
+				"initial": 0.5
+			}
+		},
+		{
+			"id": 3,
+			"type": "substance",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"chem": "Graisse",
+				"half_life": 0,
+				"initial": 0.2
+			}
+		},
+		{
+			"id": 4,
+			"type": "substance",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"chem": "Protéines",
+				"half_life": 0,
+				"initial": 0.5
+			}
+		},
+		{
+			"id": 5,
+			"type": "substance",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"chem": "Eau",
+				"half_life": 0,
+				"initial": 0.7
+			}
+		},
+		{
+			"id": 6,
+			"type": "substance",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"chem": "Glucides (estomac)",
+				"half_life": 0,
+				"initial": 0.0
+			}
+		},
+		{
+			"id": 7,
+			"type": "substance",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"chem": "Protéines (estomac)",
+				"half_life": 0,
+				"initial": 0.0
+			}
+		},
+		{
+			"id": 8,
+			"type": "substance",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"chem": "Graisses (estomac)",
+				"half_life": 0,
+				"initial": 0.0
+			}
+		},
+		{
+			"id": 9,
+			"type": "substance",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"chem": "Déchets",
+				"half_life": 0,
+				"initial": 0.0
+			}
+		},
+		{
+			"id": 10,
+			"type": "substance",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"chem": "Toxines",
+				"half_life": 0,
+				"initial": 0.0
+			}
+		},
+		{
+			"id": 11,
+			"type": "substance",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"chem": "Adrénaline",
+				"half_life": 20,
+				"initial": 0.0
+			}
+		},
+		{
+			"id": 12,
+			"type": "substance",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"chem": "Croissance",
+				"half_life": 300,
+				"initial": 0.0
+			}
+		},
+		{
+			"id": 13,
+			"type": "substance",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"chem": "Hormone sexuelle",
+				"half_life": 300,
+				"initial": 0.0
+			}
+		},
+		{
+			"id": 14,
+			"type": "substance",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"chem": "Hormone du sommeil",
+				"half_life": 60,
+				"initial": 0.0
+			}
+		},
+		{
+			"id": 15,
+			"type": "substance",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"chem": "Faim",
+				"half_life": 30,
+				"initial": 0.0
+			}
+		},
+		{
+			"id": 16,
+			"type": "substance",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"chem": "Soif",
+				"half_life": 30,
+				"initial": 0.0
+			}
+		},
+		{
+			"id": 17,
+			"type": "substance",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"chem": "Fatigue",
+				"half_life": 2400,
+				"initial": 0.1
+			}
+		},
+		{
+			"id": 18,
+			"type": "substance",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"chem": "Sommeil",
+				"half_life": 30,
+				"initial": 0.0
+			}
+		},
+		{
+			"id": 19,
+			"type": "substance",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"chem": "Douleur",
+				"half_life": 20,
+				"initial": 0.0
+			}
+		},
+		{
+			"id": 20,
+			"type": "substance",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"chem": "Peur",
+				"half_life": 20,
+				"initial": 0.0
+			}
+		},
+		{
+			"id": 21,
+			"type": "substance",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"chem": "Ennui",
+				"half_life": 1200,
+				"initial": 0.2
+			}
+		},
+		{
+			"id": 22,
+			"type": "substance",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"chem": "Solitude",
+				"half_life": 300,
+				"initial": 0.0
+			}
+		},
+		{
+			"id": 23,
+			"type": "substance",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"chem": "Surpopulation",
+				"half_life": 60,
+				"initial": 0.0
+			}
+		},
+		{
+			"id": 24,
+			"type": "substance",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"chem": "Froid",
+				"half_life": 60,
+				"initial": 0.0
+			}
+		},
+		{
+			"id": 25,
+			"type": "substance",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"chem": "Chaud",
+				"half_life": 60,
+				"initial": 0.0
+			}
+		},
+		{
+			"id": 26,
+			"type": "substance",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"chem": "Désir",
+				"half_life": 120,
+				"initial": 0.0
+			}
+		},
+		{
+			"id": 27,
+			"type": "substance",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"chem": "Récompense",
+				"half_life": 5,
+				"initial": 0.0
+			}
+		},
+		{
+			"id": 28,
+			"type": "substance",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"chem": "Punition",
+				"half_life": 5,
+				"initial": 0.0
+			}
+		},
+		{
+			"id": 29,
+			"type": "substance",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"chem": "Antigène 1",
+				"half_life": 600,
+				"initial": 0.0
+			}
+		},
+		{
+			"id": 30,
+			"type": "substance",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"chem": "Antigène 2",
+				"half_life": 600,
+				"initial": 0.0
+			}
+		},
+		{
+			"id": 31,
+			"type": "substance",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"chem": "Antigène 3",
+				"half_life": 600,
+				"initial": 0.0
+			}
+		},
+		{
+			"id": 32,
+			"type": "substance",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"chem": "Antigène 4",
+				"half_life": 600,
+				"initial": 0.0
+			}
+		},
+		{
+			"id": 33,
+			"type": "substance",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"chem": "Anticorps 1",
+				"half_life": 1200,
+				"initial": 0.0
+			}
+		},
+		{
+			"id": 34,
+			"type": "substance",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"chem": "Anticorps 2",
+				"half_life": 1200,
+				"initial": 0.0
+			}
+		},
+		{
+			"id": 35,
+			"type": "substance",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"chem": "Anticorps 3",
+				"half_life": 1200,
+				"initial": 0.0
+			}
+		},
+		{
+			"id": 36,
+			"type": "substance",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"chem": "Anticorps 4",
+				"half_life": 1200,
+				"initial": 0.0
+			}
+		},
+		{
+			"id": 37,
+			"type": "organe",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"organ": "Coeur",
+				"longevity_h": 9.5,
+				"repair": 0.0005,
+				"health": 1.0
+			}
+		},
+		{
+			"id": 38,
+			"type": "organe",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"organ": "Digestion",
+				"longevity_h": 12,
+				"repair": 0.0005,
+				"health": 1.0
+			}
+		},
+		{
+			"id": 39,
+			"type": "organe",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"organ": "Foie",
+				"longevity_h": 12,
+				"repair": 0.0005,
+				"health": 1.0
+			}
+		},
+		{
+			"id": 40,
+			"type": "organe",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"organ": "Reins",
+				"longevity_h": 12,
+				"repair": 0.0005,
+				"health": 1.0
+			}
+		},
+		{
+			"id": 41,
+			"type": "organe",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"organ": "Immunité",
+				"longevity_h": 12,
+				"repair": 0.0005,
+				"health": 1.0
+			}
+		},
+		{
+			"id": 42,
+			"type": "organe",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 0.5,
+			"dup": false,
+			"del": false,
+			"silent": false,
+			"p": {
+				"organ": "Reproduction",
+				"longevity_h": 10,
+				"repair": 0.0005,
+				"health": 1.0
+			}
+		},
+		{
+			"id": 43,
+			"type": "reaction",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"a": "Glucides (estomac)",
+				"b": "",
+				"c": "Glucose",
+				"d": "",
+				"rate": 0.08,
+				"organ": "Digestion",
+				"cond": "",
+				"lo": 0.0,
+				"hi": 1.0
+			}
+		},
+		{
+			"id": 44,
+			"type": "reaction",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"a": "Protéines (estomac)",
+				"b": "",
+				"c": "Protéines",
+				"d": "",
+				"rate": 0.05,
+				"organ": "Digestion",
+				"cond": "",
+				"lo": 0.0,
+				"hi": 1.0
+			}
+		},
+		{
+			"id": 45,
+			"type": "reaction",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"a": "Graisses (estomac)",
+				"b": "",
+				"c": "Graisse",
+				"d": "",
+				"rate": 0.03,
+				"organ": "Digestion",
+				"cond": "",
+				"lo": 0.0,
+				"hi": 1.0
+			}
+		},
+		{
+			"id": 46,
+			"type": "reaction",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"a": "Glucose",
+				"b": "",
+				"c": "Glycogène",
+				"d": "",
+				"rate": 0.02,
+				"organ": "Foie",
+				"cond": "Glucose",
+				"lo": 0.7,
+				"hi": 1.0
+			}
+		},
+		{
+			"id": 47,
+			"type": "reaction",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"a": "Glycogène",
+				"b": "",
+				"c": "Glucose",
+				"d": "",
+				"rate": 0.05,
+				"organ": "Foie",
+				"cond": "Glucose",
+				"lo": 0.0,
+				"hi": 0.4
+			}
+		},
+		{
+			"id": 48,
+			"type": "reaction",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"a": "Glucose",
+				"b": "",
+				"c": "Graisse",
+				"d": "",
+				"rate": 0.005,
+				"organ": "Foie",
+				"cond": "Glycogène",
+				"lo": 0.9,
+				"hi": 1.0
+			}
+		},
+		{
+			"id": 49,
+			"type": "reaction",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"a": "Graisse",
+				"b": "",
+				"c": "Glucose",
+				"d": "",
+				"rate": 0.01,
+				"organ": "Foie",
+				"cond": "Glycogène",
+				"lo": 0.0,
+				"hi": 0.05
+			}
+		},
+		{
+			"id": 50,
+			"type": "reaction",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"a": "Toxines",
+				"b": "",
+				"c": "Déchets",
+				"d": "",
+				"rate": 0.02,
+				"organ": "Foie",
+				"cond": "",
+				"lo": 0.0,
+				"hi": 1.0
+			}
+		},
+		{
+			"id": 51,
+			"type": "reaction",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"a": "Déchets",
+				"b": "",
+				"c": "",
+				"d": "",
+				"rate": 0.01,
+				"organ": "Reins",
+				"cond": "",
+				"lo": 0.0,
+				"hi": 1.0
+			}
+		},
+		{
+			"id": 52,
+			"type": "reaction",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"a": "Protéines",
+				"b": "",
+				"c": "",
+				"d": "",
+				"rate": 0.0005,
+				"organ": "Corps",
+				"cond": "",
+				"lo": 0.0,
+				"hi": 1.0
+			}
+		},
+		{
+			"id": 53,
+			"type": "emetteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"source": "corps.metabolisme",
+				"invert": false,
+				"threshold": 0.0,
+				"gain": -0.0008,
+				"chem": "Glucose",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 54,
+			"type": "emetteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"source": "corps.activite",
+				"invert": false,
+				"threshold": 0.0,
+				"gain": -0.002,
+				"chem": "Glucose",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 55,
+			"type": "emetteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"source": "corps.metabolisme",
+				"invert": false,
+				"threshold": 0.0,
+				"gain": 0.001,
+				"chem": "Déchets",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 56,
+			"type": "emetteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"source": "corps.metabolisme",
+				"invert": false,
+				"threshold": 0.0,
+				"gain": -0.0007,
+				"chem": "Eau",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 57,
+			"type": "emetteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"source": "chem:Glucose",
+				"invert": true,
+				"threshold": 0.5,
+				"gain": 0.05,
+				"chem": "Faim",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 58,
+			"type": "emetteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"source": "chem:Glycogène",
+				"invert": true,
+				"threshold": 0.5,
+				"gain": 0.02,
+				"chem": "Faim",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 59,
+			"type": "emetteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"source": "chem:Eau",
+				"invert": true,
+				"threshold": 0.5,
+				"gain": 0.05,
+				"chem": "Soif",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 60,
+			"type": "emetteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"source": "corps.activite",
+				"invert": false,
+				"threshold": 0.0,
+				"gain": 0.0002,
+				"chem": "Fatigue",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 61,
+			"type": "emetteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"source": "corps.metabolisme",
+				"invert": false,
+				"threshold": 0.0,
+				"gain": 0.0001,
+				"chem": "Fatigue",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 62,
+			"type": "emetteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"source": "corps.dort",
+				"invert": false,
+				"threshold": 0.0,
+				"gain": -0.003,
+				"chem": "Fatigue",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 63,
+			"type": "emetteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"source": "chem:Fatigue",
+				"invert": false,
+				"threshold": 0.6,
+				"gain": 0.05,
+				"chem": "Sommeil",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 64,
+			"type": "emetteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"source": "corps.ennui",
+				"invert": false,
+				"threshold": 0.0,
+				"gain": 0.008,
+				"chem": "Ennui",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 65,
+			"type": "emetteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"source": "chem:Toxines",
+				"invert": false,
+				"threshold": 0.3,
+				"gain": 0.05,
+				"chem": "Douleur",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 66,
+			"type": "emetteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"source": "chem:Douleur",
+				"invert": false,
+				"threshold": 0.2,
+				"gain": 0.05,
+				"chem": "Adrénaline",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 67,
+			"type": "emetteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"source": "chem:Fatigue",
+				"invert": false,
+				"threshold": 0.5,
+				"gain": 0.02,
+				"chem": "Hormone du sommeil",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 68,
+			"type": "emetteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"source": "corps.metabolisme",
+				"invert": false,
+				"threshold": 0.0,
+				"gain": 0.004,
+				"chem": "Croissance",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 69,
+			"type": "emetteur",
+			"stage": "ado",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"source": "corps.metabolisme",
+				"invert": false,
+				"threshold": 0.0,
+				"gain": -0.004,
+				"chem": "Croissance",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 70,
+			"type": "emetteur",
+			"stage": "adulte",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"source": "corps.metabolisme",
+				"invert": false,
+				"threshold": 0.0,
+				"gain": 0.005,
+				"chem": "Hormone sexuelle",
+				"organ": "Reproduction"
+			}
+		},
+		{
+			"id": 71,
+			"type": "emetteur",
+			"stage": "adulte",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"source": "chem:Hormone sexuelle",
+				"invert": false,
+				"threshold": 0.3,
+				"gain": 0.01,
+				"chem": "Désir",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 72,
+			"type": "recepteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"chem": "Toxines",
+				"invert": false,
+				"threshold": 0.2,
+				"gain": 0.002,
+				"locus": "organe.Foie.degats",
+				"organ": "Foie"
+			}
+		},
+		{
+			"id": 73,
+			"type": "recepteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"chem": "Déchets",
+				"invert": false,
+				"threshold": 0.6,
+				"gain": 0.002,
+				"locus": "organe.Reins.degats",
+				"organ": "Reins"
+			}
+		},
+		{
+			"id": 74,
+			"type": "recepteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"chem": "Glucose",
+				"invert": true,
+				"threshold": 0.97,
+				"gain": 0.02,
+				"locus": "organe.Coeur.degats",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 75,
+			"type": "recepteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"chem": "Eau",
+				"invert": true,
+				"threshold": 0.97,
+				"gain": 0.02,
+				"locus": "organe.Coeur.degats",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 76,
+			"type": "recepteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"chem": "Toxines",
+				"invert": false,
+				"threshold": 0.6,
+				"gain": 0.003,
+				"locus": "organe.Coeur.degats",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 77,
+			"type": "recepteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"chem": "Adrénaline",
+				"invert": false,
+				"threshold": 0.1,
+				"gain": 1.0,
+				"locus": "corps.vitesse_bonus",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 78,
+			"type": "lobe",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"lobe": "decision",
+				"noise": 0.5,
+				"learning_rate": 0.5
+			}
+		},
+		{
+			"id": 79,
+			"type": "apparence",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"part": "corps",
+				"hue": 0.5,
+				"size": 0.5,
+				"speed": 0.5
+			}
+		}
+	]
+}

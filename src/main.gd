@@ -3,7 +3,10 @@ extends Node2D
 ## Toucher la créature = la caresser. Toucher ailleurs = faire tomber un fruit.
 ## Glisser = déplacer la caméra.
 
-const SPEEDS: Array[float] = [1.0, 2.0, 4.0]
+## Pas fixe de simulation (5 par seconde de jeu), découplé de l'affichage.
+const STEP := 0.2
+const MAX_STEPS_PER_FRAME := 60
+const SPEEDS: Array[float] = [1.0, 2.0, 4.0, 16.0]
 const TAP_SLOP := 16.0
 
 var world: WorldSim
@@ -16,6 +19,7 @@ var _follow := true
 var _pressing := false
 var _dragged := false
 var _press_pos := Vector2.ZERO
+var _accumulator := 0.0
 
 
 func _ready() -> void:
@@ -46,19 +50,29 @@ func _ready() -> void:
 	hud.fruit_pressed.connect(func() -> void: world.drop_food(_creature().x + _creature().facing * 160.0))
 	hud.speed_pressed.connect(func() -> void: _speed_index = (_speed_index + 1) % SPEEDS.size())
 	hud.follow_pressed.connect(func() -> void: _follow = true)
+	hud.new_creature_pressed.connect(_on_new_creature)
 
 
 func _creature() -> CreatureSim:
 	return world.creatures[0]
 
 
+func _on_new_creature() -> void:
+	world.replace_dead()
+	creature_view.creature = _creature()
+	_follow = true
+
+
 func _process(delta: float) -> void:
 	var speed := SPEEDS[_speed_index]
-	# Sous-pas : la simulation reste stable même en accéléré.
-	var steps := int(ceil(speed))
-	var dt := minf(delta, 0.1) * speed / steps
-	for i in steps:
-		world.tick(dt)
+	_accumulator += minf(delta, 0.1) * speed
+	var steps := 0
+	while _accumulator >= STEP and steps < MAX_STEPS_PER_FRAME:
+		world.tick(STEP)
+		_accumulator -= STEP
+		steps += 1
+	if steps == MAX_STEPS_PER_FRAME:
+		_accumulator = 0.0   # appareil trop lent : on ralentit plutôt que de figer
 
 	if _follow:
 		camera.position.x = lerpf(camera.position.x, _creature().x, 1.0 - exp(-3.0 * delta))
@@ -87,7 +101,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _on_tap(screen_pos: Vector2) -> void:
 	var world_pos := get_canvas_transform().affine_inverse() * screen_pos
 	var c := _creature()
-	if world_pos.distance_to(creature_view.body_center()) < 80.0 * c.size:
+	if world_pos.distance_to(creature_view.body_center()) < 80.0 * c.body_size():
 		c.caress()
 	else:
 		world.drop_food(world_pos.x)

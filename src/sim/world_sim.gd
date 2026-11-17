@@ -23,7 +23,7 @@ func _init(seed_value: int = 0) -> void:
 		rng.randomize()
 	else:
 		rng.seed = seed_value
-	creatures.append(CreatureSim.new("Nina", Genome.create_random(rng), width * 0.5))
+	creatures.append(new_creature(width * 0.5))
 	for i in 3:
 		_spawn_fruit_from_tree()
 
@@ -42,6 +42,32 @@ func tick(dt: float) -> void:
 
 	for c in creatures:
 		c.tick(dt, self, rng)
+
+
+const NAMES: Array[String] = ["Nina", "Ylo", "Kesh", "Mira", "Tavi", "Oru", "Sena", "Pim", "Lysa", "Bao", "Ezra", "Noa"]
+var _name_index := 0
+
+
+## Nouvelle créature issue de la souche de départ, légèrement mutée,
+## avec une apparence tirée au hasard.
+func new_creature(at_x: float) -> CreatureSim:
+	var g := Genome.starter()
+	g.mutate(rng, 0.05)
+	var look := g.find(Gene.Type.APPEARANCE, "part", "corps")
+	if look:
+		for k in ["hue", "size", "speed"]:
+			look.params[k] = rng.randf()
+	var creature_name := NAMES[_name_index % NAMES.size()]
+	_name_index += 1
+	var sex := Gene.Sex.MALE if rng.randf() < 0.5 else Gene.Sex.FEMALE
+	return CreatureSim.new(creature_name, g, at_x, sex)
+
+
+## Remplace la créature morte par une nouvelle.
+func replace_dead() -> void:
+	for i in creatures.size():
+		if not creatures[i].alive:
+			creatures[i] = new_creature(creatures[i].x)
 
 
 ## Le joueur fait tomber un fruit du ciel.
@@ -78,6 +104,8 @@ func remove_food(id: int) -> void:
 
 
 func _spawn_fruit_from_tree() -> void:
+	if trees.is_empty():
+		return
 	var tree_x := trees[rng.randi_range(0, trees.size() - 1)]
 	_add_food(tree_x + rng.randf_range(-110.0, 110.0), rng.randf_range(180.0, 260.0))
 

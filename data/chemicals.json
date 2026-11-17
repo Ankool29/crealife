@@ -1,0 +1,182 @@
+[
+	{
+		"id": 1,
+		"name": "Glucose",
+		"family": "énergie"
+	},
+	{
+		"id": 2,
+		"name": "Glycogène",
+		"family": "énergie"
+	},
+	{
+		"id": 3,
+		"name": "Graisse",
+		"family": "énergie"
+	},
+	{
+		"id": 4,
+		"name": "Protéines",
+		"family": "énergie"
+	},
+	{
+		"id": 5,
+		"name": "Eau",
+		"family": "énergie"
+	},
+	{
+		"id": 6,
+		"name": "Glucides (estomac)",
+		"family": "digestion"
+	},
+	{
+		"id": 7,
+		"name": "Protéines (estomac)",
+		"family": "digestion"
+	},
+	{
+		"id": 8,
+		"name": "Graisses (estomac)",
+		"family": "digestion"
+	},
+	{
+		"id": 9,
+		"name": "Déchets",
+		"family": "déchets"
+	},
+	{
+		"id": 10,
+		"name": "Toxines",
+		"family": "déchets"
+	},
+	{
+		"id": 11,
+		"name": "Adrénaline",
+		"family": "hormone"
+	},
+	{
+		"id": 12,
+		"name": "Croissance",
+		"family": "hormone"
+	},
+	{
+		"id": 13,
+		"name": "Hormone sexuelle",
+		"family": "hormone"
+	},
+	{
+		"id": 14,
+		"name": "Hormone du sommeil",
+		"family": "hormone"
+	},
+	{
+		"id": 15,
+		"name": "Faim",
+		"family": "pulsion"
+	},
+	{
+		"id": 16,
+		"name": "Soif",
+		"family": "pulsion"
+	},
+	{
+		"id": 17,
+		"name": "Fatigue",
+		"family": "pulsion"
+	},
+	{
+		"id": 18,
+		"name": "Sommeil",
+		"family": "pulsion"
+	},
+	{
+		"id": 19,
+		"name": "Douleur",
+		"family": "pulsion"
+	},
+	{
+		"id": 20,
+		"name": "Peur",
+		"family": "pulsion"
+	},
+	{
+		"id": 21,
+		"name": "Ennui",
+		"family": "pulsion"
+	},
+	{
+		"id": 22,
+		"name": "Solitude",
+		"family": "pulsion"
+	},
+	{
+		"id": 23,
+		"name": "Surpopulation",
+		"family": "pulsion"
+	},
+	{
+		"id": 24,
+		"name": "Froid",
+		"family": "pulsion"
+	},
+	{
+		"id": 25,
+		"name": "Chaud",
+		"family": "pulsion"
+	},
+	{
+		"id": 26,
+		"name": "Désir",
+		"family": "pulsion"
+	},
+	{
+		"id": 27,
+		"name": "Récompense",
+		"family": "renforcement"
+	},
+	{
+		"id": 28,
+		"name": "Punition",
+		"family": "renforcement"
+	},
+	{
+		"id": 29,
+		"name": "Antigène 1",
+		"family": "immunité"
+	},
+	{
+		"id": 30,
+		"name": "Antigène 2",
+		"family": "immunité"
+	},
+	{
+		"id": 31,
+		"name": "Antigène 3",
+		"family": "immunité"
+	},
+	{
+		"id": 32,
+		"name": "Antigène 4",
+		"family": "immunité"
+	},
+	{
+		"id": 33,
+		"name": "Anticorps 1",
+		"family": "immunité"
+	},
+	{
+		"id": 34,
+		"name": "Anticorps 2",
+		"family": "immunité"
+	},
+	{
+		"id": 35,
+		"name": "Anticorps 3",
+		"family": "immunité"
+	},
+	{
+		"id": 36,
+		"name": "Anticorps 4",
+		"family": "immunité"
+	}
+]

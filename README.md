@@ -3,13 +3,24 @@
 Jeu de vie artificielle inspiré de la série *Creatures*, conçu pour le mobile (Godot 4, GDScript).
 Tout le contenu est original : aucun fichier ni code du jeu Creatures n'est utilisé.
 
-## Prototype actuel
+## État actuel : phase 1 (génome et biochimie)
 
-- **Nina**, une créature dont l'apparence et le caractère viennent de son **génome**
-  (couleur, taille, vitesse, métabolisme, endurance, curiosité, capacité d'apprentissage).
-- Une **chimie** simplifiée : faim, fatigue et ennui montent avec le temps.
-- Un **cerveau** qui choisit entre se reposer, se promener, manger, dormir et jouer,
-  et qui **apprend** : satisfaire un besoin est agréable, et le joueur peut récompenser ou punir.
+Le comportement n'est pas écrit à la main : il découle du **génome**
+(`data/genomes/souche_depart.json`, 79 gènes typés), qui configure :
+
+- **36 substances** (glucose, glycogène, eau, toxines, hormones, pulsions...)
+  avec leurs demi-vies ;
+- des **réactions** (digestion, stockage du sucre, élimination des déchets) ;
+- des **émetteurs** et **récepteurs** qui relient la chimie au corps ;
+- **6 organes** (cœur, digestion, foie, reins, immunité, reproduction) qui
+  s'abîment, se réparent et vieillissent ;
+- un **cycle de vie** : bébé, enfant, ado, adulte, vieux, puis mort vers 10 h
+  de jeu. Certains gènes ne s'activent qu'à un stade donné (hormone sexuelle
+  à l'âge adulte, par exemple).
+
+Le cerveau reste provisoire (5 actions apprises par renforcement) ; le cerveau
+à lobes arrive en phase 2. Conception complète : voir le document de
+conception technique.
 
 ### Commandes
 
@@ -19,7 +30,9 @@ Tout le contenu est original : aucun fichier ni code du jeu Creatures n'est util
 | Bouton **Gronder** | Punit ce qu'elle fait (elle le fera moins dans cette situation) |
 | Toucher le décor / bouton **Fruit** | Fait tomber un fruit |
 | Glisser | Déplace la caméra (**Suivre** pour la recentrer) |
-| **x1 / x2 / x4** | Vitesse du temps |
+| **x1 / x2 / x4 / x16** | Vitesse du temps |
+| **Chimie** | Affiche les substances et la santé des organes |
+| **Nouvelle créature** | Apparaît quand la créature est morte |
 
 ## Jouer sur Android (Galaxy S25 Ultra)
 
@@ -46,16 +59,16 @@ cd ~/storage/shared/Godot/crealife && git pull
 ## Architecture
 
 ```
-src/sim/     Simulation pure, sans affichage (testable seule)
-  genome.gd         gènes, croisement, mutations
-  biochemistry.gd   pulsions (faim, fatigue, ennui) et renforcements
-  brain.gd          choix des actions + apprentissage
-  creature_sim.gd   comportement d'une créature
-  world_sim.gd      monde, arbres, fruits
-src/view/    Dessin du monde et des créatures (formes procédurales)
-src/ui/      Interface tactile
-src/main.gd  Assemble le tout, caméra et gestes
-tests/       Tests de la simulation
+data/                 Catalogue des substances, souche de départ
+src/sim/genetics/     Gènes typés, génome, croisement, mutations
+src/sim/biology/      Substances, réactions, émetteurs, récepteurs,
+                      organes, cycle de vie
+src/sim/brain.gd      Cerveau provisoire (phase 1)
+src/sim/creature_sim.gd  Assemble corps, chimie et cerveau
+src/sim/world_sim.gd  Monde, arbres, fruits
+src/view/, src/ui/    Affichage et interface tactile
+tools/                Générateur de la souche de départ (Python)
+tests/                Tests de la simulation
 ```
 
 Tests (sur PC ou Termux avec Godot en ligne de commande) :
