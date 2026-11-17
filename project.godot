@@ -1,0 +1,25 @@
+; Fichier de configuration du projet Godot (ne pas éditer à la main sauf besoin).
+
+config_version=5
+
+[application]
+
+config/name="CreaLife"
+config/description="Jeu de vie artificielle inspiré de Creatures, pensé pour le mobile."
+run/main_scene="res://scenes/main.tscn"
+config/features=PackedStringArray("4.5", "GL Compatibility")
+config/icon="res://icon.svg"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=4
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/vram_compression/import_etc2_astc=true
