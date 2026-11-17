@@ -151,6 +151,8 @@ func _choose_attention(rng: RandomNumberGenerator) -> void:
 		var s := 0.3 * vision[c] + attn_bias[c] + rng.randfn(0.0, _attn_noise)
 		if lang:
 			s += 2.0 * lang.heard_noun[c] * lang.heard_strength()
+			if lang.shown_left > 0.0 and lang.shown_category == c:
+				s += 3.0       # on lui montre cet objet : elle le regarde
 		for d in DRIVE_COUNT:
 			s += attn_w[d * _cats + c] * drives[d]
 		if s > best:

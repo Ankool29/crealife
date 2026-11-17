@@ -29,7 +29,8 @@ Tout le contenu est original : aucun fichier ni code du jeu Creatures n'est util
 | Toucher une créature | La sélectionner (la caméra la suit) |
 | Toucher la créature sélectionnée / **Caresser** | Récompense ce qu'elle est en train de faire |
 | **Suivante** | Sélectionne la créature suivante |
-| **Parler** | Écrire une phrase ou toucher des mots, puis **Dire** : la créature sélectionnée (et ses voisines) l'entend |
+| **Parler** | Ouvre le bandeau de paroles : toucher un mot le dit aussitôt ; une phrase s'écrit puis **Dire**. La créature sélectionnée (et ses voisines) l'entend |
+| Bandeau ouvert : toucher un objet ou une autre créature | Le lui montre (flèche jaune) : elle le regarde 15 s, le temps de lui en dire le nom |
 | **Observer** | Chimie, cerveau, mots connus, gènes, famille de la créature sélectionnée |
 | Bouton **Gronder** | Punit ce qu'elle fait (elle le fera moins dans cette situation) |
 | Toucher le décor / bouton **Fruit** | Fait tomber un fruit |

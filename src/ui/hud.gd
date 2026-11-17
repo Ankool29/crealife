@@ -33,6 +33,7 @@ var _new_button: Button
 var _speech_panel: PanelContainer
 var _speech_line: LineEdit
 var _menu_button: Button
+var _state_panel: PanelContainer
 
 ## Mots proposés sous forme de boutons (on peut aussi taper la phrase).
 const CHIPS := [
@@ -55,6 +56,7 @@ func _ready() -> void:
 	var panel := _panel()
 	panel.position = Vector2(MARGIN, 16)
 	root.add_child(panel)
+	_state_panel = panel
 	var box := VBoxContainer.new()
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_theme_constant_override("separation", 2)
@@ -152,38 +154,41 @@ func _build_speech_panel(root: Control) -> void:
 	_speech_panel = _panel()
 	_speech_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	_speech_panel.visible = false
-	_speech_panel.anchor_left = 0.0
-	_speech_panel.anchor_right = 0.62
-	_speech_panel.anchor_top = 1.0
-	_speech_panel.anchor_bottom = 1.0
-	_speech_panel.offset_left = MARGIN
-	_speech_panel.offset_bottom = -126
-	_speech_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	# Bandeau compact en haut à gauche : le décor reste visible et touchable
+	# en dessous (toucher un objet le montre à la créature).
+	_speech_panel.position = Vector2(MARGIN, 16)
+	_speech_panel.custom_minimum_size = Vector2(760, 0)
 	root.add_child(_speech_panel)
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 8)
+	box.add_theme_constant_override("separation", 6)
 	_speech_panel.add_child(box)
 	var row := HBoxContainer.new()
 	box.add_child(row)
 	_speech_line = LineEdit.new()
-	_speech_line.placeholder_text = "ex. : mange la graine"
+	_speech_line.placeholder_text = "touchez un mot, ou écrivez une phrase"
 	_speech_line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_speech_line.custom_minimum_size = Vector2(0, 64)
+	_speech_line.custom_minimum_size = Vector2(0, 56)
 	_speech_line.text_submitted.connect(func(_t: String) -> void: _send_speech())
 	row.add_child(_speech_line)
 	for pair in [["Effacer", func() -> void: _speech_line.text = ""], ["Dire", _send_speech]]:
 		var b := Button.new()
 		b.text = pair[0]
-		b.custom_minimum_size = Vector2(110, 64)
+		b.custom_minimum_size = Vector2(110, 56)
 		b.focus_mode = Control.FOCUS_NONE
 		b.pressed.connect(pair[1])
 		row.add_child(b)
 	var colors := [Color(0.75, 0.95, 0.85), Color(1.0, 0.9, 0.7), Color(0.95, 0.8, 0.95)]
 	for g in CHIPS.size():
-		var flow := HFlowContainer.new()
-		flow.add_theme_constant_override("h_separation", 6)
-		flow.add_theme_constant_override("v_separation", 6)
-		box.add_child(flow)
+		# une ligne de mots par groupe, qui défile du doigt si elle dépasse
+		var scroll := ScrollContainer.new()
+		scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+		scroll.scroll_deadzone = 12
+		scroll.custom_minimum_size = Vector2(0, 52)
+		box.add_child(scroll)
+		var flow := HBoxContainer.new()
+		flow.add_theme_constant_override("separation", 6)
+		scroll.add_child(flow)
 		for w in CHIPS[g]:
 			var chip := Button.new()
 			chip.text = w
@@ -191,8 +196,7 @@ func _build_speech_panel(root: Control) -> void:
 			chip.custom_minimum_size = Vector2(0, 52)
 			chip.add_theme_font_size_override("font_size", 20)
 			chip.modulate = colors[g]
-			chip.pressed.connect(func() -> void:
-				_speech_line.text = (_speech_line.text + " " + w).strip_edges())
+			chip.pressed.connect(func() -> void: say_pressed.emit(w))   # dit tout de suite
 			flow.add_child(chip)
 
 
@@ -245,6 +249,10 @@ func _build_menu(root: Control) -> void:
 	menu.pressed.connect(func() -> void: dim.visible = true)
 
 
+func speech_open() -> bool:
+	return _speech_panel.visible
+
+
 func _send_speech() -> void:
 	var t := _speech_line.text.strip_edges()
 	if t != "":
@@ -278,6 +286,8 @@ func update_from(c: CreatureSim, world: WorldSim, event_text: String, sim_speed:
 	observe.creature = c
 	observe.world = world
 	_menu_button.visible = not observe.visible     # sinon il cache le bouton de fermeture
+	_state_panel.visible = not _speech_panel.visible
+	_event_label.position.y = 282 if _speech_panel.visible else 20
 	_event_label.text = event_text
 	_speed_button.text = "x%d" % int(sim_speed)
 	_follow_button.modulate = Color.WHITE if following else Color(1, 1, 1, 0.5)

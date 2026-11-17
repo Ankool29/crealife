@@ -35,6 +35,8 @@ const BABBLE: Array[String] = ["bi", "ba", "bou", "ga", "li", "mo", "nu", "pa", 
 const LETTERS := "aeioubdglmnpst"
 const HEARD_TIME := 12.0      # durée pendant laquelle un ordre reste « en tête »
 const SAY_TIME := 4.0
+const SHOW_TIME := 15.0       # durée pendant laquelle elle regarde l'objet montré
+const PROGRESS_TIME := 2.5
 
 var nouns := PackedFloat32Array()     # une par catégorie d'objet
 var verbs := PackedFloat32Array()     # une par verbe
@@ -50,6 +52,13 @@ var speech := ""
 var speech_left := 0.0
 ## Mots entendus en dernier (affichage « a entendu : ... »).
 var last_heard := ""
+## Objet montré par le joueur : elle le regarde pendant SHOW_TIME.
+var shown_category := -1
+var shown_object: Object = null
+var shown_left := 0.0
+## Mots qui viennent de progresser (« + fruit ») et durée d'affichage.
+var progress_text := ""
+var progress_left := 0.0
 
 var learning := 0.25
 var talk := 0.5
@@ -148,22 +157,30 @@ func vocabulary_size() -> int:
 ## closeness : 1 pour la créature à qui l'on parle, moins pour les voisines.
 func hear(text: String, brain: Brain, closeness: float) -> Array:
 	var found := []
+	var said := []
 	for raw in text.replace(",", " ").replace("!", " ").replace("?", " ").replace(".", " ").split(" ", false):
 		var c := classify(raw)
 		if c[1] >= 0:
 			found.append(c)
+			said.append(raw.to_lower())
 	last_heard = text.strip_edges()
 	if found.is_empty():
 		return found
 	heard_noun.fill(0.0)
 	heard_verb.fill(0.0)
 	_heard_left = HEARD_TIME
-	for c in found:
+	var gained: Array[String] = []
+	for n in found.size():
+		var c: Array = found[n]
 		var i: int = c[1]
+		var before := knowledge(c[0], i)
 		match c[0]:
 			"nom":
-				# Apprendre : elle regarde l'objet, ou il est tout près d'elle.
-				var look := 1.0 if brain.attention == i else 0.6 * brain.vision[i]
+				# Apprendre : elle regarde l'objet (ou on le lui montre),
+				# sinon un peu s'il est tout près d'elle.
+				var look := 0.6 * brain.vision[i]
+				if brain.attention == i or (shown_left > 0.0 and shown_category == i):
+					look = 1.0
 				learn("nom", i, look * closeness)
 				heard_noun[i] = nouns[i] * closeness
 			"verbe":
@@ -173,7 +190,19 @@ func hear(text: String, brain: Brain, closeness: float) -> Array:
 			"besoin":
 				if brain.drives[i] > 0.4:
 					learn("besoin", i, brain.drives[i] * closeness)
+		if knowledge(c[0], i) > before + 0.005:
+			gained.append("+ " + said[n])
+	if not gained.is_empty():
+		progress_text = "  ".join(gained)
+		progress_left = PROGRESS_TIME
 	return found
+
+
+## Le joueur lui montre un objet (ou une autre créature).
+func show(obj: Object, category: int) -> void:
+	shown_object = obj
+	shown_category = category
+	shown_left = SHOW_TIME
 
 
 func tick(dt: float) -> void:
@@ -182,6 +211,13 @@ func tick(dt: float) -> void:
 		if _heard_left <= 0.0:
 			heard_noun.fill(0.0)
 			heard_verb.fill(0.0)
+	if shown_left > 0.0:
+		shown_left -= dt
+		if shown_left <= 0.0:
+			shown_object = null
+			shown_category = -1
+	if progress_left > 0.0:
+		progress_left -= dt
 	if speech_left > 0.0:
 		speech_left -= dt
 		if speech_left <= 0.0:

@@ -115,6 +115,19 @@ func _draw() -> void:
 		draw_string(font, Vector2(20, -230) * sz, "?!", HORIZONTAL_ALIGNMENT_LEFT, -1, 34, Color(1, 1, 1, 0.95))
 	if c.alive and c.language.speech != "":
 		_draw_bubble(Vector2(0, top - (52 if selected else 22)), c.language.speech, font)
+	var L := c.language
+	if c.alive and L.progress_left > 0.0:
+		var rise := (Language.PROGRESS_TIME - L.progress_left) * 25.0
+		draw_string(font, Vector2(70, top + 10 - rise), L.progress_text,     # à droite du nom
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 26, Color(0.55, 1.0, 0.6, minf(1.0, L.progress_left)))
+	if selected and c.alive and L.shown_left > 0.0 and L.shown_object != null:
+		# flèche au-dessus de ce qu'on lui montre
+		var o = L.shown_object
+		var tip := Vector2(o.x - c.x, (-o.h - 60.0) if o is WorldObject else -230.0 * o.body_size())
+		tip.y -= 8.0 * sin(_t * 6.0)
+		var col := Color(1, 0.9, 0.3, minf(1.0, L.shown_left))
+		draw_colored_polygon(PackedVector2Array([tip, tip + Vector2(-16, -22), tip + Vector2(16, -22)]), col)
+		draw_rect(Rect2(tip + Vector2(-6, -48), Vector2(12, 28)), col)
 	var reward := c.level("Récompense")
 	if reward > 0.05:
 		_draw_heart(Vector2(0, -250) * sz, Color(0.95, 0.25, 0.4, minf(reward, 1.0)))

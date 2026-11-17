@@ -254,7 +254,10 @@ func _decide(world: WorldSim, rng: RandomNumberGenerator) -> void:
 	allowed[Verb.DORMIR] = level("Fatigue") >= MIN_FATIGUE_TO_SLEEP
 	allowed[Verb.ACCOUPLER] = stage == Lifecycle.Stage.ADULT
 	var v := brain.decide(rng, allowed)
-	if brain.attention == ObjectCatalog.categories.find("créature"):
+	if language.shown_left > 0.0 and brain.attention == language.shown_category \
+			and language.shown_object != null and _shown_valid(world):
+		target = language.shown_object
+	elif brain.attention == ObjectCatalog.categories.find("créature"):
 		target = _nearest_creature(world)
 	else:
 		target = _nearest(world, brain.attention) if brain.attention >= 0 else null
@@ -422,6 +425,28 @@ func _maybe_talk(rng: RandomNumberGenerator) -> void:
 		language.say([["besoin", strongest]])
 	elif brain.verb in Brain.OBJECT_VERBS and brain.attention >= 0:
 		language.say([["verbe", brain.verb], ["nom", brain.attention]])
+
+
+## Le joueur lui montre un objet ou une créature : elle se tourne vers lui
+## et le regarde un moment (le temps de lui en dire le nom).
+func show_thing(obj: Object) -> void:
+	if not alive or is_asleep() or obj == self:
+		return
+	var cat: int = ObjectCatalog.categories.find("créature") if obj is CreatureSim else obj.category
+	if cat < 0:
+		return
+	language.show(obj, cat)
+	facing = signf(obj.x - x) if absf(obj.x - x) > 1.0 else facing
+	_action_time = minf(_action_time, 0.3)
+	last_event = "Vous montrez %s à %s." % [
+		obj.creature_name if obj is CreatureSim else ObjectCatalog.label_of(obj.type_name).to_lower(), creature_name]
+
+
+func _shown_valid(world: WorldSim) -> bool:
+	var o := language.shown_object
+	if o is CreatureSim:
+		return o.alive and o in world.creatures
+	return o in world.objects and o.holder == null
 
 
 ## Le joueur (ou une autre créature) lui parle. closeness : 1 si c'est à elle

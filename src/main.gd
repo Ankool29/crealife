@@ -182,6 +182,14 @@ func _on_tap(screen_pos: Vector2) -> void:
 		if d < 110.0 * v.creature.body_size() and d < best_d:
 			best_d = d
 			best = v
+	# Panneau « Parler » ouvert : toucher un objet ou une autre créature la lui montre
+	if hud.speech_open() and _selected():
+		var thing := _thing_at(world_pos, best)
+		if thing != null:
+			_selected().show_thing(thing)
+			_event_text = _selected().last_event
+			_event_timer = 0.0
+			return
 	if best == null:
 		world.drop_food(world_pos.x)
 	elif best.creature.uid == _selected_uid:
@@ -189,6 +197,27 @@ func _on_tap(screen_pos: Vector2) -> void:
 	else:
 		_selected_uid = best.creature.uid
 		_follow = true
+
+
+## Objet ou créature (autre que la sélectionnée) le plus proche du doigt.
+func _thing_at(world_pos: Vector2, _unused: CreatureView) -> Object:
+	var best: Object = null
+	var best_d := 90.0
+	for o in world.objects:
+		if o.holder != null:
+			continue
+		var d := world_pos.distance_to(Vector2(o.x, -o.h - 25.0))
+		if d < best_d:
+			best_d = d
+			best = o
+	for v in _views.values():
+		if v.creature.uid == _selected_uid or not v.creature.alive:
+			continue
+		var d: float = world_pos.distance_to(v.body_center()) * 1.3   # les objets, plus petits, passent avant
+		if d < best_d:
+			best_d = d
+			best = v.creature
+	return best
 
 
 # ---------------------------------------------------------- sauvegarde --
