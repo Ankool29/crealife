@@ -34,11 +34,12 @@ static func ranges_for(t: int) -> Dictionary:
 		Type.RECEPTOR: return {"threshold": [0.0, 1.0], "gain": [0.0, 10.0]}
 		Type.ORGAN: return {"longevity_h": [0.5, 40.0], "repair": [0.0, 0.01], "health": [0.0, 1.0]}
 		Type.LOBE: return {"noise": [0.0, 1.0], "learning_rate": [0.0, 1.0], "ltw_rate": [0.0, 0.05], "stw_relax": [0.0, 0.05],
-				"talk": [0.0, 1.0], "obey": [0.0, 1.0], "ageing": [0.0, 1.0]}
+				"talk": [0.0, 1.0], "obey": [0.0, 1.0], "ageing": [0.0, 1.0], "care": [0.0, 1.0]}
 		Type.INSTINCT: return {"reward": [-2.0, 2.0], "repeat": [0.0, 20.0]}
 		Type.APPEARANCE: return {"hue": [0.0, 1.0], "hue2": [0.0, 1.0], "saturation": [0.0, 1.0],
 				"brightness": [0.0, 1.0], "glow": [0.0, 1.0], "glow_power": [0.0, 1.0], "size": [0.0, 1.0],
-				"speed": [0.0, 1.0], "tail": [0.0, 1.0], "antennae": [0.0, 1.0], "corpulence": [0.0, 1.0]}
+				"speed": [0.0, 1.0], "tail": [0.0, 1.0], "antennae": [0.0, 1.0], "corpulence": [0.0, 1.0],
+				"spots": [0.0, 1.0], "stripes": [0.0, 1.0], "patches": [0.0, 1.0], "hue3": [0.0, 1.0], "light3": [0.0, 1.0]}
 	return {}
 
 

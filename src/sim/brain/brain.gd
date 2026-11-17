@@ -179,6 +179,13 @@ func _compute_concepts() -> void:
 			concepts[_heard_base + v] = lang.heard_verb[v] * f
 
 
+## Oublie la trace de la dernière décision (rien ne sera renforcé).
+func clear_trace() -> void:
+	_elig.fill(0.0)
+	_elig_drives.fill(0.0)
+	_elig_cat = -1
+
+
 ## Renforcement de la dernière décision : r > 0 récompense, r < 0 punition.
 ## Les concepts de pulsion apprennent pleinement ; les concepts de contexte
 ## (objet seul, situations), toujours actifs, apprennent beaucoup moins vite :

@@ -19,5 +19,9 @@ python art/blender/background.py <dossier> near    # sol, arbres, buissons
 - La queue et les antennes existent en trois variantes chacune, rendues
   dans des couches séparées (`*_queueN.png`, `*_antennesN.png`), le corps
   servant de masque ; le jeu superpose les couches choisies par les gènes.
+- Chaque image a aussi un masque de motifs (`*_motifs.png` : rouge =
+  taches, vert = rayures, bleu = plaques), calculé dans l'espace de chaque
+  partie du corps pour suivre ses mouvements ; le shader le colore selon
+  les gènes. `creature.py <dossier> masks` ne refait que les masques.
 - Les positions des arbres et buissons dans `background.py` doivent
   correspondre à `src/sim/world_sim.gd`.

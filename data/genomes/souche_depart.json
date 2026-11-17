@@ -1806,6 +1806,38 @@
 				"antennae": 0.5,
 				"corpulence": 0.5
 			}
+		},
+		{
+			"id": 107,
+			"type": "apparence",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"part": "motif",
+				"spots": 0.0,
+				"stripes": 0.0,
+				"patches": 0.0,
+				"hue3": 0.1,
+				"light3": 0.5
+			}
+		},
+		{
+			"id": 108,
+			"type": "lobe",
+			"stage": "adulte",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"lobe": "parental",
+				"care": 0.6
+			}
 		}
 	]
 }

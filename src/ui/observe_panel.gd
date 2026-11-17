@@ -165,6 +165,8 @@ func _gene_summary(g: Gene) -> String:
 		Gene.Type.ORGAN:
 			return "%s, longévité %.1f h" % [p.organ, float(p.longevity_h)]
 		Gene.Type.LOBE:
+			if str(p.lobe) == "parental":
+				return "instinct parental %.2f (nourrir et parler à ses petits)" % float(p.get("care", 0))
 			if str(p.lobe) == "langage":
 				return "lobe langage, apprentissage %.2f, bavardage %.2f, obéissance %.2f" % [
 					float(p.get("learning_rate", 0)), float(p.get("talk", 0)), float(p.get("obey", 0))]
@@ -176,6 +178,12 @@ func _gene_summary(g: Gene) -> String:
 			var cat := str(p.category) if str(p.category) != "" else "rien"
 			return "%s + %s → %s  (%+.1f)" % [p.drive, cat, p.verb, float(p.reward)]
 		Gene.Type.APPEARANCE:
+			if str(p.get("part", "")) == "motif":
+				var names := PackedStringArray()
+				for pair in [["taches", "spots"], ["rayures", "stripes"], ["plaques", "patches"]]:
+					var v := float(p.get(pair[1], 0))
+					names.append("%s %.2f%s" % [pair[0], v, "" if v >= 0.2 else " (dormant)"])
+				return "motif : %s, teinte %.2f" % [", ".join(names), float(p.get("hue3", 0))]
 			if str(p.get("part", "")) == "silhouette":
 				return "queue %s, antennes %s, corpulence %.2f" % [
 					["courte", "longue", "massue"][clampi(int(float(p.get("tail", 0.5)) * 3.0), 0, 2)],

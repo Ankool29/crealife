@@ -19,6 +19,7 @@ func _init() -> void:
 	_test_generations()
 	_test_language()
 	_test_appearance_genes()
+	_test_family_life()
 	print("RÉSULTAT : %s" % ("OK" if _failures == 0 else "%d échec(s)" % _failures))
 	quit(_failures)
 
@@ -272,9 +273,10 @@ func _test_language() -> void:
 	_check(c.language.nouns[ObjectCatalog.categories.find("fruit")] < 0.05, "elle n'apprend pas les mots qu'on ne lui dit pas")
 
 	# 2. Obéir à un ordre (même monde, avec et sans ordres)
-	var pushes := []
-	for ordered in [false, true]:
-		var w2 := WorldSim.new(43, "vide")
+	var pushes := [0, 0]
+	for run in 6:        # 3 mondes, sans puis avec ordres
+		var ordered := run % 2 == 1
+		var w2 := WorldSim.new(43 + run / 2, "vide")
 		var c2 := w2.creatures[0]
 		c2.language.verbs[Brain.Verb.POUSSER] = 1.0
 		c2.language.nouns[jouet] = 1.0
@@ -293,8 +295,8 @@ func _test_language() -> void:
 			t += STEP
 			if c2.acted and c2.brain.verb == Brain.Verb.POUSSER and c2.target is WorldObject and c2.target.type_name == "balle":
 				n += 1
-		pushes.append(n)
-	print("    balle poussée en 20 min : %d fois sans ordre, %d fois avec l'ordre « pousse la balle »" % pushes)
+		pushes[1 if ordered else 0] += n
+	print("    balle poussée en 3 × 20 min : %d fois sans ordre, %d fois avec l'ordre « pousse la balle »" % pushes)
 	_check(pushes[1] >= 2 * pushes[0] + 5, "elle obéit à un ordre qu'elle comprend")
 
 	# 3. Transmission entre créatures
@@ -354,6 +356,73 @@ func _test_appearance_genes() -> void:
 		ants[c.antennae] = true
 	print("    variantes de queue : %s, d'antennes : %s" % [tails.keys(), ants.keys()])
 	_check(tails.size() >= 2 and ants.size() >= 2, "les fondateurs ont des silhouettes variées")
+
+
+func _test_family_life() -> void:
+	print("Vie de famille :")
+	# Mélange des couleurs : les enfants ne sont pas des copies d'un parent
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 3
+	var a := Genome.starter()
+	var b := Genome.starter()
+	a.find(Gene.Type.APPEARANCE, "part", "corps").params.hue = 0.1
+	b.find(Gene.Type.APPEARANCE, "part", "corps").params.hue = 0.3
+	var mixed := 0
+	for i in 40:
+		var h := float(Genome.cross(a, b, rng, 0.0).find(Gene.Type.APPEARANCE, "part", "corps").params.hue)
+		if h > 0.11 and h < 0.29:
+			mixed += 1
+	print("    teinte : %d enfants sur 40 ont une couleur intermédiaire" % mixed)
+	_check(mixed >= 10, "les couleurs des parents se mélangent")
+	a.find(Gene.Type.APPEARANCE, "part", "motif").params.spots = 0.9
+	var spotted := 0
+	for i in 40:
+		if float(Genome.cross(a, b, rng, 0.0).find(Gene.Type.APPEARANCE, "part", "motif").params.spots) >= 0.2:
+			spotted += 1
+	print("    taches : %d enfants sur 40 en héritent d'un parent tacheté" % spotted)
+	_check(spotted >= 15 and spotted <= 38, "les motifs se transmettent sans être systématiques")
+
+	# Accouplements : un couple d'adultes ne fait pas que ça
+	var w := WorldSim.new(61, "normal", 2)
+	for c in w.creatures:
+		c.age = 2.6 * 3600.0
+	var tries := 0
+	var mates := 0
+	var t := 0.0
+	var was_pregnant := false
+	while t < 2.0 * 3600.0:
+		w.tick(STEP)
+		t += STEP
+		for c in w.creatures:
+			if c.generation == 1 and c.acted and c.brain.verb == Brain.Verb.ACCOUPLER:
+				tries += 1
+		var f := w.creatures[0] if w.creatures[0].sex == Gene.Sex.FEMALE else w.creatures[1]
+		if f.pregnant_time >= 0.0 and not was_pregnant:
+			mates += 1
+		was_pregnant = f.pregnant_time >= 0.0
+	print("    en 2 h d'âge adulte : %d tentatives, %d accouplements réussis" % [tries, mates])
+	_check(mates >= 1 and mates <= 3, "ils s'accouplent, mais pas sans arrêt")
+	_check(tries <= 30, "ils n'insistent pas en boucle")
+
+	# Soins : un parent nourrit son petit affamé
+	var w2 := WorldSim.new(67, "vide", 1)
+	var mum := w2.creatures[0]
+	mum.age = 3.0 * 3600.0
+	w2.tick(STEP)
+	w2.lay_egg(mum.x + 300.0, Genome.starter(), mum.creature_name, "Papa", 2)
+	var fed := false
+	t = 0.0
+	while t < 2400.0 and not fed:
+		w2.tick(STEP)
+		t += STEP
+		for c in w2.creatures:
+			if c != mum and c.alive:
+				c.biochem.conc[Chemicals.id_of("Faim")] = maxf(c.level("Faim"), 0.7)
+		if w2.count_of("fruit") == 0:
+			w2.add_object("fruit", mum.x - 200.0)
+		fed = mum.last_event.contains("apporte à manger")
+	print("    %s : %s" % [mum.creature_name, mum.last_event])
+	_check(fed, "un parent apporte à manger à son petit")
 
 
 func _hm(t: float) -> String:

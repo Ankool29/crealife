@@ -21,6 +21,17 @@ Tout le contenu est original : aucun fichier ni code du jeu Creatures n'est util
   de queue (courte, longue, massue), d'antennes (courtes, longues,
   ramifiées), d'une corpulence et d'une couleur et intensité de lumière
   des antennes et des taches.
+- **Vie de famille** : après un accouplement, 40 min de repos ; le désir
+  retombe pendant la gestation, tant qu'il y a un bébé, et quand le monde
+  est plein ; après un refus, on n'insiste pas. Les parents (instinct
+  parental héréditaire) apportent à manger à leurs petits affamés et vont
+  leur parler quand ils s'ennuient ou se sentent seuls, ce qui leur
+  transmet leurs mots.
+- **Brassage génétique** : chaque trait d'apparence vient de l'un ou
+  l'autre parent ou d'un mélange des deux (couleurs intermédiaires).
+  Motifs héréditaires : taches, rayures, grandes plaques, avec leur
+  propre couleur ; un motif peut rester « dormant » et réapparaître chez
+  un descendant, ou naître d'une mutation.
 - Phases précédentes : population et reproduction, observation et
   sauvegarde (phase 3), cerveau à lobes qui apprend (phase 2), 36
   substances et 6 organes, vie d'environ 10 h (phase 1), graphismes

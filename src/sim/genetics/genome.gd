@@ -92,6 +92,28 @@ func mutate(rng: RandomNumberGenerator, rate: float) -> void:
 
 
 ## Croisement : gènes alignés par identifiant, pris par blocs chez l'un ou l'autre parent.
+## Apparence : chaque trait vient de l'un ou l'autre parent, ou d'un mélange
+## des deux (les teintes se mélangent sur le cercle des couleurs).
+static func _blend_appearance(child: Gene, a: Gene, b: Gene, rng: RandomNumberGenerator) -> void:
+	for key in Gene.ranges_for(Gene.Type.APPEARANCE):
+		if not a.params.has(key) or not b.params.has(key):
+			continue
+		var va := float(a.params[key])
+		var vb := float(b.params[key])
+		var r := rng.randf()
+		if r < 0.3:
+			child.params[key] = va
+		elif r < 0.6:
+			child.params[key] = vb
+		else:
+			var t := rng.randf_range(0.25, 0.75)
+			if key in ["hue", "hue2", "hue3", "glow"]:
+				var d := fposmod(vb - va + 0.5, 1.0) - 0.5     # plus court chemin sur le cercle
+				child.params[key] = fposmod(va + d * t, 1.0)
+			else:
+				child.params[key] = lerpf(va, vb, t)
+
+
 static func cross(a: Genome, b: Genome, rng: RandomNumberGenerator, mutation_rate: float = 0.02, crossover: float = 0.1) -> Genome:
 	var by_id_b := {}
 	for gene in b.genes:
@@ -105,8 +127,15 @@ static func cross(a: Genome, b: Genome, rng: RandomNumberGenerator, mutation_rat
 	for gene in a.genes:
 		if rng.randf() < crossover:
 			from_a = not from_a
-		var pick: Gene = gene if from_a or not by_id_b.has(gene.id) else by_id_b[gene.id]
-		child.genes.append(pick.copy())
+		# même numéro mais autre gène (génomes de versions différentes) : on garde a
+		var same: bool = by_id_b.has(gene.id) and by_id_b[gene.id].type == gene.type \
+			and str(by_id_b[gene.id].params.get("part", by_id_b[gene.id].params.get("lobe", ""))) \
+				== str(gene.params.get("part", gene.params.get("lobe", "")))
+		var pick: Gene = gene if from_a or not same else by_id_b[gene.id]
+		var copy := pick.copy()
+		if gene.type == Gene.Type.APPEARANCE and same:
+			_blend_appearance(copy, gene, by_id_b[gene.id], rng)
+		child.genes.append(copy)
 	for gene in b.genes:                                     # gènes propres au parent b
 		if not by_id_a.has(gene.id) and rng.randf() < 0.5:
 			child.genes.append(gene.copy())

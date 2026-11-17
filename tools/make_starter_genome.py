@@ -168,6 +168,12 @@ gene("apparence", {"part": "corps", "hue": 0.5, "hue2": 0.6, "saturation": 0.7,
 # Silhouette : forme de la queue (courte, longue, massue), des antennes
 # (courtes, longues, ramifiées) et corpulence (fine à trapue).
 gene("apparence", {"part": "silhouette", "tail": 0.5, "antennae": 0.5, "corpulence": 0.5})
+# Motifs : intensité des taches, rayures et plaques (visibles au-delà de
+# 0,2 environ), teinte et clarté du motif. Une mutation peut les faire apparaître.
+gene("apparence", {"part": "motif", "spots": 0.0, "stripes": 0.0, "patches": 0.0, "hue3": 0.1, "light3": 0.5})
+# Instinct parental : envie de nourrir et de parler à ses petits (bébés, enfants).
+# Nouveaux gènes : toujours à la fin, pour garder les numéros des anciens.
+gene("lobe", {"lobe": "parental", "care": 0.6}, stage="adulte")
 
 catalog = [{"id": i + 1, "name": n, "family": f} for i, (n, f, _h, _v) in enumerate(CHEMICALS)]
 (ROOT / "data").mkdir(exist_ok=True)

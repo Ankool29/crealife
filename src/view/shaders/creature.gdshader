@@ -8,7 +8,10 @@ uniform vec3 col_dark : source_color = vec3(0.1, 0.05, 0.2);
 uniform vec3 col_mid : source_color = vec3(0.2, 0.6, 0.6);
 uniform vec3 col_light : source_color = vec3(0.8, 0.9, 0.8);
 uniform float glow_shift = 0.0;     // rotation de teinte des parties lumineuses (en tours)
-uniform float glow_power = 1.0;     // intensité des parties lumineuses
+uniform float glow_power = 1.0;
+uniform sampler2D motif_tex : filter_linear;     // r = taches, v = rayures, b = plaques
+uniform vec3 motif_strength = vec3(0.0);
+uniform vec3 col_motif : source_color = vec3(0.9, 0.8, 0.3);     // intensité des parties lumineuses
 uniform float desaturate = 0.0;     // 1 = gris (créature morte)
 
 vec3 rotate_hue(vec3 c, float turns) {
@@ -25,6 +28,10 @@ void fragment() {
 	float lum = dot(c.rgb, vec3(0.299, 0.587, 0.114));
 	float l = clamp(lum * 1.7, 0.0, 1.0);
 	vec3 tinted = l < 0.45 ? mix(col_dark, col_mid, l / 0.45) : mix(col_mid, col_light, (l - 0.45) / 0.55);
+	// Motifs génétiques, ombrés comme la peau
+	vec4 m = texture(motif_tex, UV);
+	float amount = clamp(dot(m.rgb, motif_strength), 0.0, 1.0) * m.a;
+	tinted = mix(tinted, col_motif * (0.3 + 0.95 * l), amount);
 	// Reflets très clairs : on garde un peu de blanc pour l'aspect brillant
 	tinted = mix(tinted, vec3(1.0), smoothstep(0.85, 1.0, lum) * 0.6);
 	float k = 1.0 - smoothstep(0.18, 0.35, sat);

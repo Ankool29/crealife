@@ -71,6 +71,12 @@ func add_founders(count: int) -> void:
 		if shape:
 			for k in ["tail", "antennae", "corpulence"]:
 				shape.params[k] = rng.randf()
+		var motif := g.find(Gene.Type.APPEARANCE, "part", "motif")
+		if motif:      # environ un fondateur sur deux porte un motif
+			for k in ["spots", "stripes", "patches"]:
+				motif.params[k] = rng.randf_range(0.3, 1.0) if rng.randf() < 0.2 else 0.0
+			motif.params.hue3 = rng.randf()
+			motif.params.light3 = rng.randf()
 		var sex := first_sex if i % 2 == 0 else (Gene.Sex.FEMALE if first_sex == Gene.Sex.MALE else Gene.Sex.MALE)
 		_add_creature(g, width * 0.5 + (i - (count - 1) * 0.5) * 200.0, sex, 1, "", "")
 

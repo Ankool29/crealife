@@ -448,6 +448,85 @@ ANIMATIONS = {
 }
 
 
+# ------------------------------------------------------------- motifs ----
+# Masque de motifs génétiques, rendu à part pour chaque image : rouge =
+# taches, vert = rayures, bleu = grandes plaques. Les motifs sont calculés
+# dans l'espace de chaque partie du corps, ils suivent donc ses mouvements.
+# Le jeu les colore et les dose selon les gènes.
+def mask_material():
+    mat = bpy.data.materials.new("Motifs")
+    mat.use_nodes = True
+    nt = mat.node_tree
+    n, l = nt.nodes, nt.links
+    for node in list(n):
+        n.remove(node)
+    out = n.new("ShaderNodeOutputMaterial")
+    emit = n.new("ShaderNodeEmission")
+    l.new(emit.outputs[0], out.inputs["Surface"])
+    coord = n.new("ShaderNodeTexCoord")
+    # taches : cellules de Voronoï, disques nets
+    vor = n.new("ShaderNodeTexVoronoi")
+    vor.inputs["Scale"].default_value = 9.0
+    vor.inputs["Randomness"].default_value = 0.8
+    l.new(coord.outputs["Object"], vor.inputs["Vector"])
+    spots = n.new("ShaderNodeMapRange")
+    spots.inputs["From Min"].default_value = 0.3
+    spots.inputs["From Max"].default_value = 0.25
+    l.new(vor.outputs["Distance"], spots.inputs["Value"])
+    # rayures : bandes ondulées autour du corps
+    wave = n.new("ShaderNodeTexWave")
+    wave.wave_type = "BANDS"
+    wave.bands_direction = "Z"
+    wave.inputs["Scale"].default_value = 2.2
+    wave.inputs["Distortion"].default_value = 4.0
+    wave.inputs["Detail"].default_value = 1.5
+    l.new(coord.outputs["Object"], wave.inputs["Vector"])
+    stripes = n.new("ShaderNodeMapRange")
+    stripes.inputs["From Min"].default_value = 0.55
+    stripes.inputs["From Max"].default_value = 0.68
+    l.new(wave.outputs["Fac"], stripes.inputs["Value"])
+    # plaques : bruit très large, seuillé
+    noise = n.new("ShaderNodeTexNoise")
+    noise.inputs["Scale"].default_value = 4.5
+    noise.inputs["Detail"].default_value = 3.0
+    l.new(coord.outputs["Object"], noise.inputs["Vector"])
+    patch = n.new("ShaderNodeMapRange")
+    patch.inputs["From Min"].default_value = 0.5
+    patch.inputs["From Max"].default_value = 0.56
+    l.new(noise.outputs["Fac"], patch.inputs["Value"])
+    comb = n.new("ShaderNodeCombineColor")
+    l.new(spots.outputs["Result"], comb.inputs[0])
+    l.new(stripes.outputs["Result"], comb.inputs[1])
+    l.new(patch.outputs["Result"], comb.inputs[2])
+    l.new(comb.outputs[0], emit.inputs["Color"])
+    return mat
+
+
+def render_mask(path):
+    scene = bpy.context.scene
+    _layers(None)
+    mask = bpy.data.materials.get("Motifs") or mask_material()
+    saved = {}
+    for o in scene.collection.objects:
+        if o.type != "MESH":
+            continue
+        if o.active_material and o.active_material.name == "Skin":
+            saved[o.name] = o.active_material
+            o.active_material = mask
+        else:
+            o.is_holdout = True          # yeux : pas de motif
+    exposure, samples, denoise = scene.view_settings.exposure, scene.cycles.samples, scene.cycles.use_denoising
+    scene.view_settings.exposure = 0.0
+    scene.cycles.samples = 8
+    scene.cycles.use_denoising = False
+    render(path)
+    scene.view_settings.exposure, scene.cycles.samples, scene.cycles.use_denoising = exposure, samples, denoise
+    for o in scene.collection.objects:
+        if o.name in saved:
+            o.active_material = saved[o.name]
+        o.is_holdout = False
+
+
 def _layers(show):
     """show : None = corps seul ; sinon nom de la collection de variante à rendre,
     le corps servant de masque (holdout) pour les parties cachées derrière lui."""
@@ -497,6 +576,7 @@ def render_sprites(out):
             for k in range(len(ANTENNAE)):
                 _layers(f"Antennes{k}")
                 render(out / f"{name}_{i}_antennes{k}.png")
+            render_mask(out / f"{name}_{i}_motifs.png")
             frames.append(fname)
         manifest["animations"][name] = frames
     (out / "creature.json").write_text(json.dumps(manifest, indent="\t"))
@@ -510,6 +590,26 @@ if __name__ == "__main__":
         render_sprites(OUT)
         sys.exit(0)
     root, parts = build_creature()
+    if MODE == "masks":       # seulement les masques de motifs
+        scene = bpy.context.scene
+        scene.render.resolution_x = SPRITE_RES
+        scene.render.resolution_y = SPRITE_RES
+        for name, poses in ANIMATIONS.items():
+            for i, p in enumerate(poses):
+                parts["torso"].parent.rotation_euler = Euler((0, 0, 0))
+                set_lids(False)
+                if p == "couche":
+                    pose(parts, thighs=(-70, -60), knees=(100, 95), arms=(-40, -30), head=(10, 0))
+                    lying(parts, True)
+                    set_lids(True)
+                elif p == "dos":
+                    pose(parts, thighs=(-40, -20), knees=(30, 50), arms=(-60, -20), head=(-10, 0))
+                    lying(parts, False)
+                    set_lids(True)
+                else:
+                    pose(parts, **p)
+                render_mask(OUT / f"{name}_{i}_motifs.png")
+        sys.exit(0)
     if MODE == "layers":
         bpy.context.scene.render.resolution_x = SPRITE_RES
         bpy.context.scene.render.resolution_y = SPRITE_RES

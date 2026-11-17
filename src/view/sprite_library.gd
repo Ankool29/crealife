@@ -11,6 +11,8 @@ const WORLD_PX_PER_UNIT := 120.0
 static var creature_frames := {}        # animation -> Array[Texture2D]
 ## Couches génétiques : creature_layers["queue"][variante][animation] -> Array[Texture2D]
 static var creature_layers := {"queue": [], "antennes": []}
+## Masques de motifs (taches, rayures, plaques) : animation -> Array[Texture2D]
+static var creature_masks := {}
 static var creature_anchor := Vector2.ZERO
 static var creature_scale := 1.0        # pixels de sprite -> pixels du monde
 static var objects := {}                # nom -> {texture, anchor, scale}
@@ -29,6 +31,11 @@ static func ensure() -> void:
 		for f in m.animations[anim]:
 			frames.append(load(CREATURE_DIR + f))
 		creature_frames[anim] = frames
+	for anim in m.animations:
+		var masks: Array[Texture2D] = []
+		for f in m.animations[anim]:
+			masks.append(load(CREATURE_DIR + str(f).replace(".png", "_motifs.png")))
+		creature_masks[anim] = masks
 	for layer in [["queue", "tails"], ["antennes", "antennae"]]:
 		for k in (m.get(layer[1], []) as Array).size():
 			var by_anim := {}

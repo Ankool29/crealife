@@ -22,7 +22,8 @@ var selected := false
 var _sprite := Sprite2D.new()
 var _tail := Sprite2D.new()
 var _antennae := Sprite2D.new()
-var _material := ShaderMaterial.new()
+var _material := ShaderMaterial.new()        # corps (avec motifs)
+var _layer_material := ShaderMaterial.new()  # queue et antennes (sans motifs)
 var _t := 0.0
 var _bubble_style := StyleBoxFlat.new()
 
@@ -31,10 +32,11 @@ func _ready() -> void:
 	SpriteLibrary.ensure()
 	_bubble_style.set_corner_radius_all(14)
 	_material.shader = preload("res://src/view/shaders/creature.gdshader")
+	_layer_material.shader = _material.shader
 	# queue, corps puis antennes : chaque couche est déjà masquée là où le
 	# corps la cache, l'ordre n'importe que pour les bords
 	for s in [_tail, _sprite, _antennae]:
-		s.material = _material
+		s.material = _material if s == _sprite else _layer_material
 		s.centered = false
 		s.offset = -SpriteLibrary.creature_anchor
 		add_child(s)
@@ -58,12 +60,18 @@ func _process(delta: float) -> void:
 	for sp in [_tail, _sprite, _antennae]:
 		sp.scale = Vector2(s * wide * c.facing, s)   # retourné quand elle regarde à gauche
 	var pal := c.palette()
-	_material.set_shader_parameter("col_dark", pal[0])
-	_material.set_shader_parameter("col_mid", pal[1])
-	_material.set_shader_parameter("col_light", pal[2])
-	_material.set_shader_parameter("glow_shift", c.glow - 0.47)   # rendu d'origine : turquoise
-	_material.set_shader_parameter("glow_power", lerpf(0.55, 1.6, c.glow_power))
-	_material.set_shader_parameter("desaturate", 0.0 if c.alive else 0.75)
+	for m in [_material, _layer_material]:
+		m.set_shader_parameter("col_dark", pal[0])
+		m.set_shader_parameter("col_mid", pal[1])
+		m.set_shader_parameter("col_light", pal[2])
+		m.set_shader_parameter("glow_shift", c.glow - 0.47)   # rendu d'origine : turquoise
+		m.set_shader_parameter("glow_power", lerpf(0.55, 1.6, c.glow_power))
+		m.set_shader_parameter("desaturate", 0.0 if c.alive else 0.75)
+	var masks: Array = SpriteLibrary.creature_masks.get(anim, [])
+	if not masks.is_empty():
+		_material.set_shader_parameter("motif_tex", masks[f % masks.size()])
+	_material.set_shader_parameter("motif_strength", c.motif_strength())
+	_material.set_shader_parameter("col_motif", c.motif_color())
 	queue_redraw()
 
 
