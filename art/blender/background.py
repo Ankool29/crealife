@@ -97,9 +97,14 @@ def displaced(obj, strength, scale, subdiv=2):
         s = obj.modifiers.new("Sub", "SUBSURF")
         s.levels = subdiv
         s.render_levels = subdiv
-    tex = bpy.data.textures.new(obj.name + "Tex", "CLOUDS")
-    tex.noise_scale = scale
-    tex.noise_depth = 3
+    # Une seule texture par échelle de bruit : en créer une par objet coûte
+    # plusieurs dizaines de Mo chacune lors de l'évaluation.
+    key = f"Clouds{scale:.3f}"
+    tex = bpy.data.textures.get(key)
+    if tex is None:
+        tex = bpy.data.textures.new(key, "CLOUDS")
+        tex.noise_scale = scale
+        tex.noise_depth = 3
     d = obj.modifiers.new("Disp", "DISPLACE")
     d.texture = tex
     d.strength = strength
@@ -109,12 +114,14 @@ def displaced(obj, strength, scale, subdiv=2):
 
 
 def blob(name, loc, radii, mat, strength=0.3, scale=0.6, subdiv=2):
+    # Icosphère directement plus fine plutôt qu'un modificateur de subdivision :
+    # ce dernier coûte environ 15 Mo par objet à l'évaluation.
     bm = bmesh.new()
-    bmesh.ops.create_icosphere(bm, subdivisions=3, radius=1.0)
+    bmesh.ops.create_icosphere(bm, subdivisions=3 + subdiv, radius=1.0)
     bmesh.ops.scale(bm, vec=Vector(radii), verts=bm.verts)
     o = mesh_obj(name, bm, mat)
     o.location = loc
-    return displaced(o, strength, scale, subdiv)
+    return displaced(o, strength, scale, 0)
 
 
 # ---------------------------------------------------------------- éléments --
@@ -141,11 +148,11 @@ def ground(x0, x1, mats):
     bmesh.ops.scale(bm, vec=Vector((x1 - x0 + 4, 3.0, 6.0)), verts=bm.verts)
     soil = mesh_obj("Soil", bm, mats["soil"], smooth=False)
     soil.location = ((x0 + x1) / 2, -4.0, -3.02)
-    for k in range(int((x1 - x0) * 1.6)):
+    for k in range(int((x1 - x0) * 4)):
         px = rng.uniform(x0, x1)
         pz = -rng.uniform(0.25, 2.5)
-        r = rng.uniform(0.06, 0.2)
-        blob("Pebble", (px, -2.5, pz), (r * 1.4, r, r), mats["pebble"], 0.03, 0.2, 1)
+        r = rng.uniform(0.04, 0.13)
+        blob("Pebble", (px, -5.5 + r * 0.6, pz), (r * 1.4, r, r), mats["pebble"], 0.03, 0.2, 0)
     return g
 
 
@@ -162,21 +169,13 @@ def tree(x, y, h, mats):
         a = rng.uniform(0, math.tau)
         blob("Root", (x + math.cos(a) * 0.35, y + math.sin(a) * 0.35, 0.05),
              (0.45, 0.18, 0.15), mats["bark"], 0.08, 0.3, 1)
-    # Branches
-    for k in range(4):
-        side = -1 if k % 2 else 1
-        bbm = bmesh.new()
-        bmesh.ops.create_cone(bbm, segments=10, radius1=0.12 * h / 5, radius2=0.04, depth=h * 0.35, cap_ends=True)
-        b = mesh_obj("Branch", bbm, mats["bark"])
-        b.location = (x + side * 0.35 * h / 5, y - 0.1, h * (0.62 + 0.06 * k))
-        b.rotation_euler = Euler((0, math.radians(side * rng.uniform(35, 55)), 0))
     # Feuillage en grappes
     for k in range(14):
         cx = x + rng.uniform(-1.3, 1.3) * h / 5
         cz = h * rng.uniform(0.7, 1.05)
         r = rng.uniform(0.55, 0.95) * h / 5
         blob("Leaves", (cx, y + rng.uniform(-0.6, 0.6), cz), (r * 1.2, r, r * 0.85),
-             mats["leaves"] if k % 3 else mats["leaves2"], 0.5, 0.45, 2)
+             mats["leaves"] if k % 3 else mats["leaves2"], 0.5, 0.45, 1)
 
 
 def rock(x, y, s, mats):
@@ -187,7 +186,7 @@ def rock(x, y, s, mats):
 def bush(x, y, s, mats):
     for k in range(3):
         blob("Bush", (x + rng.uniform(-0.4, 0.4) * s, y, s * rng.uniform(0.35, 0.6)),
-             (s * 0.6, s * 0.5, s * 0.45), mats["leaves2"], 0.25 * s, 0.35, 2)
+             (s * 0.6, s * 0.5, s * 0.45), mats["leaves2"], 0.25 * s, 0.35, 1)
 
 
 def grass(ground_obj, mats, count):
@@ -202,8 +201,8 @@ def grass(ground_obj, mats, count):
     st.phase_factor_random = 2.0
     st.factor_random = 0.6
     st.child_type = "INTERPOLATED"
-    st.child_percent = 6
-    st.rendered_child_count = 6
+    st.child_percent = 3
+    st.rendered_child_count = 3
     st.root_radius = 0.6
     st.tip_radius = 0.0
     st.radius_scale = 0.007
@@ -239,7 +238,7 @@ def sky(x0, x1):
     ramp.color_ramp.elements[1].position = 0.6
     ramp.color_ramp.elements[1].color = (0.35, 0.55, 0.8, 1)
     nt.links.new(tc.outputs["Generated"], sep.inputs[0])
-    nt.links.new(sep.outputs["Z"], ramp.inputs[0])
+    nt.links.new(sep.outputs["Y"], ramp.inputs[0])     # plan redressé : Y local = hauteur
     nt.links.new(ramp.outputs["Color"], em.inputs["Color"])
     nt.links.new(em.outputs[0], nt.nodes["Material Output"].inputs["Surface"])
     bm = bmesh.new()
@@ -258,7 +257,7 @@ def materials():
         "bark": material("Bark", (0.22, 0.14, 0.08), 0.9, 6.0, 0.3, (0.1, 0.07, 0.04)),
         "leaves": material("Leaves", (0.13, 0.3, 0.06), 0.7, 14.0, 0.35, (0.03, 0.11, 0.03), sss=0.15),
         "leaves2": material("Leaves2", (0.2, 0.36, 0.06), 0.7, 14.0, 0.35, (0.06, 0.15, 0.03), sss=0.15),
-        "pebble": material("Pebble", (0.42, 0.38, 0.33), 0.8, 5.0, 0.25, (0.25, 0.22, 0.2)),
+        "pebble": material("Pebble", (0.34, 0.29, 0.23), 0.9, 5.0, 0.25, (0.2, 0.16, 0.12)),
         "rock": material("Rock", (0.38, 0.36, 0.32), 0.85, 3.0, 0.25, (0.2, 0.19, 0.17)),
         "moss": material("Moss", (0.2, 0.33, 0.07), 0.95, 4.0, 0.3, (0.12, 0.2, 0.05)),
         "far": material("Far", (0.36, 0.47, 0.56), 1.0, 2.0, 0.2, (0.3, 0.4, 0.5), emit=0.25),
@@ -287,8 +286,95 @@ def camera(cx, cz, width_units, w_px, h_px):
     bpy.context.scene.camera = c
 
 
+# Doit correspondre à src/sim/world_sim.gd (positions en pixels de jeu)
+WORLD_WIDTH_PX = 3000
+TREES_PX = [450, 1350, 2350]
+BUSHES_PX = [900, 2000]
+# Bande verticale couverte par le décor, en pixels de jeu (sol = 0, ciel négatif)
+TOP_PX, BOTTOM_PX = -560, 200
+
+
+def layer_camera(width_units, w_px, h_px):
+    top, bottom = -TOP_PX / PX_PER_UNIT, -BOTTOM_PX / PX_PER_UNIT
+    camera(width_units / 2, (top + bottom) / 2, width_units, w_px, h_px)
+
+
+def render_near(out):
+    """Couche du sol jouable : terre, herbe, arbres, buissons. Ciel transparent."""
+    w_px, h_px = WORLD_WIDTH_PX, BOTTOM_PX - TOP_PX
+    width = w_px / PX_PER_UNIT
+    reset_scene(w_px, h_px)
+    bpy.context.scene.render.film_transparent = True
+    bpy.context.scene.cycles.samples = 24
+    mats = materials()
+    g = ground(-1, width + 1, mats)
+    for tx in TREES_PX:
+        tree(tx / PX_PER_UNIT, rng.uniform(2.5, 3.5), rng.uniform(3.8, 4.4), mats)
+    for x in [3.0, 9.0, 15.5, 22.0]:                      # arbres plus lointains
+        tree(x + rng.uniform(-1, 1), rng.uniform(9, 12), rng.uniform(3.2, 3.8), mats)
+    for bx in BUSHES_PX:
+        bush(bx / PX_PER_UNIT, 0.9, 0.9, mats)
+    for i in range(10):
+        rock(rng.uniform(0, width), rng.uniform(1.2, 5.0), rng.uniform(0.25, 0.5), mats)
+    grass(g, mats, int(250 * width))
+    lights()
+    layer_camera(width, w_px, h_px)
+    bpy.context.scene.render.filepath = str(out / "decor_proche.png")
+    bpy.ops.render.render(write_still=True)
+
+
+def ridge(name, x0, x1, y, base, amp, waves, mat):
+    """Crête de collines : une bande verticale dont le bord haut ondule."""
+    phases = [rng.uniform(0, math.tau) for _ in waves]
+    bm = bmesh.new()
+    n = 240
+    prev = None
+    for i in range(n + 1):
+        x = x0 + (x1 - x0) * i / n
+        z = base + sum(amp * w[1] * math.sin(x / w[0] + ph) for w, ph in zip(waves, phases))
+        top = bm.verts.new((x, y, z))
+        bottom = bm.verts.new((x, y, -4.0))
+        if prev:
+            bm.faces.new((prev[1], bottom, top, prev[0]))
+        prev = (top, bottom)
+    o = mesh_obj(name, bm, mat)
+    return o
+
+
+def far_hills(x0, x1, mats):
+    """Deux crêtes de collines lointaines (bleutée puis verte) et quelques nuages."""
+    ridge("RidgeFar", x0, x1, 34, 2.9, 0.45, [(3.1, 1.0), (1.3, 0.35), (7.0, 0.8)], mats["far"])
+    ridge("RidgeMid", x0, x1, 24, 2.1, 0.35, [(2.3, 1.0), (0.9, 0.25), (5.5, 0.7)], mats["mid"])
+    cloud = material("Cloud", (0.95, 0.96, 1.0), 1.0, emit=0.9)
+    for i in range(6):
+        x = x0 + (x1 - x0) * (i + 0.5) / 6 + rng.uniform(-1, 1)
+        z = rng.uniform(3.4, 4.3)
+        for k in range(3):
+            blob("Cloud", (x + k * 0.5 - 0.5, 40, z + rng.uniform(-0.1, 0.1)),
+                 (rng.uniform(0.6, 0.9), 0.4, rng.uniform(0.2, 0.3)), cloud, 0.1, 1.0, 2)
+
+
+def render_far(out, w_px=2400):
+    """Couche lointaine : ciel et collines, défile plus lentement (parallaxe)."""
+    h_px = BOTTOM_PX - TOP_PX
+    width = w_px / PX_PER_UNIT
+    reset_scene(w_px, h_px)
+    bpy.context.scene.cycles.samples = 20
+    mats = materials()
+    sky(-2, width + 2)
+    far_hills(-2, width + 2, mats)
+    lights()
+    layer_camera(width, w_px, h_px)
+    bpy.context.scene.render.filepath = str(out / "decor_lointain.png")
+    bpy.ops.render.render(write_still=True)
+
+
 if __name__ == "__main__":
     OUT.mkdir(parents=True, exist_ok=True)
+    if MODE == "near":
+        render_near(OUT)
+    elif MODE == "far":
+        render_far(OUT)
     if MODE == "test":
         w_px, h_px = 1600, 900
         width = w_px / PX_PER_UNIT

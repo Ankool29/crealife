@@ -1,50 +1,56 @@
 class_name WorldView
 extends Node2D
-## Dessine le décor et les fruits. Le sol est à y = 0, le ciel vers les y négatifs.
+## Décor rendu en 3D (deux couches, la lointaine défile plus lentement)
+## et sprites des objets, synchronisés avec la simulation.
 
-const GROUND_DEPTH := 600.0
+const DECOR_DIR := "res://assets/decor/"
+const DECOR_TOP := -560.0          # haut des images de décor, en pixels de jeu
+const FAR_PARALLAX := 0.4          # la couche lointaine se déplace à 40 % de la caméra
 
 var world: WorldSim
+var camera: Camera2D
+
+var _far := Sprite2D.new()
+var _near := Sprite2D.new()
+var _sprites := {}                 # id d'objet -> Sprite2D
+var _objects_layer := Node2D.new()
+
+
+func _ready() -> void:
+	for s in [_far, _near]:
+		s.centered = false
+		add_child(s)
+	_far.texture = load(DECOR_DIR + "decor_lointain.png")
+	_near.texture = load(DECOR_DIR + "decor_proche.png")
+	_far.z_index = -20
+	_near.z_index = -10
+	_near.position = Vector2(0, DECOR_TOP)
+	add_child(_objects_layer)
 
 
 func _process(_delta: float) -> void:
-	queue_redraw()
-
-
-func _draw() -> void:
 	if world == null:
 		return
-	var w := world.width
-	# Collines lointaines
-	for i in 8:
-		var hx := w * (i + 0.5) / 8.0
-		draw_circle(Vector2(hx, 60.0), 260.0 + (i % 3) * 40.0, Color(0.55, 0.75, 0.55))
-	# Sol
-	draw_rect(Rect2(-400.0, 0.0, w + 800.0, GROUND_DEPTH), Color(0.45, 0.32, 0.2))
-	draw_rect(Rect2(-400.0, 0.0, w + 800.0, 18.0), Color(0.36, 0.66, 0.3))
-	# Arbres
-	for tx in world.trees:
-		draw_rect(Rect2(tx - 16.0, -170.0, 32.0, 172.0), Color(0.42, 0.27, 0.15))
-		draw_circle(Vector2(tx, -210.0), 95.0, Color(0.2, 0.52, 0.24))
-		draw_circle(Vector2(tx - 70.0, -175.0), 60.0, Color(0.23, 0.56, 0.26))
-		draw_circle(Vector2(tx + 70.0, -180.0), 65.0, Color(0.22, 0.55, 0.25))
-	# Objets (formes provisoires, remplacées par les sprites 3D)
+	if camera:
+		# Couche lointaine : centrée quand la caméra est au milieu du monde
+		var far_w := float(_far.texture.get_width())
+		var half := world.width * 0.5
+		_far.position = Vector2(half - far_w * 0.5 + (camera.position.x - half) * (1.0 - FAR_PARALLAX), DECOR_TOP)
+	var seen := {}
 	for o in world.objects:
-		var p := Vector2(o.x, -o.h - 10.0)
-		match o.type_name:
-			"fruit":
-				draw_circle(p, 11.0, Color(0.85, 0.15, 0.15))
-				draw_line(p + Vector2(0, -10), p + Vector2(3, -17), Color(0.3, 0.2, 0.1), 3.0)
-			"graine":
-				draw_circle(p + Vector2(0, 4), 6.0, Color(0.8, 0.65, 0.3))
-			"baie":
-				draw_circle(p + Vector2(0, 2), 8.0, Color(0.45, 0.15, 0.6))
-			"balle":
-				draw_circle(p + Vector2(0, -4), 16.0, Color(0.95, 0.8, 0.2))
-			"pierre":
-				draw_circle(p + Vector2(0, 4), 14.0, Color(0.5, 0.5, 0.5))
-			"distributeur":
-				draw_rect(Rect2(o.x - 30, -110, 60, 110), Color(0.35, 0.4, 0.5))
-				draw_circle(Vector2(o.x, -80), 16.0, Color(0.3, 0.8, 0.7) if o.cooldown <= 0.0 else Color(0.3, 0.3, 0.3))
-	for bx in world.bushes:
-		draw_circle(Vector2(bx, -30), 50.0, Color(0.18, 0.4, 0.2, 0.9))
+		seen[o.id] = true
+		var s: Sprite2D = _sprites.get(o.id)
+		if s == null:
+			s = Sprite2D.new()
+			_objects_layer.add_child(s)
+			_sprites[o.id] = s
+		var sprite_name := o.type_name
+		if o.type_name == "distributeur":
+			sprite_name = "distributeur_on" if o.cooldown <= 0.0 else "distributeur_off"
+		SpriteLibrary.setup_object_sprite(s, sprite_name)
+		s.position = Vector2(o.x, -o.h)
+		s.z_index = 5 if o.holder != null else 0
+	for id in _sprites.keys():
+		if not seen.has(id):
+			_sprites[id].queue_free()
+			_sprites.erase(id)

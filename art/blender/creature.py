@@ -7,6 +7,7 @@ La créature est construite en « marionnette » : torse, tête, pattes et queue
 sont des objets séparés avec leur pivot, ce qui permet de les poser pour
 générer les images d'animation.
 """
+import json
 import math
 import sys
 from pathlib import Path
@@ -335,7 +336,8 @@ def build_creature():
 
 # ---------------------------------------------------------------- poses ----
 def pose(parts, thighs=(0, 0), knees=(0, 0), arms=(0, 0), head=(0, 0), body_z=0.0, lean=0.0):
-    """Angles en degrés ; positif = vers l'arrière (rotation autour de Y)."""
+    """Angles en degrés (rotation autour de Y). Membres : négatif = vers l'avant.
+    Tête : négatif = vers le bas."""
     for k, a in zip(("l", "r"), thighs):
         parts["thigh_" + k].rotation_euler = Euler((0, math.radians(a), 0))
     for k, a in zip(("l", "r"), knees):
@@ -353,10 +355,95 @@ def render(path):
     bpy.ops.render.render(write_still=True)
 
 
+# ------------------------------------------------------------ sprites ----
+SPRITE_RES = 320
+
+
+def set_lids(closed):
+    for side in ("L", "R"):
+        bpy.data.objects["Lid" + side].hide_render = not closed
+
+
+def walk_pose(phase):
+    """Cycle de marche digitigrade : phase dans [0, 1[."""
+    a = math.tau * phase
+    thigh = 28.0 * math.sin(a)
+    knee_l = -30.0 * max(0.0, math.sin(a + 1.2))
+    knee_r = -30.0 * max(0.0, math.sin(a + 1.2 + math.pi))
+    return dict(thighs=(thigh, -thigh), knees=(knee_l, knee_r),
+                arms=(-18.0 * math.sin(a), 18.0 * math.sin(a)),
+                head=(2.0 * math.sin(2 * a), 0.0), body_z=-0.015 * abs(math.cos(a)))
+
+
+def lying(parts, face_down):
+    root = parts["torso"].parent
+    if face_down:
+        root.rotation_euler = Euler((0, math.radians(90), 0))
+        root.location = (-0.72, 0, 0.28)
+    else:
+        root.rotation_euler = Euler((0, math.radians(-90), 0))
+        root.location = (0.9, 0, 0.16)
+
+
+# Nom de l'animation -> liste de poses (une image par pose)
+ANIMATIONS = {
+    "repos": [dict(thighs=(-6, 6), arms=(4, -4)), dict(thighs=(-6, 6), arms=(6, -2), head=(-3, 0), body_z=-0.01)],
+    "marche": [walk_pose(i / 8) for i in range(8)],
+    "manger": [dict(thighs=(-20, 10), knees=(30, 30), arms=(-55, -40), head=(-30, 0), body_z=-0.06),
+               dict(thighs=(-20, 10), knees=(30, 30), arms=(-75, -60), head=(-40, 0), body_z=-0.07)],
+    "pousser": [dict(thighs=(-30, 25), knees=(-10, 5), arms=(-70, -60), head=(-5, 0)),
+                dict(thighs=(-35, 30), knees=(-10, 5), arms=(-95, -85), head=(-8, 0))],
+    "frapper": [dict(thighs=(-15, 15), arms=(130, -10), head=(-5, 0)),
+                dict(thighs=(-30, 25), arms=(-100, -10), head=(5, 0))],
+    "prendre": [dict(thighs=(-45, 20), knees=(60, 40), arms=(-60, -20), head=(-25, 0), body_z=-0.12)],
+    "examiner": [dict(thighs=(-10, 10), arms=(-20, 10), head=(-24, 15))],
+    "parler": [dict(thighs=(-6, 6), arms=(-30, 20), head=(16, 0))],
+    "dormir": ["couche"],
+    "mort": ["dos"],
+}
+
+
+def render_sprites(out):
+    scene = bpy.context.scene
+    scene.render.resolution_x = SPRITE_RES
+    scene.render.resolution_y = SPRITE_RES
+    scene.cycles.samples = 40
+    cam = scene.camera
+    ppu = SPRITE_RES / cam.data.ortho_scale
+    manifest = {"size": SPRITE_RES, "px_per_unit": ppu,
+                "anchor": [SPRITE_RES / 2 - cam.location.x * ppu, SPRITE_RES / 2 + cam.location.z * ppu],
+                "animations": {}}
+    _, parts = build_creature()
+    for name, poses in ANIMATIONS.items():
+        frames = []
+        for i, p in enumerate(poses):
+            root = parts["torso"].parent
+            root.rotation_euler = Euler((0, 0, 0))
+            set_lids(False)
+            if p == "couche":
+                pose(parts, thighs=(-70, -60), knees=(100, 95), arms=(-40, -30), head=(10, 0))
+                lying(parts, True)
+                set_lids(True)
+            elif p == "dos":
+                pose(parts, thighs=(-40, -20), knees=(30, 50), arms=(-60, -20), head=(-10, 0))
+                lying(parts, False)
+                set_lids(True)
+            else:
+                pose(parts, **p)
+            fname = f"{name}_{i}.png"
+            render(out / fname)
+            frames.append(fname)
+        manifest["animations"][name] = frames
+    (out / "creature.json").write_text(json.dumps(manifest, indent="\t"))
+
+
 if __name__ == "__main__":
     OUT.mkdir(parents=True, exist_ok=True)
     reset_scene()
     setup_camera_and_lights()
+    if MODE == "sprites":
+        render_sprites(OUT)
+        sys.exit(0)
     root, parts = build_creature()
     if MODE == "test":
         pose(parts, thighs=(-15, 12), knees=(5, -4), arms=(18, -14), head=(0, 0))

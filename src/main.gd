@@ -32,16 +32,19 @@ func _ready() -> void:
 
 	creature_view = CreatureView.new()
 	creature_view.creature = _creature()
+	creature_view.z_index = 1
 	add_child(creature_view)
 
 	camera = Camera2D.new()
-	camera.position = Vector2(_creature().x, -150.0)
-	camera.zoom = Vector2(1.3, 1.3)
+	camera.position = Vector2(_creature().x, -180.0)
+	camera.zoom = Vector2(1.0, 1.0)
 	camera.limit_left = 0
 	camera.limit_right = int(world.width)
 	camera.limit_bottom = 200
+	camera.limit_top = -560
 	add_child(camera)
 	camera.make_current()
+	world_view.camera = camera
 
 	hud = Hud.new()
 	add_child(hud)

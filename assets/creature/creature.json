@@ -1,0 +1,51 @@
+{
+	"size": 240,
+	"px_per_unit": 126.31579105873851,
+	"anchor": [
+		113.68421035295049,
+		228.63158211747702
+	],
+	"animations": {
+		"repos": [
+			"repos_0.png",
+			"repos_1.png"
+		],
+		"marche": [
+			"marche_0.png",
+			"marche_1.png",
+			"marche_2.png",
+			"marche_3.png",
+			"marche_4.png",
+			"marche_5.png",
+			"marche_6.png",
+			"marche_7.png"
+		],
+		"manger": [
+			"manger_0.png",
+			"manger_1.png"
+		],
+		"pousser": [
+			"pousser_0.png",
+			"pousser_1.png"
+		],
+		"frapper": [
+			"frapper_0.png",
+			"frapper_1.png"
+		],
+		"prendre": [
+			"prendre_0.png"
+		],
+		"examiner": [
+			"examiner_0.png"
+		],
+		"parler": [
+			"parler_0.png"
+		],
+		"dormir": [
+			"dormir_0.png"
+		],
+		"mort": [
+			"mort_0.png"
+		]
+	}
+}

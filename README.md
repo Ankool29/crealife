@@ -3,24 +3,21 @@
 Jeu de vie artificielle inspiré de la série *Creatures*, conçu pour le mobile (Godot 4, GDScript).
 Tout le contenu est original : aucun fichier ni code du jeu Creatures n'est utilisé.
 
-## État actuel : phase 1 (génome et biochimie)
+## État actuel : phase 2 (cerveau et monde)
 
-Le comportement n'est pas écrit à la main : il découle du **génome**
-(`data/genomes/souche_depart.json`, 79 gènes typés), qui configure :
-
-- **36 substances** (glucose, glycogène, eau, toxines, hormones, pulsions...)
-  avec leurs demi-vies ;
-- des **réactions** (digestion, stockage du sucre, élimination des déchets) ;
-- des **émetteurs** et **récepteurs** qui relient la chimie au corps ;
-- **6 organes** (cœur, digestion, foie, reins, immunité, reproduction) qui
-  s'abîment, se réparent et vieillissent ;
-- un **cycle de vie** : bébé, enfant, ado, adulte, vieux, puis mort vers 10 h
-  de jeu. Certains gènes ne s'activent qu'à un stade donné (hormone sexuelle
-  à l'âge adulte, par exemple).
-
-Le cerveau reste provisoire (5 actions apprises par renforcement) ; le cerveau
-à lobes arrive en phase 2. Conception complète : voir le document de
-conception technique.
+- **Monde** : arbres à fruits, buissons à baies violettes (toxiques),
+  distributeur de graines, balle, pierres. Chaque objet décrit sa réaction
+  aux verbes dans `data/objects.json`.
+- **Cerveau à lobes** : pulsions, vision par catégorie d'objet, attention,
+  concepts « pulsion × objet », décision parmi 14 verbes (approcher, fuir,
+  examiner, prendre, lâcher, manger, pousser, tirer, frapper, parler,
+  dormir, explorer...). Il apprend par récompense et punition, avec une
+  mémoire à court et à long terme, et naît avec quelques instincts écrits
+  dans ses gènes.
+- **Elle découvre seule** que les graines se mangent, que les baies font
+  mal et que pousser le distributeur donne des graines.
+- **Biologie** (phase 1) : 36 substances, 6 organes, cycle de vie de 10 h.
+- **Graphismes** rendus en 3D avec Blender (voir `art/`).
 
 ### Commandes
 

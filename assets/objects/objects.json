@@ -1,0 +1,58 @@
+{
+	"fruit": {
+		"size": 128,
+		"anchor": [
+			64,
+			115.2
+		],
+		"scale": 0.5
+	},
+	"graine": {
+		"size": 96,
+		"anchor": [
+			48,
+			86.4
+		],
+		"scale": 0.5
+	},
+	"baie": {
+		"size": 96,
+		"anchor": [
+			48,
+			86.4
+		],
+		"scale": 0.5
+	},
+	"balle": {
+		"size": 128,
+		"anchor": [
+			64,
+			115.2
+		],
+		"scale": 0.5
+	},
+	"pierre": {
+		"size": 128,
+		"anchor": [
+			64,
+			115.2
+		],
+		"scale": 0.5
+	},
+	"distributeur_on": {
+		"size": 320,
+		"anchor": [
+			160,
+			288.0
+		],
+		"scale": 0.5
+	},
+	"distributeur_off": {
+		"size": 320,
+		"anchor": [
+			160,
+			288.0
+		],
+		"scale": 0.5
+	}
+}

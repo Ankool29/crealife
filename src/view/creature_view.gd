@@ -1,28 +1,68 @@
 class_name CreatureView
 extends Node2D
-## Dessine une créature à partir de son état de simulation (formes procédurales,
-## aucune image nécessaire pour l'instant).
+## Affiche une créature avec les sprites rendus en 3D : l'animation suit le
+## verbe en cours, la teinte vient du gène d'apparence.
 
 const Verb = Brain.Verb
+const WALK_FPS := 10.0
+const ACTION_ANIM := {
+	Verb.MANGER: "manger", Verb.POUSSER: "pousser", Verb.TIRER: "pousser",
+	Verb.FRAPPER: "frapper", Verb.PRENDRE: "prendre", Verb.LACHER: "prendre",
+	Verb.EXAMINER: "examiner", Verb.PARLER: "parler",
+}
 
-var creature: CreatureSim
+var creature: CreatureSim:
+	set(value):
+		creature = value
+		_t = 0.0
+
+var _sprite := Sprite2D.new()
+var _material := ShaderMaterial.new()
 var _t := 0.0
+
+
+func _ready() -> void:
+	SpriteLibrary.ensure()
+	_material.shader = preload("res://src/view/shaders/creature.gdshader")
+	_sprite.material = _material
+	_sprite.centered = false
+	_sprite.offset = -SpriteLibrary.creature_anchor
+	add_child(_sprite)
 
 
 func _process(delta: float) -> void:
 	if creature == null:
 		return
 	_t += delta
-	var hop := 0.0
-	if creature.alive and creature.get_verb() in [Verb.POUSSER, Verb.FRAPPER]:
-		hop = -absf(sin(_t * 7.0)) * 35.0
-	position = Vector2(creature.x, hop)
+	var c := creature
+	position = Vector2(c.x, 0.0)
+	var anim := _animation()
+	var frames: Array = SpriteLibrary.creature_frames[anim]
+	var fps := WALK_FPS if anim == "marche" else 2.0
+	_sprite.texture = frames[int(_t * fps) % frames.size()]
+	var s := SpriteLibrary.creature_scale * c.body_size()
+	_sprite.scale = Vector2(s * c.facing, s)     # retourné quand elle regarde à gauche
+	_material.set_shader_parameter("hue_shift", c.hue)
+	_material.set_shader_parameter("desaturate", 0.0 if c.alive else 0.75)
 	queue_redraw()
+
+
+func _animation() -> String:
+	var c := creature
+	if not c.alive:
+		return "mort"
+	if c.is_asleep():
+		return "dormir"
+	if c.is_moving:
+		return "marche"
+	if c.is_acting() and ACTION_ANIM.has(c.get_verb()):
+		return ACTION_ANIM[c.get_verb()]
+	return "repos"
 
 
 ## Point central du corps en coordonnées monde (pour savoir si on la touche).
 func body_center() -> Vector2:
-	return position + Vector2(0, -45.0 * creature.body_size())
+	return position + Vector2(0, -95.0 * creature.body_size())
 
 
 func _draw() -> void:
@@ -30,52 +70,18 @@ func _draw() -> void:
 		return
 	var c := creature
 	var sz := c.body_size()
-	var col := Color.from_hsv(c.hue, 0.55, 0.92)
-	if not c.alive:
-		col = col.lerp(Color(0.55, 0.55, 0.55), 0.7)   # morte : couleurs éteintes
-	var dark := col.darkened(0.25)
-	var sleeping := c.alive and c.get_verb() == Verb.DORMIR
-	# Morte : couchée sur le flanc
-	var rot := -PI / 2.0 * c.facing if not c.alive else 0.0
-	var base := Vector2(0, -14 * sz) if not c.alive else Vector2.ZERO
-
-	draw_set_transform(base, rot, Vector2(c.facing * sz, sz))
-
-	# Pattes (animées en marche)
-	var swing := sin(_t * 12.0) * 10.0 if c.is_moving else 0.0
-	draw_line(Vector2(-14, -22), Vector2(-14 + swing, 0), dark, 7.0)
-	draw_line(Vector2(14, -22), Vector2(14 - swing, 0), dark, 7.0)
-	# Queue
-	draw_line(Vector2(-34, -38), Vector2(-52, -52 + sin(_t * 4.0) * 6.0), dark, 6.0)
-	# Corps (ellipse via une transformation locale)
-	draw_set_transform(base + (Vector2(0, -40) * sz).rotated(rot), rot, Vector2(c.facing * sz * 1.5, sz))
-	draw_circle(Vector2.ZERO, 24.0, col)
-	draw_set_transform(base, rot, Vector2(c.facing * sz, sz))
-	# Tête
-	var head := Vector2(36, -66)
-	if sleeping:
-		head = Vector2(36, -48)
-	draw_circle(head, 20.0, col)
-	draw_colored_polygon(PackedVector2Array([head + Vector2(-10, -14), head + Vector2(-6, -38), head + Vector2(2, -16)]), dark)
-	# Œil
-	if sleeping or not c.alive:
-		draw_line(head + Vector2(2, -4), head + Vector2(13, -4), Color(0.1, 0.1, 0.1), 3.0)
-	else:
-		draw_circle(head + Vector2(7, -5), 6.0, Color.WHITE)
-		draw_circle(head + Vector2(9, -5), 3.0, Color(0.1, 0.1, 0.1))
-	# Bouche
-	draw_line(head + Vector2(10, 8), head + Vector2(17, 6), Color(0.25, 0.1, 0.1), 2.0)
-
-	# Indicateurs (dessinés sans miroir)
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	var font := ThemeDB.fallback_font
-	if sleeping:
-		var zy := -100.0 - fmod(_t * 20.0, 30.0)
-		draw_string(font, Vector2(30, zy) * sz, "z z", HORIZONTAL_ALIGNMENT_LEFT, -1, 30, Color(1, 1, 1, 0.9))
-	if c.level("Récompense") > 0.05:
-		_draw_heart(Vector2(0, -120) * sz, Color(0.95, 0.25, 0.4, c.level("Récompense")))
-	if c.level("Punition") > 0.05:
-		draw_string(font, Vector2(-8, -110) * sz, "!", HORIZONTAL_ALIGNMENT_LEFT, -1, 48, Color(0.9, 0.1, 0.1, c.level("Punition")))
+	if c.is_asleep():
+		var zy := -150.0 - fmod(_t * 20.0, 30.0)
+		draw_string(font, Vector2(40, zy) * sz, "z z", HORIZONTAL_ALIGNMENT_LEFT, -1, 32, Color(1, 1, 1, 0.9))
+	if c.alive and c.get_verb() == Verb.PARLER and c.is_acting():
+		draw_string(font, Vector2(20, -230) * sz, "?!", HORIZONTAL_ALIGNMENT_LEFT, -1, 34, Color(1, 1, 1, 0.95))
+	var reward := c.level("Récompense")
+	if reward > 0.05:
+		_draw_heart(Vector2(0, -250) * sz, Color(0.95, 0.25, 0.4, minf(reward, 1.0)))
+	var punish := c.level("Punition")
+	if punish > 0.05:
+		draw_string(font, Vector2(-8, -240) * sz, "!", HORIZONTAL_ALIGNMENT_LEFT, -1, 52, Color(0.95, 0.15, 0.1, minf(punish, 1.0)))
 
 
 func _draw_heart(p: Vector2, col: Color) -> void:

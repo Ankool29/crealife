@@ -91,6 +91,11 @@ func get_verb() -> int:
 	return brain.verb
 
 
+## Vrai pendant le court instant qui suit une action sur un objet (animation).
+func is_acting() -> bool:
+	return alive and _done and brain.verb != Verb.DORMIR
+
+
 func is_asleep() -> bool:
 	return alive and brain.verb == Verb.DORMIR
 
