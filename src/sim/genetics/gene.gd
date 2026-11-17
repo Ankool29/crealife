@@ -40,7 +40,8 @@ static func ranges_for(t: int) -> Dictionary:
 		Type.APPEARANCE: return {"hue": [0.0, 1.0], "hue2": [0.0, 1.0], "saturation": [0.0, 1.0],
 				"brightness": [0.0, 1.0], "glow": [0.0, 1.0], "glow_power": [0.0, 1.0], "size": [0.0, 1.0],
 				"speed": [0.0, 1.0], "tail": [0.0, 1.0], "antennae": [0.0, 1.0], "corpulence": [0.0, 1.0],
-				"spots": [0.0, 1.0], "stripes": [0.0, 1.0], "patches": [0.0, 1.0], "hue3": [0.0, 1.0], "light3": [0.0, 1.0]}
+				"spots": [0.0, 1.0], "stripes": [0.0, 1.0], "patches": [0.0, 1.0], "hue3": [0.0, 1.0], "light3": [0.0, 1.0],
+				"head": [0.0, 1.0], "eye": [0.0, 1.0], "rufous": [0.0, 1.0], "white_grade": [0.0, 1.0], "contrast": [0.0, 1.0]}
 	return {}
 
 
@@ -64,6 +65,8 @@ func copy() -> Gene:
 
 ## Mutation des paramètres numériques. rate = probabilité par paramètre.
 func mutate(rng: RandomNumberGenerator, rate: float) -> bool:
+	if type == Type.APPEARANCE and str(params.get("part", "")) == "pelage":
+		return CatCoat.mutate(self, rng, rate)       # allèles : mutation par sauts
 	var changed := false
 	var ranges := ranges_for(type)
 	for key in ranges:

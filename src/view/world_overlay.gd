@@ -52,18 +52,23 @@ func _draw_screen(w: WorldSim, o: WorldObject, font: Font) -> void:
 		Color(0.6, 1.0, 0.85, 0.7))
 	var pic := Rect2(c + Vector2(-30, -36), Vector2(60, 52))
 	var tex: Texture2D = null
+	var cat_anim := ""
 	if kind == "nom":
 		var cat: String = ObjectCatalog.categories[i]
 		if cat == "créature":
-			tex = SpriteLibrary.creature_frames["repos"][0]
+			cat_anim = "repos"
 		elif NOUN_SPRITES.has(cat):
 			tex = SpriteLibrary.objects[NOUN_SPRITES[cat]].texture
 	elif kind == "verbe":
-		var frames: Array = SpriteLibrary.creature_frames.get(VERB_ANIM.get(Language.VERB_WORDS[i], "repos"), [])
-		if not frames.is_empty():
-			tex = frames[int(_t * 3.0) % frames.size()]
-	if tex:
-		draw_texture_rect(tex, pic, false, Color(0.75, 1.0, 0.9) if kind == "verbe" else Color.WHITE)
+		cat_anim = VERB_ANIM.get(Language.VERB_WORDS[i], "repos")
+	if cat_anim != "":
+		# un chat gris, en trois couches, sur l'écran
+		var f := int(_t * 3.0) % SpriteLibrary.cat_frame_count(cat_anim)
+		var big := Rect2(c + Vector2(-46, -46), Vector2(92, 74))
+		for layer in ["queue0", "corps", "tete1"]:
+			draw_texture_rect(SpriteLibrary.cat_texture(cat_anim, f, layer, "c", ""), big, false, Color(0.8, 1.0, 0.92))
+	elif tex:
+		draw_texture_rect(tex, pic, false)
 	elif kind == "besoin":
 		var col := Color.from_hsv(float(i) / Language.DRIVE_WORDS.size(), 0.6, 1.0)
 		draw_circle(pic.get_center(), 20.0, col)

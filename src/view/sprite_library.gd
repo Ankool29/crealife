@@ -1,21 +1,23 @@
 class_name SpriteLibrary
 extends RefCounted
-## Charge une seule fois les sprites rendus avec Blender (dossier assets/)
-## et leurs points d'ancrage (le sol).
+## Sprites rendus avec Blender (dossier assets/) et leurs points d'ancrage.
+## Les chats sont chargés à la demande (corps, têtes, queues, poil court ou
+## long, avec leurs masques de pelage) pour ne pas tout mettre en mémoire.
 
-const CREATURE_DIR := "res://assets/creature/"
+const CAT_DIR := "res://assets/chat/"
 const OBJECTS_DIR := "res://assets/objects/"
 ## Échelle du monde : 1 unité Blender = 120 pixels de jeu.
 const WORLD_PX_PER_UNIT := 120.0
+## Les chats sont affichés un peu plus grands que nature par rapport au décor.
+const CAT_SIZE := 1.25
 
-static var creature_frames := {}        # animation -> Array[Texture2D]
-## Couches génétiques : creature_layers["queue"][variante][animation] -> Array[Texture2D]
-static var creature_layers := {"queue": [], "antennes": []}
-## Masques de motifs (taches, rayures, plaques) : animation -> Array[Texture2D]
-static var creature_masks := {}
-static var creature_anchor := Vector2.ZERO
-static var creature_scale := 1.0        # pixels de sprite -> pixels du monde
-static var objects := {}                # nom -> {texture, anchor, scale}
+static var cat := {}                     # manifeste chat.json
+static var cat_anchor := Vector2.ZERO
+static var cat_scale := 1.0              # pixels de sprite -> pixels du monde
+static var cat_head_top := -130.0        # haut de la tête, en pixels de sprite (négatif)
+static var cat_body_center := Vector2.ZERO
+static var objects := {}                 # nom -> {texture, anchor, scale}
+static var _cache := {}
 static var _loaded := false
 
 
@@ -23,28 +25,11 @@ static func ensure() -> void:
 	if _loaded:
 		return
 	_loaded = true
-	var m: Dictionary = (load(CREATURE_DIR + "creature.json") as JSON).data
-	creature_anchor = Vector2(m.anchor[0], m.anchor[1])
-	creature_scale = WORLD_PX_PER_UNIT / float(m.px_per_unit)
-	for anim in m.animations:
-		var frames: Array[Texture2D] = []
-		for f in m.animations[anim]:
-			frames.append(load(CREATURE_DIR + f))
-		creature_frames[anim] = frames
-	for anim in m.animations:
-		var masks: Array[Texture2D] = []
-		for f in m.animations[anim]:
-			masks.append(load(CREATURE_DIR + str(f).replace(".png", "_motifs.png")))
-		creature_masks[anim] = masks
-	for layer in [["queue", "tails"], ["antennes", "antennae"]]:
-		for k in (m.get(layer[1], []) as Array).size():
-			var by_anim := {}
-			for anim in m.animations:
-				var frames: Array[Texture2D] = []
-				for f in m.animations[anim]:
-					frames.append(load(CREATURE_DIR + str(f).replace(".png", "_%s%d.png" % [layer[0], k])))
-				by_anim[anim] = frames
-			creature_layers[layer[0]].append(by_anim)
+	cat = (load(CAT_DIR + "chat.json") as JSON).data
+	cat_anchor = Vector2(cat.anchor[0], cat.anchor[1])
+	cat_scale = WORLD_PX_PER_UNIT * CAT_SIZE / float(cat.px_per_unit)
+	cat_head_top = float(cat.head_top)
+	cat_body_center = Vector2(cat.body_center[0], cat.body_center[1])
 	var o: Dictionary = (load(OBJECTS_DIR + "objects.json") as JSON).data
 	for name in o:
 		objects[name] = {
@@ -52,6 +37,22 @@ static func ensure() -> void:
 			"anchor": Vector2(o[name].anchor[0], o[name].anchor[1]),
 			"scale": float(o[name].scale),
 		}
+
+
+static func cat_frame_count(anim: String) -> int:
+	ensure()
+	return (cat.animations[anim] as Array).size()
+
+
+## Image d'une couche : anim, numéro d'image, couche (corps, tete0..2,
+## queue0..1), poil ("c" ou "l"), suffixe ("" image, "_m1" ou "_m2" masques).
+static func cat_texture(anim: String, f: int, layer: String, fur: String, suffix: String) -> Texture2D:
+	ensure()
+	var frames: Array = cat.animations[anim]
+	var path: String = "%s%s_%s_%s%s.png" % [CAT_DIR, frames[f % frames.size()], layer, fur, suffix]
+	if not _cache.has(path):
+		_cache[path] = load(path)
+	return _cache[path]
 
 
 ## Place un Sprite2D pour que son point d'ancrage tombe sur l'origine du nœud.

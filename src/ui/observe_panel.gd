@@ -138,7 +138,10 @@ func _genes_text(c: CreatureSim) -> String:
 	var t := "[b]%s : %d gènes[/b]   (génération %d" % [c.creature_name, c.genome.genes.size(), c.generation]
 	if c.mother != "":
 		t += ", mère %s, père %s" % [c.mother, c.father]
-	t += ")\n[color=#9fb3c8]%s[/color]\n\n" % " · ".join(parts)
+	t += ")\n[color=#9fb3c8]%s[/color]\n" % " · ".join(parts)
+	if not c.coat.is_empty():
+		t += "[b]Pelage : %s[/b]%s\n" % [c.coat.name, "  [color=#ff9f80](sourd)[/color]" if c.coat.deaf else ""]
+	t += "\n"
 	for g in c.genome.genes:
 		var active := g.is_expressed(c.stage, c.sex)
 		var line := "[color=#7fd6c2]%s[/color]  %s" % [Gene.TYPE_LABELS[g.type], _gene_summary(g)]
@@ -180,6 +183,15 @@ func _gene_summary(g: Gene) -> String:
 			var cat := str(p.category) if str(p.category) != "" else "rien"
 			return "%s + %s → %s  (%+.1f)" % [p.drive, cat, p.verb, float(p.reward)]
 		Gene.Type.APPEARANCE:
+			if str(p.get("part", "")) == "pelage":
+				var pairs := PackedStringArray()
+				for locus in CatCoat.LOCI:
+					pairs.append("%s %d/%d" % [locus, int(p.get(locus + "1", 0)), int(p.get(locus + "2", 0))])
+				return "pelage (allèles, 0 = sauvage) : " + "  ".join(pairs)
+			if str(p.get("part", "")) == "morpho":
+				return "morphologie : tête %.2f (en coin → ronde), yeux %.2f, roux %.2f, blanc %.2f, contraste %.2f" % [
+					float(p.get("head", 0)), float(p.get("eye", 0)), float(p.get("rufous", 0)),
+					float(p.get("white_grade", 0)), float(p.get("contrast", 0))]
 			if str(p.get("part", "")) == "motif":
 				var names := PackedStringArray()
 				for pair in [["taches", "spots"], ["rayures", "stripes"], ["plaques", "patches"]]:
@@ -209,6 +221,8 @@ func _family_text() -> String:
 		var sex := "♀" if int(h.sex) == Gene.Sex.FEMALE else "♂"
 		var col := Color.from_hsv(float(h.get("hue", 0.5)), 0.7, 0.95).to_html(false)
 		var line := "  [color=#%s]●[/color] %s %s" % [col, h.name, sex]
+		if str(h.get("coat", "")) != "":
+			line += " [color=#c8b89f](%s)[/color]" % h.coat
 		if str(h.mother) != "":
 			line += "  [color=#9fb3c8]de %s et %s[/color]" % [h.mother, h.father]
 		if bool(h.alive):

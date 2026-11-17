@@ -7,6 +7,9 @@ extends RefCounted
 const Verb = Brain.Verb
 const VISION_RANGE := 700.0
 const REACH := 30.0
+## Le chat agit avec la gueule (et les pattes avant) : en pixels devant son centre.
+const MOUTH := 105.0
+const HOLD_H := 70.0
 const AFTER_ACTION := 1.5        # pause après une action, le temps que la récompense arrive
 const MIN_FATIGUE_TO_SLEEP := 0.2
 const DRIVE_REWARD_GAIN := 3.0   # baisse d'une pulsion -> récompense
@@ -89,6 +92,8 @@ var _refused := 0.0
 ## {kind : "nourrir" ou "parler", child, food, time}.
 var care_instinct := 0.0
 var _care := {}
+## Pelage (génétique du chat) : ce que l'on voit, voir CatCoat.phenotype.
+var coat := {}
 ## Tempérament (gène) : curiosité (apprend plus à l'écran, aime le regarder)
 ## et espièglerie (s'ennuie plus vite, s'amuse plus avec les jouets).
 var curiosity := 0.5
@@ -128,6 +133,7 @@ func _init(p_name: String, p_genome: Genome, p_x: float, p_sex: int) -> void:
 	for d in Brain.DRIVE_NAMES:
 		_drive_loci.append(l.id_of("pulsion." + d))
 	_prev_drives.resize(Brain.DRIVE_COUNT)
+	ensure_cat_genes(genome, null, false)
 	_express(true)
 	language = Language.new(genome.expressed(stage, sex), hash(p_name))
 	brain = Brain.new(genome.expressed(stage, sex), language)
@@ -141,6 +147,24 @@ func _apply_age_learning() -> void:
 	brain.plasticity = Lifecycle.learning_factor(stage, brain.ageing)
 	language.plasticity = brain.plasticity
 	language.forgetting = stage == Lifecycle.Stage.OLD
+
+
+## Ajoute les gènes de chat à un génome qui n'en a pas (créature d'une
+## ancienne version) ; random = nouveau pelage tiré au hasard (fondateurs).
+static func ensure_cat_genes(g: Genome, rng: RandomNumberGenerator, random: bool) -> void:
+	var r := rng
+	if r == null:
+		r = RandomNumberGenerator.new()
+		r.seed = hash(JSON.stringify(g.to_dict()))
+	var starter := Genome.starter()
+	for part in ["pelage", "morpho"]:
+		var gene := g.find(Gene.Type.APPEARANCE, "part", part)
+		if gene == null:
+			gene = starter.find(Gene.Type.APPEARANCE, "part", part).copy()
+			g.genes.append(gene)
+			random = true if rng == null else random
+		if random:
+			gene.params = CatCoat.random_alleles(r) if part == "pelage" else CatCoat.random_morpho(r)
 
 
 ## Exprime les gènes du stade actuel (naissance, puis à chaque changement de stade).
@@ -163,6 +187,12 @@ func _express(first_time: bool) -> void:
 		if g.type == Gene.Type.LOBE and str(g.params.get("lobe", "")) == "temperament":
 			curiosity = float(g.params.get("curiosity", 0.5))
 			playfulness = float(g.params.get("playfulness", 0.5))
+	var pel := genome.find(Gene.Type.APPEARANCE, "part", "pelage")
+	var mor := genome.find(Gene.Type.APPEARANCE, "part", "morpho")
+	if pel and mor:
+		coat = CatCoat.phenotype(pel.params, mor.params, sex)
+		var c: Color = coat.col_r if coat.orange == 1 else coat.col_e
+		hue = c.h
 	var shape := genome.find(Gene.Type.APPEARANCE, "part", "silhouette")
 	if shape:
 		tail = clampi(int(float(shape.params.get("tail", 0.5)) * 3.0), 0, 2)
@@ -264,8 +294,8 @@ func tick(dt: float, world: WorldSim, rng: RandomNumberGenerator) -> void:
 	elif not _done:
 		_execute(dt, world, rng)
 	if held != null:
-		held.x = x + facing * 22.0 * body_size()
-		held.h = 30.0 * body_size()
+		held.x = x + facing * MOUTH * body_size()
+		held.h = HOLD_H * body_size()
 
 	var l := biochem.loci.values
 	l[_l_meta] = 1.0
@@ -359,7 +389,7 @@ func _perceive(world: WorldSim) -> void:
 	if nearest_other < VISION_RANGE:
 		brain.vision[cc] = 1.0 - nearest_other / VISION_RANGE
 	brain.situation[0] = 1.0 if held != null else 0.0
-	brain.situation[1] = 1.0 if target != null and absf(target.x - x) < REACH * 2.0 else 0.0
+	brain.situation[1] = 1.0 if target != null and absf(target.x - mouth_x()) < REACH * 2.0 else 0.0
 	brain.situation[2] = clampf(level("Récompense"), 0.0, 1.0)
 	brain.situation[3] = 0.0 if nearest_other < COMPANY_RANGE else 1.0
 
@@ -447,9 +477,8 @@ func _execute(dt: float, world: WorldSim, rng: RandomNumberGenerator) -> void:
 			if not _target_valid(world):
 				_action_time = 0.0       # la cible a disparu : on change d'idée
 				return
-			if target != held and absf(target.x - x) > REACH:
-				_move_towards(target.x, dt)      # d'abord s'approcher de l'objet
-				return
+			if target != held and not _approach(target.x, dt):
+				return                           # d'abord s'approcher de l'objet
 			if v != Verb.APPROCHER:
 				if target is CreatureSim:
 					_act_on_creature(target, v, world)
@@ -477,7 +506,8 @@ func _act_on_creature(other: CreatureSim, v: int, world: WorldSim) -> void:
 				language.speech_left = Language.SAY_TIME
 			else:
 				language.say([w])
-				other.language.learn_from(w[0], w[1], language.knowledge(w[0], w[1]))
+				if not other.coat.get("deaf", false):
+					other.language.learn_from(w[0], w[1], language.knowledge(w[0], w[1]))
 			biochem.add(_chem["Solitude"], -0.3)
 			other.biochem.add(other._chem["Solitude"], -0.3)
 			biochem.add(_chem["Ennui"], -0.05)
@@ -607,8 +637,7 @@ func _execute_care(dt: float, world: WorldSim) -> void:
 			if food == null or not food in world.objects or food.holder != null:
 				_end_care()
 				return
-			if absf(food.x - x) > REACH:
-				_move_towards(food.x, dt)
+			if not _approach(food.x, dt):
 				return
 			held = food                      # il ramasse la nourriture
 			food.holder = self
@@ -617,10 +646,8 @@ func _execute_care(dt: float, world: WorldSim) -> void:
 			brain.verb = Verb.APPROCHER
 			target = child
 			return
-		if absf(child.x - x) > REACH * 1.5:
-			_move_towards(child.x, dt)
+		if not _approach(child.x, dt, REACH * 1.5):
 			return
-		facing = signf(child.x - x) if absf(child.x - x) > 1.0 else facing
 		drop_held()                          # posée devant le petit
 		acted = true
 		brain.verb = Verb.LACHER
@@ -628,10 +655,8 @@ func _execute_care(dt: float, world: WorldSim) -> void:
 		last_event = "%s apporte à manger à %s." % [creature_name, child.creature_name]
 		_end_care()
 	else:
-		if absf(child.x - x) > REACH * 1.5:
-			_move_towards(child.x, dt)
+		if not _approach(child.x, dt, REACH * 1.5):
 			return
-		facing = signf(child.x - x) if absf(child.x - x) > 1.0 else facing
 		brain.verb = Verb.PARLER
 		_act_on_creature(child, Verb.PARLER, world)
 		child.biochem.add(child._chem["Ennui"], -0.2)
@@ -703,6 +728,9 @@ func _shown_valid(world: WorldSim) -> bool:
 ## qu'on s'adresse, moins pour celles qui entendent de loin.
 func hear(text: String, closeness: float) -> Array:
 	if not alive or is_asleep():
+		return []
+	if coat.get("deaf", false):
+		last_event = "%s est sourde : elle n'entend pas les mots (elle peut lire l'écran)." % creature_name
 		return []
 	var found := language.hear(text, brain, closeness)
 	if closeness >= 1.0 and not found.is_empty():
@@ -869,6 +897,24 @@ static func from_dict(d: Dictionary) -> CreatureSim:
 func format_age() -> String:
 	var m := int(age / 60.0)
 	return "%d h %02d" % [m / 60, m % 60]
+
+
+## Position de la gueule (devant le chat, du côté où il regarde).
+func mouth_x() -> float:
+	return x + facing * MOUTH * body_size()
+
+
+## S'approche jusqu'à avoir tx juste devant la gueule ; true une fois arrivée.
+func _approach(tx: float, dt: float, tolerance: float = REACH) -> bool:
+	var dir := signf(tx - x) if absf(tx - x) > 1.0 else facing
+	var want := tx - dir * MOUTH * body_size()
+	if absf(want - x) > tolerance:
+		_move_towards(want, dt)
+		if absf(tx - x) > 1.0:
+			facing = signf(tx - x)              # toujours tournée vers ce qu'elle vise
+		return false
+	facing = dir
+	return true
 
 
 ## Avance vers tx ; renvoie true une fois arrivée.

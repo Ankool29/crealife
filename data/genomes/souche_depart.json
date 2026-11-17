@@ -2031,6 +2031,63 @@
 				"curiosity": 0.5,
 				"playfulness": 0.5
 			}
+		},
+		{
+			"id": 120,
+			"type": "apparence",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"part": "pelage",
+				"O1": 0.0,
+				"O2": 0.0,
+				"B1": 0.0,
+				"B2": 0.0,
+				"D1": 0.0,
+				"D2": 0.0,
+				"A1": 0.0,
+				"A2": 0.0,
+				"T1": 0.0,
+				"T2": 0.0,
+				"Ti1": 0.0,
+				"Ti2": 0.0,
+				"Sp1": 0.0,
+				"Sp2": 0.0,
+				"C1": 0.0,
+				"C2": 0.0,
+				"W1": 0.0,
+				"W2": 0.0,
+				"S1": 0.0,
+				"S2": 0.0,
+				"I1": 0.0,
+				"I2": 0.0,
+				"L1": 0.0,
+				"L2": 0.0,
+				"M1": 0.0,
+				"M2": 0.0
+			}
+		},
+		{
+			"id": 121,
+			"type": "apparence",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"part": "morpho",
+				"head": 0.5,
+				"eye": 0.5,
+				"rufous": 0.5,
+				"white_grade": 0.5,
+				"contrast": 0.5
+			}
 		}
 	]
 }

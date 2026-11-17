@@ -3,7 +3,31 @@
 Jeu de vie artificielle inspiré de la série *Creatures*, conçu pour le mobile (Godot 4, GDScript).
 Tout le contenu est original : aucun fichier ni code du jeu Creatures n'est utilisé.
 
-## État actuel : phase 5 (zones et climat)
+## État actuel : les créatures sont des chats
+
+- **Apparence de chat** (quadrupède), rendue en 3D comme avant. Le cerveau,
+  le langage, la biologie, l'apprentissage et le comportement sont
+  inchangés.
+- **Génétique réelle du pelage**, mendélienne : chaque gène a deux
+  allèles, un de chaque parent, dominants ou récessifs.
+  - Couleurs : noir, chocolat, cannelle et leurs dilutions bleu, lilas,
+    faon ; roux et crème, liés au chromosome X : les mâles roux sont
+    fréquents, l'écaille de tortue et le calico sont (presque) toujours
+    des femelles.
+  - Tigré (agouti) ou uni ; motifs maquereau, classique, moucheté,
+    tiqueté ; argenté ou « smoke ».
+  - Colourpoint siamois : yeux bleus, extrémités qui foncent au froid,
+    chatons qui naissent pâles.
+  - Blanc : panachure (bicolore, arlequin, van) ou blanc dominant, avec
+    yeux bleus ou vairons ; les blancs aux yeux bleus sont sourds (ils
+    n'entendent pas les mots, mais lisent l'écran).
+  - Poil long (récessif), queue courte (Manx, dominant).
+  - Traits continus : forme de la tête (en coin, moyenne, ronde),
+    couleur des yeux, intensité du roux, quantité de blanc, contraste.
+  - Deux chats noirs peuvent avoir un chaton bleu ou siamois ; le nom du
+    pelage s'affiche dans le panneau, les gènes dans l'onglet Gènes.
+
+### Phase 5 (zones et climat)
 
 - **Trois zones** côte à côte : la **salle d'apprentissage** (intérieur
   chaud et éclairé), le **jardin** (nourriture) et l'**aire de loisirs**

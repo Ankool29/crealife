@@ -185,6 +185,7 @@ func add_founders(count: int) -> void:
 		if look:
 			for k in ["hue", "hue2", "saturation", "brightness", "glow", "glow_power", "size", "speed"]:
 				look.params[k] = rng.randf()
+		CreatureSim.ensure_cat_genes(g, rng, true)
 		var temper := g.find(Gene.Type.LOBE, "lobe", "temperament")
 		if temper:     # des caractères variés dès les fondateurs
 			temper.params.curiosity = rng.randf()
@@ -214,7 +215,7 @@ func _add_creature(g: Genome, at_x: float, sex: int, generation: int, mother: St
 	creatures.append(c)
 	history.append({"uid": c.uid, "name": c.creature_name, "sex": sex, "generation": generation,
 		"mother": mother, "father": father, "born_at": time, "alive": true, "cause": "", "age": 0.0,
-		"hue": c.hue})
+		"hue": c.hue, "coat": c.coat.get("name", "")})
 	return c
 
 

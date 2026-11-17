@@ -21,6 +21,7 @@ func _init() -> void:
 	_test_appearance_genes()
 	_test_family_life()
 	_test_zones_and_climate()
+	_test_cat_genetics()
 	print("RÉSULTAT : %s" % ("OK" if _failures == 0 else "%d échec(s)" % _failures))
 	quit(_failures)
 
@@ -498,6 +499,77 @@ func _test_zones_and_climate() -> void:
 	_check(is_equal_approx(w4._first("distributeur").x, w.machine_x) and is_equal_approx(w4.creatures[0].x, w.creatures[0].x)
 		and w4._first("ecran") != null and w4._first("trampoline") != null,
 		"une ancienne sauvegarde s'ouvre avec les nouvelles zones")
+
+
+func _cat(alleles: Dictionary) -> Genome:
+	var g := Genome.starter()
+	var p := g.find(Gene.Type.APPEARANCE, "part", "pelage").params
+	for k in alleles:
+		p[k] = float(alleles[k])
+	return g
+
+
+func _coat(g: Genome, sex: int) -> Dictionary:
+	return CatCoat.phenotype(g.find(Gene.Type.APPEARANCE, "part", "pelage").params,
+		g.find(Gene.Type.APPEARANCE, "part", "morpho").params, sex)
+
+
+func _test_cat_genetics() -> void:
+	print("Chats : génétique du pelage :")
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 21
+	# Mère écaille de tortue (O/o) × père noir (o) : fils roux ou noirs, filles écaille ou noires
+	var mum := _cat({"O1": 1, "O2": 0})
+	var dad := _cat({"O1": 0})
+	_check(_coat(mum, Gene.Sex.FEMALE).orange == 2, "une femelle O/o est écaille de tortue (%s)" % _coat(mum, Gene.Sex.FEMALE).name)
+	var sons_red := 0
+	var daughters := {0: 0, 1: 0, 2: 0}
+	for i in 200:
+		var kid := Genome.cross(mum, dad, rng, 0.0)
+		if _coat(kid, Gene.Sex.MALE).orange == 1:
+			sons_red += 1
+		daughters[_coat(kid, Gene.Sex.FEMALE).orange] += 1
+	print("    mère écaille × père noir : %d fils roux sur 200 ; filles : %d noires, %d écaille, %d rousses" % [
+		sons_red, daughters[0], daughters[2], daughters[1]])
+	_check(sons_red > 70 and sons_red < 130 and daughters[1] == 0 and daughters[2] > 70, "le roux est lié au chromosome X")
+	# Père roux × mère noire : toutes les filles écaille, aucun fils roux
+	var red_dad := _cat({"O1": 1})
+	var black_mum := _cat({"O1": 0, "O2": 0})
+	var tortie := 0
+	var red_sons := 0
+	for i in 100:
+		var kid := Genome.cross(black_mum, red_dad, rng, 0.0)
+		tortie += int(_coat(kid, Gene.Sex.FEMALE).orange == 2)
+		red_sons += int(_coat(kid, Gene.Sex.MALE).orange == 1)
+	_check(tortie == 100 and red_sons == 0, "père roux × mère noire : filles écaille, fils noirs")
+	# Récessifs cachés : deux noirs porteurs de dilution et de colourpoint
+	var a := _cat({"D1": 1, "D2": 0, "C1": 1, "C2": 0, "A1": 1, "A2": 1})
+	var b := _cat({"D1": 0, "D2": 1, "C1": 0, "C2": 1, "A1": 1, "A2": 1})
+	var blue := 0
+	var siamese := 0
+	for i in 400:
+		var kid := Genome.cross(a, b, rng, 0.0)
+		var ph := _coat(kid, Gene.Sex.MALE)
+		blue += int(ph.dilute)
+		siamese += int(ph.points)
+	print("    deux noirs porteurs : %d%% de bleus, %d%% de siamois (attendu ≈ 25 %%) ; parents : %s" % [
+		blue * 100 / 400, siamese * 100 / 400, _coat(a, Gene.Sex.MALE).name])
+	_check(_coat(a, Gene.Sex.MALE).name == "noir" and absi(blue - 100) < 35 and absi(siamese - 100) < 35,
+		"les récessifs réapparaissent chez un quart des petits")
+	# Blanc aux yeux bleus : sourd, n'apprend pas les mots entendus
+	var white := _cat({"W1": 1})
+	white.find(Gene.Type.APPEARANCE, "part", "morpho").params.eye = 0.1
+	var w := WorldSim.new(3, "vide", 0)
+	var deaf := CreatureSim.new("Neige", white, 500.0, Gene.Sex.FEMALE)
+	w.creatures.append(deaf)
+	_check(deaf.coat.deaf and deaf.hear("fruit", 1.0).is_empty(), "un chat blanc aux yeux bleus est sourd (%s)" % deaf.coat.name)
+	# Variété des fondateurs
+	var w2 := WorldSim.new(9, "normal", 10)
+	var names := {}
+	for c in w2.creatures:
+		names[c.coat.name] = true
+	print("    10 fondateurs : %s" % ", ".join(names.keys()))
+	_check(names.size() >= 6, "des pelages variés")
 
 
 func _hm(t: float) -> String:

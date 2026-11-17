@@ -189,6 +189,11 @@ instinct("Froid", "créature", "approcher", 0.8, 4)                         # se
 instinct("Chaud", "", "rien", 0.5, 2)                                      # se reposer
 # Tempérament : curiosité (apprend à l'écran) et espièglerie (aime jouer)
 gene("lobe", {"lobe": "temperament", "curiosity": 0.5, "playfulness": 0.5})
+# --- Chats : génétique du pelage (deux allèles par locus, 0 = sauvage) et
+# traits continus (forme de tête, yeux, roux, blanc, contraste). Voir cat_coat.gd.
+LOCI = ["O", "B", "D", "A", "T", "Ti", "Sp", "C", "W", "S", "I", "L", "M"]
+gene("apparence", dict({"part": "pelage"}, **{l + k: 0.0 for l in LOCI for k in "12"}))
+gene("apparence", {"part": "morpho", "head": 0.5, "eye": 0.5, "rufous": 0.5, "white_grade": 0.5, "contrast": 0.5})
 
 catalog = [{"id": i + 1, "name": n, "family": f} for i, (n, f, _h, _v) in enumerate(CHEMICALS)]
 (ROOT / "data").mkdir(exist_ok=True)

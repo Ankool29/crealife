@@ -1,7 +1,7 @@
 class_name CreatureView
 extends Node2D
-## Affiche une créature avec les sprites rendus en 3D : l'animation suit le
-## verbe en cours, la teinte vient du gène d'apparence.
+## Affiche un chat avec les sprites rendus en 3D : l'animation suit le verbe
+## en cours, le pelage vient des gènes (CatCoat, shader cat.gdshader).
 
 const Verb = Brain.Verb
 const WALK_FPS := 10.0
@@ -19,11 +19,11 @@ var creature: CreatureSim:
 ## Créature sélectionnée : un repère s'affiche au-dessus d'elle.
 var selected := false
 
-var _sprite := Sprite2D.new()
+## Trois couches : queue, corps, tête (chacune avec son matériau de pelage).
 var _tail := Sprite2D.new()
-var _antennae := Sprite2D.new()
-var _material := ShaderMaterial.new()        # corps (avec motifs)
-var _layer_material := ShaderMaterial.new()  # queue et antennes (sans motifs)
+var _sprite := Sprite2D.new()
+var _head := Sprite2D.new()
+var _mats: Array[ShaderMaterial] = []
 var _t := 0.0
 var _bubble_style := StyleBoxFlat.new()
 ## Noms, bulles et icônes : au-dessus de la nuit pour rester lisibles.
@@ -37,14 +37,14 @@ func _ready() -> void:
 	_labels.z_as_relative = false
 	_labels.draw.connect(func() -> void: _draw_labels(_labels))
 	add_child(_labels)
-	_material.shader = preload("res://src/view/shaders/creature.gdshader")
-	_layer_material.shader = _material.shader
-	# queue, corps puis antennes : chaque couche est déjà masquée là où le
-	# corps la cache, l'ordre n'importe que pour les bords
-	for s in [_tail, _sprite, _antennae]:
-		s.material = _material if s == _sprite else _layer_material
+	var shader := preload("res://src/view/shaders/cat.gdshader")
+	for s in [_tail, _sprite, _head]:
+		var m := ShaderMaterial.new()
+		m.shader = shader
+		s.material = m
+		_mats.append(m)
 		s.centered = false
-		s.offset = -SpriteLibrary.creature_anchor
+		s.offset = -SpriteLibrary.cat_anchor
 		add_child(s)
 
 
@@ -55,38 +55,45 @@ func _process(delta: float) -> void:
 	var c := creature
 	position = Vector2(c.x, -absf(sin(_t * 5.0)) * 70.0 * c.body_size() if c.bounce_left > 0.0 else 0.0)
 	var anim := _animation()
-	var frames: Array = SpriteLibrary.creature_frames[anim]
+	var count := SpriteLibrary.cat_frame_count(anim)
 	var fps := WALK_FPS if anim == "marche" else 2.0
-	var f := int(_t * fps) % frames.size()
-	_sprite.texture = frames[f]
-	_tail.texture = _layer("queue", c.tail, anim, f)
-	_antennae.texture = _layer("antennes", c.antennae, anim, f)
-	var s := SpriteLibrary.creature_scale * c.body_size()
-	var wide := lerpf(0.86, 1.18, c.corpulence)     # corpulence : fine à trapue
-	for sp in [_tail, _sprite, _antennae]:
-		sp.scale = Vector2(s * wide * c.facing, s)   # retourné quand elle regarde à gauche
-	var pal := c.palette()
-	for m in [_material, _layer_material]:
-		m.set_shader_parameter("col_dark", pal[0])
-		m.set_shader_parameter("col_mid", pal[1])
-		m.set_shader_parameter("col_light", pal[2])
-		m.set_shader_parameter("glow_shift", c.glow - 0.47)   # rendu d'origine : turquoise
-		m.set_shader_parameter("glow_power", lerpf(0.55, 1.6, c.glow_power))
-		m.set_shader_parameter("desaturate", 0.0 if c.alive else 0.75)
-	var masks: Array = SpriteLibrary.creature_masks.get(anim, [])
-	if not masks.is_empty():
-		_material.set_shader_parameter("motif_tex", masks[f % masks.size()])
-	_material.set_shader_parameter("motif_strength", c.motif_strength())
-	_material.set_shader_parameter("col_motif", c.motif_color())
+	var f := int(_t * fps) % count
+	var coat := c.coat
+	var fur := "l" if coat.get("long_fur", false) else "c"
+	var layers := ["queue1" if coat.get("manx", false) else "queue0", "corps", "tete%d" % int(coat.get("head", 1))]
+	var sprites := [_tail, _sprite, _head]
+	var s := SpriteLibrary.cat_scale * c.body_size()
+	var wide := lerpf(0.9, 1.12, c.corpulence)       # corpulence : svelte à trapu
+	for i in 3:
+		var sp: Sprite2D = sprites[i]
+		var m: ShaderMaterial = _mats[i]
+		sp.texture = SpriteLibrary.cat_texture(anim, f, layers[i], fur, "")
+		m.set_shader_parameter("mask1", SpriteLibrary.cat_texture(anim, f, layers[i], fur, "_m1"))
+		m.set_shader_parameter("mask2", SpriteLibrary.cat_texture(anim, f, layers[i], fur, "_m2"))
+		sp.scale = Vector2(s * wide * c.facing, s)     # retourné quand il regarde à gauche
+		_set_coat(m, c)
 	_labels.queue_redraw()
 
 
-func _layer(kind: String, variant: int, anim: String, f: int) -> Texture2D:
-	var layers: Array = SpriteLibrary.creature_layers[kind]
-	if variant >= layers.size():
-		return null
-	var frames: Array = layers[variant][anim]
-	return frames[f % frames.size()]
+func _set_coat(m: ShaderMaterial, c: CreatureSim) -> void:
+	var coat := c.coat
+	if coat.is_empty():
+		return
+	m.set_shader_parameter("col_e", coat.col_e)
+	m.set_shader_parameter("col_r", coat.col_r)
+	m.set_shader_parameter("orange", coat.orange)
+	m.set_shader_parameter("agouti", coat.agouti)
+	m.set_shader_parameter("pattern", coat.pattern)
+	m.set_shader_parameter("silver", coat.silver)
+	m.set_shader_parameter("contrast", coat.contrast)
+	m.set_shader_parameter("points", coat.points)
+	# siamois : extrémités plus foncées au froid ; les chatons naissent pâles
+	var cold := clampf(0.55 + (20.0 - c.felt_temp) / 30.0, 0.35, 1.0)
+	var age_f: float = [0.2, 0.6, 0.9, 1.0, 1.0][c.stage]
+	m.set_shader_parameter("point_strength", cold * age_f)
+	m.set_shader_parameter("white", coat.white)
+	m.set_shader_parameter("eye_color", coat.eye)
+	m.set_shader_parameter("desaturate", 0.0 if c.alive else 0.6)
 
 
 func _animation() -> String:
@@ -104,7 +111,7 @@ func _animation() -> String:
 
 ## Point central du corps en coordonnées monde (pour savoir si on la touche).
 func body_center() -> Vector2:
-	return position + Vector2(0, -95.0 * creature.body_size())
+	return position + SpriteLibrary.cat_body_center * SpriteLibrary.cat_scale * creature.body_size()
 
 
 func _draw_labels(cv: CanvasItem) -> void:
@@ -114,7 +121,8 @@ func _draw_labels(cv: CanvasItem) -> void:
 	var sz := c.body_size()
 	var font := ThemeDB.fallback_font
 	# Nom au-dessus de la tête (et repère si sélectionnée)
-	var top := -215.0 * sz - 18.0
+	var head := SpriteLibrary.cat_head_top * SpriteLibrary.cat_scale       # haut de la tête (négatif)
+	var top := head * sz - 18.0
 	var name_col := Color(1, 1, 1, 0.95) if selected else Color(1, 1, 1, 0.55)
 	cv.draw_string(font, Vector2(-100, top), c.creature_name, HORIZONTAL_ALIGNMENT_CENTER, 200, 20 if selected else 16, name_col)
 	if selected:
@@ -123,10 +131,10 @@ func _draw_labels(cv: CanvasItem) -> void:
 	if c.alive and c.pregnant_time >= 0.0:
 		cv.draw_string(font, Vector2(-100, top + 22), "attend un œuf", HORIZONTAL_ALIGNMENT_CENTER, 200, 14, Color(1, 0.85, 0.9, 0.9))
 	if c.is_asleep():
-		var zy := -150.0 - fmod(_t * 20.0, 30.0)
-		cv.draw_string(font, Vector2(40, zy) * sz, "z z", HORIZONTAL_ALIGNMENT_LEFT, -1, 32, Color(1, 1, 1, 0.9))
+		var zy := head * 0.55 - fmod(_t * 20.0, 30.0)
+		cv.draw_string(font, Vector2(c.facing * 60.0, zy) * sz, "z z", HORIZONTAL_ALIGNMENT_LEFT, -1, 32, Color(1, 1, 1, 0.9))
 	if c.alive and c.get_verb() == Verb.PARLER and c.is_acting():
-		cv.draw_string(font, Vector2(20, -230) * sz, "?!", HORIZONTAL_ALIGNMENT_LEFT, -1, 34, Color(1, 1, 1, 0.95))
+		cv.draw_string(font, Vector2(c.facing * 100.0, head * 1.05) * sz, "?!", HORIZONTAL_ALIGNMENT_LEFT, -1, 34, Color(1, 1, 1, 0.95))
 	if c.alive and c.language.speech != "":
 		_draw_bubble(cv, Vector2(0, top - (52 if selected else 22)), c.language.speech, font)
 	var L := c.language
@@ -137,17 +145,17 @@ func _draw_labels(cv: CanvasItem) -> void:
 	if selected and c.alive and L.shown_left > 0.0 and L.shown_object != null:
 		# flèche au-dessus de ce qu'on lui montre
 		var o = L.shown_object
-		var tip := Vector2(o.x - c.x, (-o.h - 60.0) if o is WorldObject else -230.0 * o.body_size())
+		var tip := Vector2(o.x - c.x, (-o.h - 60.0) if o is WorldObject else head * o.body_size() - 20.0)
 		tip.y -= 8.0 * sin(_t * 6.0)
 		var col := Color(1, 0.9, 0.3, minf(1.0, L.shown_left))
 		cv.draw_colored_polygon(PackedVector2Array([tip, tip + Vector2(-16, -22), tip + Vector2(16, -22)]), col)
 		cv.draw_rect(Rect2(tip + Vector2(-6, -48), Vector2(12, 28)), col)
 	var reward := c.level("Récompense")
 	if reward > 0.05:
-		_draw_heart(cv, Vector2(0, -250) * sz, Color(0.95, 0.25, 0.4, minf(reward, 1.0)))
+		_draw_heart(cv, Vector2(0, head * 1.15) * sz, Color(0.95, 0.25, 0.4, minf(reward, 1.0)))
 	var punish := c.level("Punition")
 	if punish > 0.05:
-		cv.draw_string(font, Vector2(-8, -240) * sz, "!", HORIZONTAL_ALIGNMENT_LEFT, -1, 52, Color(0.95, 0.15, 0.1, minf(punish, 1.0)))
+		cv.draw_string(font, Vector2(-8, head * 1.1) * sz, "!", HORIZONTAL_ALIGNMENT_LEFT, -1, 52, Color(0.95, 0.15, 0.1, minf(punish, 1.0)))
 
 
 ## Bulle de paroles au-dessus de la tête.

@@ -307,7 +307,7 @@ func update_from(c: CreatureSim, world: WorldSim, event_text: String, sim_speed:
 		return
 	var sex_mark := "♀" if c.sex == Gene.Sex.FEMALE else "♂"
 	_name_label.text = "%s %s  ·  %s  ·  %s" % [c.creature_name, sex_mark, Lifecycle.STAGE_LABELS[c.stage], c.format_age()]
-	var info := "Génération %d" % c.generation
+	var info := "Génération %d · %s" % [c.generation, c.coat.get("name", "")]
 	if c.mother != "":
 		info += " · enfant de %s et %s" % [c.mother, c.father]
 	if c.pregnant_time >= 0.0:

@@ -134,7 +134,10 @@ static func cross(a: Genome, b: Genome, rng: RandomNumberGenerator, mutation_rat
 		var pick: Gene = gene if from_a or not same else by_id_b[gene.id]
 		var copy := pick.copy()
 		if gene.type == Gene.Type.APPEARANCE and same:
-			_blend_appearance(copy, gene, by_id_b[gene.id], rng)
+			if str(gene.params.get("part", "")) == "pelage":
+				CatCoat.cross(copy, gene, by_id_b[gene.id], rng)     # a = mère, b = père
+			else:
+				_blend_appearance(copy, gene, by_id_b[gene.id], rng)
 		child.genes.append(copy)
 	for gene in b.genes:                                     # gènes propres au parent b
 		if not by_id_a.has(gene.id) and rng.randf() < 0.5:
