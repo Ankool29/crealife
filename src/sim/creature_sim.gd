@@ -11,8 +11,15 @@ const AFTER_ACTION := 1.5        # pause après une action, le temps que la réc
 const MIN_FATIGUE_TO_SLEEP := 0.2
 const DRIVE_REWARD_GAIN := 3.0   # baisse d'une pulsion -> récompense
 const ACTIVITY: Array[float] = [0.1, 0.5, 0.8, 0.2, 0.3, 0.1, 0.3, 0.5, 0.5, 0.6, 0.2, 0.0, 0.5, 0.4]
+const COMPANY_RANGE := 400.0     # au-delà, elle se sent seule
+const GESTATION := 900.0         # 15 min de jeu avant la ponte
+const MATING_DESIRE := 0.3       # désir minimal du partenaire pour accepter
 
+var uid := 0
 var creature_name: String
+var generation := 1
+var mother := ""
+var father := ""
 var genome: Genome
 var sex: int
 var biochem: Biochemistry
@@ -26,7 +33,12 @@ var alive := true
 var death_cause := ""
 var is_moving := false
 var held: WorldObject = null
-var target: WorldObject = null
+## Ce que la créature vise : un WorldObject ou une autre CreatureSim.
+var target: Object = null
+## Gestation (femelle) : temps écoulé, -1 si elle n'attend pas d'œuf.
+var pregnant_time := -1.0
+var _father_genome: Genome = null
+var _father_name := ""
 ## Instant où l'action en cours a produit son effet (pour l'animation).
 var acted := false
 var meals := 0
@@ -51,6 +63,7 @@ var _l_act: int
 var _l_dort: int
 var _l_ennui: int
 var _l_speed: int
+var _l_seul: int
 
 var _action_time := 0.0
 var _done := false
@@ -66,7 +79,8 @@ func _init(p_name: String, p_genome: Genome, p_x: float, p_sex: int) -> void:
 	x = p_x
 	_goal_x = p_x
 	biochem = Biochemistry.new()
-	for n in ["Faim", "Soif", "Fatigue", "Ennui", "Douleur", "Eau", "Glucose", "Toxines", "Récompense", "Punition"]:
+	for n in ["Faim", "Soif", "Fatigue", "Ennui", "Douleur", "Eau", "Glucose", "Toxines", "Récompense", "Punition",
+			"Solitude", "Désir", "Hormone sexuelle"]:
 		_chem[n] = Chemicals.id_of(n)
 	var l := biochem.loci
 	_l_meta = l.id_of("corps.metabolisme")
@@ -74,6 +88,7 @@ func _init(p_name: String, p_genome: Genome, p_x: float, p_sex: int) -> void:
 	_l_dort = l.id_of("corps.dort")
 	_l_ennui = l.id_of("corps.ennui")
 	_l_speed = l.id_of("corps.vitesse_bonus")
+	_l_seul = l.id_of("corps.seul")
 	for d in Brain.DRIVE_NAMES:
 		_drive_loci.append(l.id_of("pulsion." + d))
 	_prev_drives.resize(Brain.DRIVE_COUNT)
@@ -139,7 +154,7 @@ func action_text() -> String:
 		return "Morte"
 	var t := Brain.VERB_LABELS[brain.verb]
 	if target != null and brain.verb in Brain.OBJECT_VERBS:
-		t += " : " + ObjectCatalog.label_of(target.type_name)
+		t += " : " + (target.creature_name if target is CreatureSim else ObjectCatalog.label_of(target.type_name))
 	return t
 
 
@@ -151,9 +166,14 @@ func tick(dt: float, world: WorldSim, rng: RandomNumberGenerator) -> void:
 	if st != stage:
 		stage = st
 		_express(false)
+		for g in genome.expressed(stage, sex):
+			if g.type == Gene.Type.INSTINCT and g.stage == stage:   # instincts de ce nouvel âge
+				for i in int(round(float(g.params.get("repeat", 1.0)))):
+					brain.train_instinct(g.params, 1.0)
 		last_event = "%s est maintenant %s." % [creature_name, Lifecycle.STAGE_LABELS[stage].to_lower()]
 
 	_perceive(world)
+	_gestation(dt, world)
 	_action_time -= dt
 	is_moving = false
 	acted = false
@@ -168,6 +188,7 @@ func tick(dt: float, world: WorldSim, rng: RandomNumberGenerator) -> void:
 	l[_l_act] = ACTIVITY[brain.verb]
 	l[_l_dort] = 1.0 if brain.verb == Verb.DORMIR else 0.0
 	l[_l_ennui] = 0.0 if brain.verb == Verb.EXPLORER else 1.0
+	l[_l_seul] = brain.situation[3]
 	biochem.step(dt, age)
 
 	# Récompense naturelle : sentir un besoin diminuer est agréable, et c'est
@@ -198,10 +219,17 @@ func _perceive(world: WorldSim) -> void:
 		var dist := absf(o.x - x) if o.holder != self else 0.0
 		if dist < VISION_RANGE and (o.holder == null or o.holder == self) and o.category >= 0:
 			brain.vision[o.category] = maxf(brain.vision[o.category], 1.0 - dist / VISION_RANGE)
+	var nearest_other := INF
+	for c in world.creatures:
+		if c != self and c.alive:
+			nearest_other = minf(nearest_other, absf(c.x - x))
+	var cc := ObjectCatalog.categories.find("créature")
+	if nearest_other < VISION_RANGE:
+		brain.vision[cc] = 1.0 - nearest_other / VISION_RANGE
 	brain.situation[0] = 1.0 if held != null else 0.0
 	brain.situation[1] = 1.0 if target != null and absf(target.x - x) < REACH * 2.0 else 0.0
 	brain.situation[2] = clampf(level("Récompense"), 0.0, 1.0)
-	brain.situation[3] = 1.0 if world.creatures.size() <= 1 else 0.0
+	brain.situation[3] = 0.0 if nearest_other < COMPANY_RANGE else 1.0
 
 
 func _decide(world: WorldSim, rng: RandomNumberGenerator) -> void:
@@ -210,9 +238,12 @@ func _decide(world: WorldSim, rng: RandomNumberGenerator) -> void:
 	allowed.fill(true)
 	allowed[Verb.LACHER] = held != null
 	allowed[Verb.DORMIR] = level("Fatigue") >= MIN_FATIGUE_TO_SLEEP
-	allowed[Verb.ACCOUPLER] = false    # phase 3
+	allowed[Verb.ACCOUPLER] = stage == Lifecycle.Stage.ADULT
 	var v := brain.decide(rng, allowed)
-	target = _nearest(world, brain.attention) if brain.attention >= 0 else null
+	if brain.attention == ObjectCatalog.categories.find("créature"):
+		target = _nearest_creature(world)
+	else:
+		target = _nearest(world, brain.attention) if brain.attention >= 0 else null
 	if v in Brain.OBJECT_VERBS and target == null:
 		brain.verb = Verb.RIEN
 	_done = false
@@ -229,6 +260,16 @@ func _decide(world: WorldSim, rng: RandomNumberGenerator) -> void:
 			_goal_x = clampf(x + signf(x - target.x + 0.01) * 300.0, 60.0, world.width - 60.0)
 		_:
 			_action_time = 20.0
+
+
+func _nearest_creature(world: WorldSim) -> CreatureSim:
+	var best: CreatureSim = null
+	var best_d := VISION_RANGE
+	for c in world.creatures:
+		if c != self and c.alive and absf(c.x - x) < best_d:
+			best_d = absf(c.x - x)
+			best = c
+	return best
 
 
 func _nearest(world: WorldSim, category: int) -> WorldObject:
@@ -265,15 +306,82 @@ func _execute(dt: float, world: WorldSim, rng: RandomNumberGenerator) -> void:
 			drop_held()
 			_finish()
 		_:
-			if target == null or not (target in world.objects):
-				_action_time = 0.0       # l'objet a disparu : on change d'idée
+			if not _target_valid(world):
+				_action_time = 0.0       # la cible a disparu : on change d'idée
 				return
 			if target != held and absf(target.x - x) > REACH:
 				_move_towards(target.x, dt)      # d'abord s'approcher de l'objet
 				return
 			if v != Verb.APPROCHER:
-				_act_on(target, v, world)
+				if target is CreatureSim:
+					_act_on_creature(target, v, world)
+				else:
+					_act_on(target, v, world)
 			_finish()
+
+
+func _target_valid(world: WorldSim) -> bool:
+	if target == null:
+		return false
+	if target is CreatureSim:
+		return target.alive and target in world.creatures
+	return target in world.objects
+
+
+## Interactions avec une autre créature.
+func _act_on_creature(other: CreatureSim, v: int, world: WorldSim) -> void:
+	acted = true
+	match v:
+		Verb.PARLER:
+			biochem.add(_chem["Solitude"], -0.3)
+			other.biochem.add(other._chem["Solitude"], -0.3)
+			biochem.add(_chem["Ennui"], -0.05)
+		Verb.EXAMINER:
+			biochem.add(_chem["Solitude"], -0.05)
+		Verb.FRAPPER:
+			other.biochem.add(other._chem["Douleur"], 0.3)
+			biochem.add(_chem["Ennui"], -0.1)
+			other.last_event = "%s a été frappée par %s." % [other.creature_name, creature_name]
+		Verb.POUSSER:
+			other.x = clampf(other.x + facing * 40.0, 60.0, world.width - 60.0)
+			biochem.add(_chem["Ennui"], -0.05)
+		Verb.ACCOUPLER:
+			_try_mating(other, world)
+
+
+## Accouplement : adultes de sexe opposé, partenaire consentant (désir
+## suffisant), femelle pas déjà en gestation, population pas au maximum.
+func _try_mating(other: CreatureSim, world: WorldSim) -> void:
+	if other.sex == sex or other.stage != Lifecycle.Stage.ADULT or stage != Lifecycle.Stage.ADULT:
+		return
+	if other.level("Désir") < MATING_DESIRE:
+		return
+	var female: CreatureSim = self if sex == Gene.Sex.FEMALE else other
+	var male: CreatureSim = other if female == self else self
+	if female.pregnant_time >= 0.0 or world.population_full():
+		return
+	for c in [self, other]:
+		c.biochem.add(c._chem["Désir"], -0.8)
+		c.biochem.conc[c._chem["Hormone sexuelle"]] = 0.0
+	female.pregnant_time = 0.0
+	female._father_genome = male.genome
+	female._father_name = male.creature_name
+	female.last_event = "%s et %s se sont accouplés : %s attend un œuf." % [creature_name, other.creature_name, female.creature_name]
+	world.last_event = female.last_event
+
+
+## Gestation : au bout du temps voulu, la femelle pond un œuf.
+func _gestation(dt: float, world: WorldSim) -> void:
+	if pregnant_time < 0.0:
+		return
+	pregnant_time += dt
+	if pregnant_time >= GESTATION:
+		pregnant_time = -1.0
+		var child := Genome.cross(genome, _father_genome, world.rng, 0.03)
+		world.lay_egg(x, child, creature_name, _father_name, maxi(generation, 1) + 1)
+		last_event = "%s a pondu un œuf." % creature_name
+		world.last_event = last_event
+		_father_genome = null
 
 
 ## L'objet répond au verbe : substances, consommation, coup de pied, apparition.
@@ -365,6 +473,43 @@ func _die() -> void:
 	else:
 		death_cause = "d'épuisement"
 	last_event = "%s est morte %s, à %s." % [creature_name, death_cause, format_age()]
+
+
+## État complet pour la sauvegarde.
+func to_dict() -> Dictionary:
+	return {
+		"uid": uid, "name": creature_name, "genome": genome.to_dict(), "sex": sex,
+		"generation": generation, "mother": mother, "father": father,
+		"x": x, "facing": facing, "age": age, "alive": alive, "death_cause": death_cause,
+		"meals": meals, "naps": naps, "eaten": eaten,
+		"pregnant_time": pregnant_time, "father_genome": _father_genome.to_dict() if _father_genome else null,
+		"father_name": _father_name,
+		"biochem": biochem.to_dict(), "brain": brain.to_dict(),
+	}
+
+
+static func from_dict(d: Dictionary) -> CreatureSim:
+	var c := CreatureSim.new(str(d.name), Genome.from_dict(d.genome), float(d.x), int(d.sex))
+	c.uid = int(d.uid)
+	c.generation = int(d.generation)
+	c.mother = str(d.mother)
+	c.father = str(d.father)
+	c.facing = float(d.facing)
+	c.age = float(d.age)
+	c.stage = Lifecycle.stage_at(c.age)
+	c._express(false)
+	c.alive = bool(d.alive)
+	c.death_cause = str(d.death_cause)
+	c.meals = int(d.meals)
+	c.naps = int(d.naps)
+	c.eaten = d.eaten
+	c.pregnant_time = float(d.pregnant_time)
+	if d.father_genome != null:
+		c._father_genome = Genome.from_dict(d.father_genome)
+	c._father_name = str(d.father_name)
+	c.biochem.load_dict(d.biochem)
+	c.brain.load_dict(d.brain)
+	return c
 
 
 func format_age() -> String:

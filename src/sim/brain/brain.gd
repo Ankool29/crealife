@@ -233,3 +233,17 @@ func weight(drive_name: String, category: int, v: int) -> float:
 	var d := DRIVE_NAMES.find(drive_name)
 	var slot := category if category >= 0 else _cats
 	return stw[(d * (_cats + 1) + slot) * VERB_COUNT + v]
+
+
+## Mémoire du cerveau pour la sauvegarde.
+func to_dict() -> Dictionary:
+	return {"stw": Array(stw), "ltw": Array(ltw), "attn_w": Array(attn_w),
+		"attn_bias": Array(attn_bias), "verb_bias": Array(verb_bias)}
+
+
+func load_dict(d: Dictionary) -> void:
+	for key in ["stw", "ltw", "attn_w", "attn_bias", "verb_bias"]:
+		var src: Array = d.get(key, [])
+		var dst: PackedFloat32Array = get(key)
+		if src.size() == dst.size():     # sinon : cerveau d'une autre version, on garde l'inné
+			set(key, PackedFloat32Array(src))

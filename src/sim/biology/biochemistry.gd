@@ -204,3 +204,22 @@ func step(dt: float, age_s: float) -> void:
 		var o := organs[i]
 		var used := o.step(dt, age_s, loci.values[o.damage_locus], conc[_proteins])
 		conc[_proteins] = maxf(0.0, conc[_proteins] - used)
+
+
+func to_dict() -> Dictionary:
+	var org := {}
+	for o in organs.slice(1):
+		org[o.organ_name] = o.health
+	return {"conc": Array(conc), "organs": org}
+
+
+## Recharge concentrations et santé des organes (après configure()).
+func load_dict(d: Dictionary) -> void:
+	var c: Array = d.get("conc", [])
+	for i in mini(c.size(), conc.size()):
+		conc[i] = float(c[i])
+	var org: Dictionary = d.get("organs", {})
+	for n in org:
+		var o := organ(n)
+		if o:
+			o.health = float(org[n])

@@ -110,6 +110,7 @@ emitter("corps.metabolisme", "Fatigue", 0.0001)
 emitter("corps.dort", "Fatigue", -0.003)
 emitter("chem:Fatigue", "Sommeil", 0.05, threshold=0.6)
 emitter("corps.ennui", "Ennui", 0.008)
+emitter("corps.seul", "Solitude", 0.004)                                   # personne autour
 emitter("chem:Toxines", "Douleur", 0.05, threshold=0.3)
 # Hormones
 emitter("chem:Douleur", "Adrénaline", 0.05, threshold=0.2)
@@ -142,7 +143,8 @@ gene("lobe", {"lobe": "decision", "noise": 0.4, "learning_rate": 0.5,
 
 def instinct(drive, category, verb, reward=1.0, repeat=6):
     gene("instinct", {"drive": drive, "category": category, "verb": verb,
-                      "reward": reward, "repeat": repeat})
+                      "reward": reward, "repeat": repeat},
+         stage="adulte" if verb == "accoupler" else "bebe")
 
 
 # Instincts : réflexes appris avant la naissance (catégorie "" = aucun objet).
@@ -155,6 +157,8 @@ instinct("Sommeil", "", "dormir")
 instinct("Ennui", "jouet", "pousser", 1.0, 4)
 instinct("Ennui", "", "explorer", 0.8, 3)
 instinct("Douleur", "", "rien", 0.5, 2)
+instinct("Solitude", "créature", "parler", 0.8, 4)
+instinct("Désir", "créature", "accoupler", 1.0, 6)                       # actif à l'âge adulte
 # Couleurs : teinte principale, teinte secondaire (ventre, reflets),
 # saturation, luminosité et couleur des parties lumineuses. Tirées au hasard pour chaque nouvelle créature.
 gene("apparence", {"part": "corps", "hue": 0.5, "hue2": 0.6, "saturation": 0.7,

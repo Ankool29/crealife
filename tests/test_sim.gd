@@ -15,6 +15,8 @@ func _init() -> void:
 	_test_learns_seeds()
 	_test_avoids_berries()
 	_test_full_life()
+	_test_save_load()
+	_test_generations()
 	print("RÉSULTAT : %s" % ("OK" if _failures == 0 else "%d échec(s)" % _failures))
 	quit(_failures)
 
@@ -188,3 +190,64 @@ func _test_full_life() -> void:
 	_check(stages.size() == 5, "elle traverse les 5 stades de vie")
 	_check(not c.alive and c.death_cause == "de vieillesse", "elle meurt de vieillesse")
 	_check(t > 9.0 * 3600.0 and t < 11.5 * 3600.0, "durée de vie autour de 10 h")
+
+
+func _test_save_load() -> void:
+	print("Sauvegarde :")
+	var w := WorldSim.new(9, "normal", 2)
+	for i in 3000:
+		w.tick(STEP)
+	var text := JSON.stringify(w.to_dict())
+	var w2 := WorldSim.from_dict(JSON.parse_string(text))
+	var a := w.creatures[0]
+	var b := w2.creatures[0]
+	_check(w2.creatures.size() == w.creatures.size() and w2.objects.size() == w.objects.size(),
+		"créatures et objets rechargés")
+	_check(a.creature_name == b.creature_name and absf(a.age - b.age) < 0.01 and absf(a.hue - b.hue) < 0.0001,
+		"identité, âge et couleurs conservés")
+	var fruit := ObjectCatalog.categories.find("fruit")
+	_check(absf(a.brain.weight("Faim", fruit, Brain.Verb.MANGER) - b.brain.weight("Faim", fruit, Brain.Verb.MANGER)) < 0.001,
+		"ce que le cerveau a appris est conservé")
+	_check(absf(a.level("Glucose") - b.level("Glucose")) < 0.001, "la chimie est conservée")
+	print("    taille de la sauvegarde : %d Ko" % (text.length() / 1024))
+
+
+func _test_generations() -> void:
+	print("Critère phase 3 : trois générations viables :")
+	var w := WorldSim.new(12, "normal", 2)
+	for c in w.creatures:
+		c.age = 2.5 * 3600.0          # les fondateurs commencent adultes
+	var t := 0.0
+	var max_pop := 0
+	var start := Time.get_ticks_msec()
+	while t < 10.0 * 3600.0:
+		w.tick(STEP)
+		t += STEP
+		max_pop = maxi(max_pop, w.alive_count() + w._eggs.size())
+		var max_gen := 0
+		for h in w.history:
+			max_gen = maxi(max_gen, int(h.generation))
+		if max_gen >= 3 and t > 1.0 * 3600.0:
+			var g3_alive := false
+			for c in w.creatures:
+				if c.generation >= 3 and c.alive and c.age > 1800.0:
+					g3_alive = true
+			if g3_alive:
+				break
+	var gens := {}
+	for h in w.history:
+		gens[int(h.generation)] = gens.get(int(h.generation), 0) + 1
+	print("    après %s : créatures par génération %s, population max %d (%d s de calcul)" % [_hm(t), gens, max_pop, (Time.get_ticks_msec() - start) / 1000])
+	_check(gens.get(2, 0) >= 1, "des enfants naissent")
+	_check(gens.get(3, 0) >= 1, "une troisième génération naît")
+	var g3_ok := false
+	for c in w.creatures:
+		if c.generation >= 3 and c.alive and c.age > 1800.0:
+			g3_ok = true
+	_check(g3_ok, "un membre de la 3e génération vit plus de 30 min")
+	_check(max_pop <= WorldSim.MAX_POPULATION, "la population reste plafonnée à %d" % WorldSim.MAX_POPULATION)
+
+
+func _hm(t: float) -> String:
+	var m := int(t / 60.0)
+	return "%d h %02d" % [m / 60, m % 60]
