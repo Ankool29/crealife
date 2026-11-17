@@ -9,6 +9,15 @@ const STAGE_LABELS: Array[String] = ["Bébé", "Enfant", "Ado", "Adulte", "Vieux
 const STAGE_START_H: Array[float] = [0.0, 0.5, 1.5, 2.5, 8.0]
 ## Taille relative du corps selon le stade.
 const STAGE_SIZE: Array[float] = [0.55, 0.75, 0.9, 1.0, 0.97]
+## Plasticité du cerveau selon le stade : les jeunes apprennent vite, les
+## adultes sont plus « têtus », les vieux apprennent lentement et oublient.
+const STAGE_LEARNING: Array[float] = [1.5, 1.3, 1.0, 0.7, 0.4]
+
+
+## Multiplicateur d'apprentissage à ce stade. ageing (gène, 0..1) règle
+## l'écart à 1 : faible = l'esprit reste jeune longtemps, fort = mûrit vite.
+static func learning_factor(stage: int, ageing: float) -> float:
+	return maxf(0.1, 1.0 + (STAGE_LEARNING[stage] - 1.0) * lerpf(0.4, 1.6, ageing))
 
 
 static func stage_at(age_s: float) -> int:

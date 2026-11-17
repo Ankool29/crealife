@@ -311,6 +311,34 @@ func _test_language() -> void:
 	print("    après 30 échanges, %s connaît %d noms appris de %s (dernière phrase : « %s »)" % [b.creature_name, learnt, a.creature_name, a.language.speech])
 	_check(learnt >= 4, "les mots se transmettent en parlant")
 
+	# 5. L'âge : les enfants apprennent plus vite que les adultes, les vieux oublient
+	var gains := []
+	for hours in [1.0, 4.0]:
+		var w5 := WorldSim.new(51, "vide")
+		var c5 := w5.creatures[0]
+		c5.age = hours * 3600.0
+		w5.tick(STEP)
+		var b5 := w5.add_object("balle", c5.x + 30.0)
+		c5.show_thing(b5)
+		w5.say("balle", c5)
+		gains.append(c5.language.nouns[jouet])
+	print("    une leçon : enfant %.2f, adulte %.2f" % gains)
+	_check(gains[0] > gains[1] * 1.4, "un enfant apprend plus vite qu'un adulte")
+	var w6 := WorldSim.new(53, "vide")
+	var c6 := w6.creatures[0]
+	c6.age = 8.2 * 3600.0
+	w6.tick(STEP)
+	c6.language.nouns[jouet] = 1.0
+	c6.language.nouns[0] = 1.0
+	t = 0.0
+	while t < 3600.0:
+		if int(t / STEP) % 1500 == 0:
+			c6.language.used("nom", 0)     # « fruit » est entretenu, « jouet » non
+		c6.tick(STEP, w6, w6.rng)
+		t += STEP
+	print("    vieille, après 1 h : mot entretenu %.2f, mot oublié %.2f" % [c6.language.nouns[0], c6.language.nouns[jouet]])
+	_check(c6.language.nouns[0] > 0.99 and c6.language.nouns[jouet] < 0.95, "les vieux oublient les mots qui ne servent plus")
+
 	# 4. Sauvegarde
 	var w4 := WorldSim.from_dict(JSON.parse_string(JSON.stringify(w3.to_dict())))
 	_check(is_equal_approx(w4.creatures[1].language.nouns[jouet], b.language.nouns[jouet]), "le vocabulaire est sauvegardé")

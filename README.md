@@ -13,6 +13,10 @@ Tout le contenu est original : aucun fichier ni code du jeu Creatures n'est util
   tendance, renforcée par les caresses. Elle dit ce qu'elle ressent
   (« faim ! ») dans une bulle, en babillant au début puis en écorchant
   les mots, et transmet son vocabulaire aux autres en leur parlant.
+- **L'âge compte** : bébés et enfants apprennent vite (mots comme
+  habitudes), les adultes plus lentement, les vieux encore moins et
+  oublient peu à peu les mots qui ne servent plus. Un gène
+  (« maturation ») règle à quel point l'esprit vieillit selon les lignées.
 - **Apparence** : en plus des couleurs, chaque créature hérite d'une forme
   de queue (courte, longue, massue), d'antennes (courtes, longues,
   ramifiées), d'une corpulence et d'une couleur et intensité de lumière

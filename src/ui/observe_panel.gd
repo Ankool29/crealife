@@ -103,6 +103,8 @@ func _update_text() -> void:
 func _words_text(c: CreatureSim) -> String:
 	var L := c.language
 	var t := "[b]%s connaît %d mots[/b]" % [c.creature_name, L.vocabulary_size()]
+	t += "   [color=#9fb3c8]%s : apprend ×%.1f%s[/color]" % [Lifecycle.STAGE_LABELS[c.stage], L.plasticity,
+		", oublie les mots inutilisés" if L.forgetting else ""]
 	if L.last_heard != "":
 		t += "   [color=#9fb3c8]a entendu : « %s »[/color]" % L.last_heard
 	t += "\n[color=#9fb3c8]Dites un nom quand elle regarde l'objet, un verbe pendant qu'elle fait l'action, "
@@ -166,7 +168,10 @@ func _gene_summary(g: Gene) -> String:
 			if str(p.lobe) == "langage":
 				return "lobe langage, apprentissage %.2f, bavardage %.2f, obéissance %.2f" % [
 					float(p.get("learning_rate", 0)), float(p.get("talk", 0)), float(p.get("obey", 0))]
-			return "lobe %s, curiosité %.2f, apprentissage %.2f" % [p.lobe, float(p.get("noise", 0)), float(p.learning_rate)]
+			var txt := "lobe %s, curiosité %.2f, apprentissage %.2f" % [p.lobe, float(p.get("noise", 0)), float(p.learning_rate)]
+			if p.has("ageing"):
+				txt += ", maturation %.2f" % float(p.ageing)
+			return txt
 		Gene.Type.INSTINCT:
 			var cat := str(p.category) if str(p.category) != "" else "rien"
 			return "%s + %s → %s  (%+.1f)" % [p.drive, cat, p.verb, float(p.reward)]

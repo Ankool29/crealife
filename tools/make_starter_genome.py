@@ -138,7 +138,7 @@ for d in DRIVES:
     receptor(d, f"pulsion.{d}", 1.0)
 gene("lobe", {"lobe": "attention", "noise": 0.4, "learning_rate": 0.5})
 gene("lobe", {"lobe": "decision", "noise": 0.4, "learning_rate": 0.5,
-              "ltw_rate": 0.0005, "stw_relax": 0.002})
+              "ltw_rate": 0.0005, "stw_relax": 0.002, "ageing": 0.5})
 # Langage : vitesse d'apprentissage des mots, envie de parler, tendance à obéir.
 gene("lobe", {"lobe": "langage", "learning_rate": 0.5, "talk": 0.5, "obey": 0.5})
 

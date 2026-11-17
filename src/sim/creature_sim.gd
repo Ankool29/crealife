@@ -101,6 +101,16 @@ func _init(p_name: String, p_genome: Genome, p_x: float, p_sex: int) -> void:
 	_express(true)
 	language = Language.new(genome.expressed(stage, sex), hash(p_name))
 	brain = Brain.new(genome.expressed(stage, sex), language)
+	_apply_age_learning()
+
+
+## L'âge règle la vitesse d'apprentissage (mots et habitudes) et l'oubli.
+func _apply_age_learning() -> void:
+	if brain == null:
+		return
+	brain.plasticity = Lifecycle.learning_factor(stage, brain.ageing)
+	language.plasticity = brain.plasticity
+	language.forgetting = stage == Lifecycle.Stage.OLD
 
 
 ## Exprime les gènes du stade actuel (naissance, puis à chaque changement de stade).
@@ -183,6 +193,7 @@ func tick(dt: float, world: WorldSim, rng: RandomNumberGenerator) -> void:
 			if g.type == Gene.Type.INSTINCT and g.stage == stage:   # instincts de ce nouvel âge
 				for i in int(round(float(g.params.get("repeat", 1.0)))):
 					brain.train_instinct(g.params, 1.0)
+		_apply_age_learning()
 		last_event = "%s est maintenant %s." % [creature_name, Lifecycle.STAGE_LABELS[stage].to_lower()]
 
 	_perceive(world)
@@ -593,6 +604,7 @@ static func from_dict(d: Dictionary) -> CreatureSim:
 		c._father_genome = Genome.from_dict(d.father_genome)
 	c._father_name = str(d.father_name)
 	c.biochem.load_dict(d.biochem)
+	c._apply_age_learning()
 	c.brain.load_dict(d.brain)
 	c.language.load_dict(d.get("language", {}))
 	return c

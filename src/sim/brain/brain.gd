@@ -59,6 +59,9 @@ var _stw_relax := 0.002
 var _relax_timer := 0.0
 var _heard_base := 0
 var lang: Language = null
+## Plasticité selon l'âge (voir Lifecycle.learning_factor), fixée par le corps.
+var plasticity := 1.0
+var ageing := 0.5
 
 # Trace de la dernière décision (ce que le renforcement va modifier)
 var _elig := PackedFloat32Array()
@@ -100,6 +103,7 @@ func _init(genes: Array[Gene], p_lang: Language = null) -> void:
 				_lr = lerpf(0.1, 0.6, float(p.get("learning_rate", 0.5)))
 				_ltw_rate = float(p.get("ltw_rate", 0.0005))
 				_stw_relax = float(p.get("stw_relax", 0.002))
+				ageing = float(p.get("ageing", 0.5))
 	var obey := lang.obey if lang else 0.5
 	for v in VERB_COUNT:
 		var i := (_heard_base + v) * VERB_COUNT + v
@@ -188,13 +192,13 @@ func reinforce(r: float) -> void:
 		var a := _elig[k]
 		if a > 0.01:
 			var i := k * VERB_COUNT + verb
-			var rate := _lr if k < drive_part or k >= _heard_base else _lr * CONTEXT_LEARNING
+			var rate := (_lr if k < drive_part or k >= _heard_base else _lr * CONTEXT_LEARNING) * plasticity
 			stw[i] = clampf(stw[i] + rate * r * a, -3.0, 3.0)
 	if _elig_cat >= 0:
 		for d in DRIVE_COUNT:
 			var i := d * _cats + _elig_cat
-			attn_w[i] = clampf(attn_w[i] + _attn_lr * r * _elig_drives[d], -3.0, 3.0)
-		attn_bias[_elig_cat] = clampf(attn_bias[_elig_cat] + _attn_lr * CONTEXT_LEARNING * r, -1.0, 1.0)
+			attn_w[i] = clampf(attn_w[i] + _attn_lr * plasticity * r * _elig_drives[d], -3.0, 3.0)
+		attn_bias[_elig_cat] = clampf(attn_bias[_elig_cat] + _attn_lr * plasticity * CONTEXT_LEARNING * r, -1.0, 1.0)
 
 
 ## Récompense naturelle ciblée : la pulsion d qui vient de baisser renforce
@@ -205,10 +209,10 @@ func reinforce_drive(d: int, r: float) -> void:
 	var k := d * (_cats + 1) + slot
 	if _elig[k] > 0.01:
 		var i := k * VERB_COUNT + verb
-		stw[i] = clampf(stw[i] + _lr * r, -3.0, 3.0)
+		stw[i] = clampf(stw[i] + _lr * plasticity * r, -3.0, 3.0)
 	if _elig_cat >= 0:
 		var j := d * _cats + _elig_cat
-		attn_w[j] = clampf(attn_w[j] + _attn_lr * r, -3.0, 3.0)
+		attn_w[j] = clampf(attn_w[j] + _attn_lr * plasticity * r, -3.0, 3.0)
 
 
 ## Les poids à court terme reviennent vers le long terme (oubli) et le long

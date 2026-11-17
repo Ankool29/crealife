@@ -1580,7 +1580,8 @@
 				"noise": 0.4,
 				"learning_rate": 0.5,
 				"ltw_rate": 0.0005,
-				"stw_relax": 0.002
+				"stw_relax": 0.002,
+				"ageing": 0.5
 			}
 		},
 		{

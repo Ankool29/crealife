@@ -61,6 +61,13 @@ var progress_text := ""
 var progress_left := 0.0
 
 var learning := 0.25
+## Plasticité selon l'âge ; forgetting : la vieillesse fait oublier les mots
+## qui ne servent plus (ni entendus ni dits depuis FORGET_AFTER secondes).
+var plasticity := 1.0
+var forgetting := false
+const FORGET_AFTER := 1200.0
+const FORGET_RATE := 0.00004      # par seconde : environ -0,15 par heure
+var _unused := {}                 # "genre:index" -> secondes depuis le dernier usage
 var talk := 0.5
 var obey := 0.5
 var seed := 0
@@ -137,7 +144,8 @@ func _set_knowledge(kind: String, i: int, k: float) -> void:
 ## Rapproche la connaissance d'un mot de 1 ; strength dans [0, 1].
 func learn(kind: String, i: int, strength: float) -> void:
 	var k := knowledge(kind, i)
-	_set_knowledge(kind, i, k + learning * strength * (1.0 - k))
+	_set_knowledge(kind, i, k + learning * plasticity * strength * (1.0 - k))
+	_unused[kind + ":" + str(i)] = 0.0
 
 
 ## Nombre de mots bien connus (connaissance > 0,6).
@@ -174,6 +182,7 @@ func hear(text: String, brain: Brain, closeness: float) -> Array:
 		var c: Array = found[n]
 		var i: int = c[1]
 		var before := knowledge(c[0], i)
+		used(c[0], i)
 		match c[0]:
 			"nom":
 				# Apprendre : elle regarde l'objet (ou on le lui montre),
@@ -198,6 +207,28 @@ func hear(text: String, brain: Brain, closeness: float) -> Array:
 	return found
 
 
+func _forget(dt: float) -> void:
+	for kind in ["nom", "verbe", "besoin"]:
+		var arr: PackedFloat32Array = nouns if kind == "nom" else (verbs if kind == "verbe" else drive_words)
+		for i in arr.size():
+			if arr[i] <= 0.0:
+				continue
+			var key: String = kind + ":" + str(i)
+			var t: float = _unused.get(key, FORGET_AFTER) + dt
+			_unused[key] = t
+			if t >= FORGET_AFTER:
+				arr[i] = maxf(0.0, arr[i] - FORGET_RATE * dt)
+		match kind:
+			"nom": nouns = arr
+			"verbe": verbs = arr
+			"besoin": drive_words = arr
+
+
+## Un mot entendu ou dit est « entretenu » : il ne s'oublie pas.
+func used(kind: String, i: int) -> void:
+	_unused[kind + ":" + str(i)] = 0.0
+
+
 ## Le joueur lui montre un objet (ou une autre créature).
 func show(obj: Object, category: int) -> void:
 	shown_object = obj
@@ -211,6 +242,8 @@ func tick(dt: float) -> void:
 		if _heard_left <= 0.0:
 			heard_noun.fill(0.0)
 			heard_verb.fill(0.0)
+	if forgetting:
+		_forget(dt)
 	if shown_left > 0.0:
 		shown_left -= dt
 		if shown_left <= 0.0:
@@ -269,6 +302,7 @@ func say(words: Array) -> void:
 	var parts: Array[String] = []
 	for w in words:
 		parts.append(pronounce(w[0], w[1]))
+		used(w[0], w[1])
 	speech = " ".join(parts)
 	if speech != "":
 		speech += " !" if words.size() == 1 and words[0][0] == "besoin" else ""
@@ -299,8 +333,9 @@ func favourite_word(rng: RandomNumberGenerator) -> Array:
 ## locutrice en sait (on n'apprend pas un mot juste de quelqu'un qui babille).
 func learn_from(kind: String, i: int, speaker_knowledge: float) -> void:
 	var k := knowledge(kind, i)
+	used(kind, i)
 	if speaker_knowledge > k:
-		_set_knowledge(kind, i, k + learning * 0.5 * (speaker_knowledge - k))
+		_set_knowledge(kind, i, k + learning * plasticity * 0.5 * (speaker_knowledge - k))
 
 
 func to_dict() -> Dictionary:
