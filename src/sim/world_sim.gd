@@ -53,7 +53,7 @@ func new_creature(at_x: float) -> CreatureSim:
 	g.mutate(rng, 0.05)
 	var look := g.find(Gene.Type.APPEARANCE, "part", "corps")
 	if look:
-		for k in ["hue", "size", "speed"]:
+		for k in ["hue", "hue2", "saturation", "brightness", "glow", "size", "speed"]:
 			look.params[k] = rng.randf()
 	var creature_name := NAMES[_name_index % NAMES.size()]
 	_name_index += 1

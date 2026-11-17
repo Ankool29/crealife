@@ -42,7 +42,11 @@ func _process(delta: float) -> void:
 	_sprite.texture = frames[int(_t * fps) % frames.size()]
 	var s := SpriteLibrary.creature_scale * c.body_size()
 	_sprite.scale = Vector2(s * c.facing, s)     # retourné quand elle regarde à gauche
-	_material.set_shader_parameter("hue_shift", c.hue)
+	var pal := c.palette()
+	_material.set_shader_parameter("col_dark", pal[0])
+	_material.set_shader_parameter("col_mid", pal[1])
+	_material.set_shader_parameter("col_light", pal[2])
+	_material.set_shader_parameter("glow_shift", c.glow - 0.47)   # rendu d'origine : turquoise
 	_material.set_shader_parameter("desaturate", 0.0 if c.alive else 0.75)
 	queue_redraw()
 

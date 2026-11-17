@@ -175,11 +175,12 @@ def skin_material(root):
     l.new(nsep.outputs["X"], side.inputs[1])
     ramp = n.new("ShaderNodeValToRGB")
     ramp.color_ramp.elements[0].position = 0.25
-    ramp.color_ramp.elements[0].color = (0.62, 0.8, 0.62, 1)    # ventre vert d'eau
+    # Rendu en niveaux de gris : le jeu colorise selon les gènes.
+    ramp.color_ramp.elements[0].color = (0.85, 0.85, 0.85, 1)   # ventre clair
     ramp.color_ramp.elements[1].position = 0.6
-    ramp.color_ramp.elements[1].color = (0.04, 0.32, 0.38, 1)    # flancs bleu-vert
+    ramp.color_ramp.elements[1].color = (0.42, 0.42, 0.42, 1)   # flancs
     e = ramp.color_ramp.elements.new(0.85)
-    e.color = (0.16, 0.04, 0.3, 1)                              # dos violet sombre
+    e.color = (0.16, 0.16, 0.16, 1)                             # dos sombre
     to01 = n.new("ShaderNodeMapRange")
     to01.inputs["From Min"].default_value = -1.0
     to01.inputs["From Max"].default_value = 1.0
@@ -230,10 +231,10 @@ def skin_material(root):
     bsdf.inputs["Coat Weight"].default_value = 0.25
     bsdf.inputs["Coat Roughness"].default_value = 0.3
     bsdf.inputs["Subsurface Weight"].default_value = 0.25
-    bsdf.inputs["Subsurface Radius"].default_value = (0.2, 0.35, 0.3)
+    bsdf.inputs["Subsurface Radius"].default_value = (0.3, 0.3, 0.3)
     bsdf.inputs["Subsurface Scale"].default_value = 0.05
     # Reflets irisés
-    bsdf.inputs["Thin Film Thickness"].default_value = 420.0
+    bsdf.inputs["Thin Film Thickness"].default_value = 0.0      # pas d'irisation : elle colorerait le gris
     bsdf.inputs["Thin Film IOR"].default_value = 1.45
     return mat
 

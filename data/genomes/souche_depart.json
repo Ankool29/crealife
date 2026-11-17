@@ -1713,6 +1713,10 @@
 			"p": {
 				"part": "corps",
 				"hue": 0.5,
+				"hue2": 0.6,
+				"saturation": 0.7,
+				"brightness": 0.7,
+				"glow": 0.47,
 				"size": 0.5,
 				"speed": 0.5
 			}

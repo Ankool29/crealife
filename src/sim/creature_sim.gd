@@ -35,8 +35,12 @@ var naps := 0
 var eaten := {}
 var last_event := ""
 
-# Apparence (gène Apparence « corps »)
+# Apparence (gène Apparence « corps »), valeurs dans [0, 1]
 var hue := 0.5
+var hue2 := 0.6
+var saturation := 0.7
+var brightness := 0.7
+var glow := 0.47
 var _size_gene := 0.5
 var _speed := 100.0
 
@@ -83,6 +87,10 @@ func _express(first_time: bool) -> void:
 	var look := genome.find(Gene.Type.APPEARANCE, "part", "corps")
 	if look:
 		hue = float(look.params.get("hue", 0.5))
+		hue2 = float(look.params.get("hue2", 0.6))
+		saturation = float(look.params.get("saturation", 0.7))
+		brightness = float(look.params.get("brightness", 0.7))
+		glow = float(look.params.get("glow", 0.47))
 		_size_gene = float(look.params.get("size", 0.5))
 		_speed = lerpf(60.0, 150.0, float(look.params.get("speed", 0.5)))
 
@@ -98,6 +106,17 @@ func is_acting() -> bool:
 
 func is_asleep() -> bool:
 	return alive and brain.verb == Verb.DORMIR
+
+
+## Palette de couleurs tirée des gènes : [sombre, principale, claire].
+func palette() -> Array[Color]:
+	var s := lerpf(0.55, 1.0, saturation)
+	var v := lerpf(0.75, 1.0, brightness)
+	return [
+		Color.from_hsv(fposmod(hue + 0.04, 1.0), minf(1.0, s + 0.1), v * 0.3),
+		Color.from_hsv(hue, s, v),
+		Color.from_hsv(hue2, s * 0.6, minf(1.0, v * 1.1 + 0.1)),
+	]
 
 
 ## Taille affichée : gène de taille × stade de vie.

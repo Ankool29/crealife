@@ -35,7 +35,8 @@ static func ranges_for(t: int) -> Dictionary:
 		Type.ORGAN: return {"longevity_h": [0.5, 40.0], "repair": [0.0, 0.01], "health": [0.0, 1.0]}
 		Type.LOBE: return {"noise": [0.0, 1.0], "learning_rate": [0.0, 1.0], "ltw_rate": [0.0, 0.05], "stw_relax": [0.0, 0.05]}
 		Type.INSTINCT: return {"reward": [-2.0, 2.0], "repeat": [0.0, 20.0]}
-		Type.APPEARANCE: return {"hue": [0.0, 1.0], "size": [0.0, 1.0], "speed": [0.0, 1.0]}
+		Type.APPEARANCE: return {"hue": [0.0, 1.0], "hue2": [0.0, 1.0], "saturation": [0.0, 1.0],
+				"brightness": [0.0, 1.0], "glow": [0.0, 1.0], "size": [0.0, 1.0], "speed": [0.0, 1.0]}
 	return {}
 
 

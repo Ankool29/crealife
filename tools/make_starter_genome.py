@@ -155,7 +155,10 @@ instinct("Sommeil", "", "dormir")
 instinct("Ennui", "jouet", "pousser", 1.0, 4)
 instinct("Ennui", "", "explorer", 0.8, 3)
 instinct("Douleur", "", "rien", 0.5, 2)
-gene("apparence", {"part": "corps", "hue": 0.5, "size": 0.5, "speed": 0.5})
+# Couleurs : teinte principale, teinte secondaire (ventre, reflets),
+# saturation, luminosité et couleur des parties lumineuses. Tirées au hasard pour chaque nouvelle créature.
+gene("apparence", {"part": "corps", "hue": 0.5, "hue2": 0.6, "saturation": 0.7,
+                   "brightness": 0.7, "glow": 0.47, "size": 0.5, "speed": 0.5})
 
 catalog = [{"id": i + 1, "name": n, "family": f} for i, (n, f, _h, _v) in enumerate(CHEMICALS)]
 (ROOT / "data").mkdir(exist_ok=True)
