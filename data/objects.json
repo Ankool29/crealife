@@ -182,6 +182,83 @@
 					}
 				}
 			}
+		},
+		"ecran": {
+			"category": "machine",
+			"label": "écran d'apprentissage",
+			"carry": false,
+			"verbs": {
+				"examiner": {
+					"chems": {
+						"Ennui": -0.12
+					},
+					"curious": true
+				},
+				"pousser": {
+					"chems": {
+						"Ennui": -0.04
+					},
+					"next_screen": true
+				},
+				"frapper": {
+					"chems": {
+						"Douleur": 0.05
+					}
+				}
+			}
+		},
+		"trampoline": {
+			"category": "jouet",
+			"label": "trampoline",
+			"carry": false,
+			"verbs": {
+				"pousser": {
+					"chems": {
+						"Ennui": -0.3,
+						"Fatigue": 0.03
+					},
+					"bounce": 3.0,
+					"play": true
+				},
+				"tirer": {
+					"chems": {
+						"Ennui": -0.15
+					},
+					"bounce": 1.5,
+					"play": true
+				},
+				"examiner": {
+					"chems": {
+						"Ennui": -0.03
+					}
+				}
+			}
+		},
+		"boite_musique": {
+			"category": "jouet",
+			"label": "boîte à musique",
+			"carry": false,
+			"verbs": {
+				"pousser": {
+					"chems": {
+						"Ennui": -0.1
+					},
+					"music": 25.0,
+					"play": true
+				},
+				"tirer": {
+					"chems": {
+						"Ennui": -0.1
+					},
+					"music": 25.0,
+					"play": true
+				},
+				"examiner": {
+					"chems": {
+						"Ennui": -0.03
+					}
+				}
+			}
 		}
 	}
 }

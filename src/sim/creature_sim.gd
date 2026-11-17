@@ -89,6 +89,19 @@ var _refused := 0.0
 ## {kind : "nourrir" ou "parler", child, food, time}.
 var care_instinct := 0.0
 var _care := {}
+## Tempérament (gène) : curiosité (apprend plus à l'écran, aime le regarder)
+## et espièglerie (s'ennuie plus vite, s'amuse plus avec les jouets).
+var curiosity := 0.5
+var playfulness := 0.5
+## Saut sur le trampoline : temps restant (pour l'affichage).
+var bounce_left := 0.0
+## Température ressentie (°C) et zone actuelle, pour l'interface.
+var felt_temp := 18.0
+var _l_cold: int
+var _l_hot: int
+var _l_night: int
+var _l_rain: int
+const HUDDLE_RANGE := 150.0
 
 
 func _init(p_name: String, p_genome: Genome, p_x: float, p_sex: int) -> void:
@@ -99,7 +112,7 @@ func _init(p_name: String, p_genome: Genome, p_x: float, p_sex: int) -> void:
 	_goal_x = p_x
 	biochem = Biochemistry.new()
 	for n in ["Faim", "Soif", "Fatigue", "Ennui", "Douleur", "Eau", "Glucose", "Toxines", "Récompense", "Punition",
-			"Solitude", "Désir", "Hormone sexuelle"]:
+			"Solitude", "Désir", "Hormone sexuelle", "Froid", "Chaud"]:
 		_chem[n] = Chemicals.id_of(n)
 	var l := biochem.loci
 	_l_meta = l.id_of("corps.metabolisme")
@@ -108,6 +121,10 @@ func _init(p_name: String, p_genome: Genome, p_x: float, p_sex: int) -> void:
 	_l_ennui = l.id_of("corps.ennui")
 	_l_speed = l.id_of("corps.vitesse_bonus")
 	_l_seul = l.id_of("corps.seul")
+	_l_cold = l.id_of("corps.froid_ext")
+	_l_hot = l.id_of("corps.chaud_ext")
+	_l_night = l.id_of("corps.nuit")
+	_l_rain = l.id_of("corps.pluie")
 	for d in Brain.DRIVE_NAMES:
 		_drive_loci.append(l.id_of("pulsion." + d))
 	_prev_drives.resize(Brain.DRIVE_COUNT)
@@ -143,6 +160,9 @@ func _express(first_time: bool) -> void:
 	for g in genome.expressed(stage, sex):
 		if g.type == Gene.Type.LOBE and str(g.params.get("lobe", "")) == "parental":
 			care_instinct = float(g.params.get("care", 0.6))
+		if g.type == Gene.Type.LOBE and str(g.params.get("lobe", "")) == "temperament":
+			curiosity = float(g.params.get("curiosity", 0.5))
+			playfulness = float(g.params.get("playfulness", 0.5))
 	var shape := genome.find(Gene.Type.APPEARANCE, "part", "silhouette")
 	if shape:
 		tail = clampi(int(float(shape.params.get("tail", 0.5)) * 3.0), 0, 2)
@@ -251,8 +271,9 @@ func tick(dt: float, world: WorldSim, rng: RandomNumberGenerator) -> void:
 	l[_l_meta] = 1.0
 	l[_l_act] = ACTIVITY[brain.verb]
 	l[_l_dort] = 1.0 if brain.verb == Verb.DORMIR else 0.0
-	l[_l_ennui] = 0.0 if brain.verb == Verb.EXPLORER else 1.0
+	l[_l_ennui] = 0.0 if brain.verb == Verb.EXPLORER else lerpf(0.5, 1.8, playfulness)
 	l[_l_seul] = brain.situation[3]
+	_feel_climate(dt, world)
 	biochem.step(dt, age)
 
 	# Récompense naturelle : sentir un besoin diminuer est agréable, et c'est
@@ -272,6 +293,53 @@ func tick(dt: float, world: WorldSim, rng: RandomNumberGenerator) -> void:
 		return
 	if _action_time <= 0.0:
 		_decide(world, rng)
+
+
+## Climat ressenti : température de la zone, réchauffée par les créatures
+## blotties tout près ; nuit (fatigue) ; pluie (elle boit un peu).
+func _feel_climate(dt: float, world: WorldSim) -> void:
+	var l := biochem.loci.values
+	bounce_left = maxf(0.0, bounce_left - dt)
+	if world.scenario != "normal":          # les scénarios de test n'ont pas de climat
+		l[_l_cold] = 0.0
+		l[_l_hot] = 0.0
+		l[_l_night] = 0.0
+		l[_l_rain] = 0.0
+		felt_temp = 18.0
+		return
+	var t := world.temperature_at(x)
+	var huddle := 0.0
+	for c in world.creatures:
+		if c != self and c.alive and absf(c.x - x) < HUDDLE_RANGE:
+			huddle += 2.0
+	t += minf(huddle, 5.0) + (1.5 if is_asleep() else 0.0)     # endormie, roulée en boule
+	felt_temp = t
+	l[_l_cold] = clampf((14.0 - t) / 16.0, 0.0, 1.0)
+	l[_l_hot] = clampf((t - 27.0) / 10.0, 0.0, 1.0)
+	l[_l_night] = 1.0 - world.light_at(x)
+	l[_l_rain] = 1.0 if world.raining_at(x) else 0.0
+
+
+## Regarde-t-elle l'écran ?
+func watches(scr: WorldObject) -> bool:
+	return target == scr and (brain.attention == ObjectCatalog.categories.find("machine"))
+
+
+## Le mot montré par l'écran : on l'apprend d'autant mieux qu'on est curieuse.
+func learn_from_screen(kind: String, i: int) -> void:
+	var before := language.knowledge(kind, i)
+	language.learn(kind, i, 0.3 * lerpf(0.3, 1.7, curiosity))
+	if language.knowledge(kind, i) > before + 0.005:
+		language.progress_text = "+ " + Language.word_of(kind, i)
+		language.progress_left = Language.PROGRESS_TIME
+
+
+## La boîte à musique joue près d'elle : l'ennui et la solitude baissent.
+func hear_music(dt: float) -> void:
+	if is_asleep():
+		return
+	biochem.add(_chem["Ennui"], -0.006 * dt * lerpf(0.6, 1.4, playfulness))
+	biochem.add(_chem["Solitude"], -0.002 * dt)
 
 
 ## Remplit les lobes d'entrée : pulsions, vision, situation.
@@ -660,7 +728,23 @@ func _act_on(o: WorldObject, v: int, world: WorldSim) -> void:
 		return
 	var r := ObjectCatalog.response(o.type_name, Brain.VERB_KEYS[v])
 	for chem_name in r.get("chems", {}):
-		biochem.add(Chemicals.id_of(chem_name), float(r.chems[chem_name]))
+		var amount := float(r.chems[chem_name])
+		if chem_name == "Ennui" and amount < 0.0:
+			if o.category == ObjectCatalog.categories.find("jouet"):
+				amount *= lerpf(0.8, 1.3, playfulness)       # les espiègles s'amusent plus
+			elif r.get("curious", false):
+				amount *= lerpf(0.4, 1.8, curiosity)         # les curieuses aiment l'écran
+		biochem.add(Chemicals.id_of(chem_name), amount)
+	if r.has("bounce"):
+		bounce_left = float(r.bounce)
+	if r.has("music"):
+		o.cooldown = float(r.music)
+		world.last_event = "%s fait jouer la boîte à musique." % creature_name
+	if r.get("next_screen", false):
+		world.next_screen_mode()
+	if r.get("curious", false) and o.type_name == "ecran":
+		var item := world.screen_item()
+		learn_from_screen(item[0], item[1])
 	if r.has("kick"):
 		if o == held:
 			drop_held()

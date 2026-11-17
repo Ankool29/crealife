@@ -14,11 +14,14 @@ signal say_pressed(text: String)
 signal new_game_confirmed
 
 const MARGIN := 40  # marge pour l'encoche / les bords arrondis
-const BAR_LABELS: Array[String] = ["Faim", "Soif", "Fatigue", "Ennui", "Solitude", "Désir", "Santé"]
+const BAR_LABELS: Array[String] = ["Faim", "Soif", "Fatigue", "Ennui", "Solitude", "Désir", "Froid", "Chaud", "Santé"]
 const BAR_COLORS: Array[Color] = [
 	Color(0.9, 0.55, 0.2), Color(0.3, 0.65, 0.95), Color(0.45, 0.55, 0.95),
-	Color(0.75, 0.45, 0.85), Color(0.6, 0.75, 0.8), Color(0.95, 0.45, 0.6), Color(0.35, 0.8, 0.4),
+	Color(0.75, 0.45, 0.85), Color(0.6, 0.75, 0.8), Color(0.95, 0.45, 0.6),
+	Color(0.55, 0.85, 1.0), Color(1.0, 0.4, 0.2), Color(0.35, 0.8, 0.4),
 ]
+## Barres affichées seulement quand elles comptent (Froid, Chaud).
+const OPTIONAL_BARS: Array[int] = [6, 7]
 
 var observe: ObservePanel
 
@@ -27,6 +30,8 @@ var _info_label: Label
 var _action_label: Label
 var _event_label: Label
 var _bars: Array[ProgressBar] = []
+var _bar_rows: Array[Control] = []
+var _climate_label: Label
 var _speed_button: Button
 var _follow_button: Button
 var _new_button: Button
@@ -68,6 +73,10 @@ func _ready() -> void:
 	_info_label.add_theme_font_size_override("font_size", 18)
 	_info_label.modulate = Color(0.75, 0.82, 0.9)
 	box.add_child(_info_label)
+	_climate_label = Label.new()
+	_climate_label.add_theme_font_size_override("font_size", 18)
+	_climate_label.modulate = Color(0.95, 0.9, 0.7)
+	box.add_child(_climate_label)
 	for i in BAR_LABELS.size():
 		var row := HBoxContainer.new()
 		var l := Label.new()
@@ -88,6 +97,7 @@ func _ready() -> void:
 		row.add_child(bar)
 		box.add_child(row)
 		_bars.append(bar)
+		_bar_rows.append(row)
 	_action_label = Label.new()
 	box.add_child(_action_label)
 
@@ -305,7 +315,12 @@ func update_from(c: CreatureSim, world: WorldSim, event_text: String, sim_speed:
 	info += " · %d vivantes" % world.alive_count()
 	_info_label.text = info
 	var values := [c.level("Faim"), c.level("Soif"), c.level("Fatigue"), c.level("Ennui"),
-		c.level("Solitude"), c.level("Désir"), c.heart_health()]
+		c.level("Solitude"), c.level("Désir"), c.level("Froid"), c.level("Chaud"), c.heart_health()]
 	for i in _bars.size():
 		_bars[i].value = values[i]
+		if i in OPTIONAL_BARS:
+			_bar_rows[i].visible = values[i] > 0.05
+	if world.scenario == "normal":
+		_climate_label.text = "%s · %s · ressent %d °C" % [world.zone_at(c.x).label, world.climate.describe(world.time),
+			int(round(c.felt_temp))]
 	_action_label.text = c.action_text()

@@ -190,6 +190,13 @@ func _on_tap(screen_pos: Vector2) -> void:
 			_event_text = _selected().last_event
 			_event_timer = 0.0
 			return
+	# Toucher l'écran d'apprentissage change ce qu'il montre
+	var scr := world._first("ecran")
+	if best == null and scr and Rect2(scr.x - 75.0, -scr.h - 200.0, 150.0, 110.0).has_point(world_pos):
+		world.next_screen_mode()
+		_event_text = "L'écran montre maintenant les %s." % WorldSim.SCREEN_MODES[world.screen.mode]
+		_event_timer = EVENT_DURATION
+		return
 	if best == null:
 		world.drop_food(world_pos.x)
 	elif best.creature.uid == _selected_uid:

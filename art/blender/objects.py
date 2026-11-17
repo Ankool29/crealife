@@ -118,13 +118,78 @@ def build(kind, variant=""):
             ellipsoid(f"Fin{side}", (-0.12, 0.12 * side, 0.8), (0.12, 0.02, 0.06), organic, (0, -30, 0))
 
 
+    elif kind == "ecran":
+        # Écran d'apprentissage sur pied : cadre organique, dalle sombre (le
+        # jeu y dessine l'image et le mot), petite lampe.
+        shell = glossy("ScreenShell", (0.55, 0.42, 0.3), 0.35, 0.5, 0, 6, (0.35, 0.25, 0.16))
+        metal = glossy("ScreenMetal", (0.3, 0.32, 0.36), 0.3, 0.3)
+        metal.node_tree.nodes["Principled BSDF"].inputs["Metallic"].default_value = 0.8
+        cylinder("Foot", (0, 0, 0.04), 0.3, 0.26, 0.08, metal)
+        cylinder("Pole", (0, 0, 0.45), 0.05, 0.05, 0.8, metal)
+        bm = bmesh.new()
+        bmesh.ops.create_cube(bm, size=1.0)
+        bmesh.ops.scale(bm, vec=Vector((1.25, 0.12, 0.92)), verts=bm.verts)
+        frame = bg.mesh_obj("Frame", bm, shell, smooth=False)
+        frame.location = (0, 0, 1.25)
+        bev = frame.modifiers.new("Bevel", "BEVEL")
+        bev.width = 0.06
+        bev.segments = 4
+        bm = bmesh.new()
+        bmesh.ops.create_cube(bm, size=1.0)
+        bmesh.ops.scale(bm, vec=Vector((1.08, 0.02, 0.76)), verts=bm.verts)
+        pane = bg.mesh_obj("Pane", bm, glossy("Pane", (0.05, 0.12, 0.14), 0.15, 1.0, emit=0.6), smooth=False)
+        pane.location = (0, -0.065, 1.25)
+        ellipsoid("Lamp", (0.52, -0.07, 1.64), (0.035, 0.035, 0.035), glossy("ScreenLamp", (0.3, 0.95, 0.75), 0.2, 1.0, emit=4.0))
+    elif kind == "trampoline":
+        frame = glossy("TrampFrame", (0.15, 0.35, 0.75), 0.35, 0.5)
+        mat = glossy("TrampMat", (0.08, 0.08, 0.1), 0.6, 0.1)
+        bm = bmesh.new()
+        bmesh.ops.create_cone(bm, segments=48, radius1=0.62, radius2=0.62, depth=0.02, cap_ends=True)
+        top = bg.mesh_obj("Mat", bm, mat)
+        top.location = (0, 0, 0.3)
+        tor = bpy.ops.mesh.primitive_torus_add(major_radius=0.64, minor_radius=0.05, location=(0, 0, 0.3))
+        ring = bpy.context.active_object
+        ring.data.materials.append(glossy("TrampRing", (0.95, 0.45, 0.15), 0.35, 0.6))
+        for i, a in enumerate([20, 160, 250, 330]):
+            x, y = 0.55 * math.cos(math.radians(a)), 0.55 * math.sin(math.radians(a))
+            leg = cylinder(f"Leg{i}", (x, y, 0.15), 0.03, 0.03, 0.3, frame)
+    elif kind == "boite_musique":
+        wood = glossy("MusicWood", (0.55, 0.3, 0.14), 0.4, 0.5, 0, 10, (0.3, 0.15, 0.06))
+        brass = glossy("Brass", (0.85, 0.65, 0.25), 0.25, 0.5)
+        brass.node_tree.nodes["Principled BSDF"].inputs["Metallic"].default_value = 0.9
+        bm = bmesh.new()
+        bmesh.ops.create_cube(bm, size=1.0)
+        bmesh.ops.scale(bm, vec=Vector((0.42, 0.3, 0.3)), verts=bm.verts)
+        box = bg.mesh_obj("Box", bm, wood, smooth=False)
+        box.location = (0, 0, 0.15)
+        bev = box.modifiers.new("Bevel", "BEVEL")
+        bev.width = 0.025
+        bev.segments = 3
+        # pavillon (cornet) en laiton
+        bm = bmesh.new()
+        bmesh.ops.create_cone(bm, segments=32, radius1=0.04, radius2=0.2, depth=0.4, cap_ends=False)
+        horn = bg.mesh_obj("Horn", bm, brass)
+        horn.location = (0.08, 0.02, 0.48)
+        horn.rotation_euler = Euler((0, math.radians(35), 0))
+        horn.modifiers.new("Solid", "SOLIDIFY").thickness = 0.01
+        cylinder("Crank", (-0.24, -0.05, 0.2), 0.012, 0.012, 0.12, brass).rotation_euler = Euler((0, math.radians(90), 0))
+        ellipsoid("Knob", (-0.31, -0.05, 0.26), (0.03, 0.03, 0.03), glossy("Knob", (0.6, 0.12, 0.1), 0.3, 0.6))
+        for i, x in enumerate([-0.12, 0.0, 0.12]):
+            ellipsoid(f"Note{i}", (x, -0.155, 0.17), (0.025, 0.01, 0.025), glossy(f"Gem{i}", [(0.9, 0.3, 0.3), (0.3, 0.8, 0.4), (0.3, 0.5, 0.95)][i], 0.2, 1.0, emit=1.5))
+
+
 SPRITES = [("fruit", "", 64), ("graine", "", 48), ("baie", "", 48), ("balle", "", 64),
-           ("pierre", "", 64), ("oeuf", "", 64), ("distributeur", "on", 160), ("distributeur", "off", 160)]
+           ("pierre", "", 64), ("oeuf", "", 64), ("distributeur", "on", 160), ("distributeur", "off", 160),
+           ("ecran", "", 240), ("trampoline", "", 180), ("boite_musique", "", 120)]
 
 if __name__ == "__main__":
     OUT.mkdir(parents=True, exist_ok=True)
-    manifest = {}
+    only = sys.argv[2].split(",") if len(sys.argv) > 2 else None
+    mpath = OUT / "objects.json"
+    manifest = json.loads(mpath.read_text()) if only and mpath.exists() else {}
     for kind, variant, res in SPRITES:
+        if only and kind not in only:
+            continue
         info = scene_for(res)
         build(kind, variant)
         name = kind + ("_" + variant if variant else "")

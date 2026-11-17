@@ -20,6 +20,7 @@ func _init() -> void:
 	_test_language()
 	_test_appearance_genes()
 	_test_family_life()
+	_test_zones_and_climate()
 	print("RÉSULTAT : %s" % ("OK" if _failures == 0 else "%d échec(s)" % _failures))
 	quit(_failures)
 
@@ -423,6 +424,80 @@ func _test_family_life() -> void:
 		fed = mum.last_event.contains("apporte à manger")
 	print("    %s : %s" % [mum.creature_name, mum.last_event])
 	_check(fed, "un parent apporte à manger à son petit")
+
+
+func _test_zones_and_climate() -> void:
+	print("Critère phase 5 : zones et climat :")
+	var w := WorldSim.new(71, "normal", 2)
+	_check(w.zones.size() == 3 and w.width == 7200.0, "trois zones côte à côte")
+	_check(w.zone_at(w.creatures[0].x).key == "jardin", "les fondateurs naissent au jardin")
+	# Hiver : froid dehors, doux dedans, peu de fruits
+	w.time = 3.0 * Climate.SEASON + 0.2 * Climate.DAY
+	var outside := w.temperature_at(w.garden_x() + 500.0)
+	var inside := w.temperature_at(300.0)
+	print("    en hiver : %.0f °C au jardin, %.0f °C dans la salle (%s)" % [outside, inside, w.climate.describe(w.time)])
+	_check(outside < 8.0 and inside > 15.0, "l'hiver est froid dehors et doux dans la salle")
+	var froid := 0.0
+	var t := 0.0
+	while t < 1800.0:
+		w.tick(STEP)
+		t += STEP
+		froid = maxf(froid, w.creatures[0].level("Froid"))
+	print("    froid ressenti au plus fort : %.2f, toutes vivantes : %s" % [froid, w.alive_count() == 2])
+	_check(froid > 0.2, "elles ont froid en hiver")
+	_check(w.alive_count() == 2, "elles survivent à une demi-heure d'hiver")
+
+	# Écran : les curieuses apprennent plus vite que les autres
+	var learnt := [0.0, 0.0]
+	for run in 4:
+		var curious := run % 2 == 1
+		var w2 := WorldSim.new(80 + run / 2, "normal", 1)
+		var c := w2.creatures[0]
+		c.curiosity = 0.95 if curious else 0.05
+		var scr := w2._first("ecran")
+		c.x = scr.x + 120.0
+		t = 0.0
+		while t < 300.0:
+			c.target = scr                  # elle regarde l'écran (comme si on le lui montrait)
+			c.brain.attention = ObjectCatalog.categories.find("machine")
+			w2._tick_screen(STEP)
+			t += STEP
+		var k := 0.0
+		for v in c.language.nouns:
+			k += v
+		learnt[1 if curious else 0] += k
+	print("    5 min devant l'écran : vocabulaire %.1f (peu curieuse) contre %.1f (curieuse)" % learnt)
+	_check(learnt[0] > 0.5 and learnt[1] > learnt[0] * 1.8, "l'écran apprend des mots, mieux aux curieuses")
+
+	# Loisirs : les espiègles jouent plus (même monde, tempérament différent)
+	var plays := [0, 0]
+	for run in 4:
+		var playful := run % 2 == 1
+		var w3 := WorldSim.new(90 + run / 2, "normal", 1)
+		var c3 := w3.creatures[0]
+		c3.playfulness = 0.95 if playful else 0.05
+		c3.x = w3.zones[2].x0 + 500.0
+		t = 0.0
+		while t < 3600.0:
+			w3.tick(STEP)
+			t += STEP
+			if c3.acted and c3.target is WorldObject and c3.target.category == ObjectCatalog.categories.find("jouet"):
+				plays[1 if playful else 0] += 1
+	print("    1 h aux loisirs : %d jeux (peu espiègle) contre %d (espiègle)" % plays)
+	_check(plays[1] > plays[0], "les espiègles jouent plus")
+
+	# Sauvegarde d'avant les zones : le jardin est décalé, les zones ajoutées
+	var old := w.to_dict()
+	old.version = 1
+	for od in old.objects:
+		od.x = float(od.x) - w.garden_x()
+	old.objects = old.objects.filter(func(od): return od.type in ["fruit", "baie", "distributeur", "pierre", "balle"] and float(od.x) >= 0.0)
+	for cd in old.creatures:
+		cd.x = float(cd.x) - w.garden_x()
+	var w4 := WorldSim.from_dict(JSON.parse_string(JSON.stringify(old)))
+	_check(is_equal_approx(w4._first("distributeur").x, w.machine_x) and is_equal_approx(w4.creatures[0].x, w.creatures[0].x)
+		and w4._first("ecran") != null and w4._first("trampoline") != null,
+		"une ancienne sauvegarde s'ouvre avec les nouvelles zones")
 
 
 func _hm(t: float) -> String:

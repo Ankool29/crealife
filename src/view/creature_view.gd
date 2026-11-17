@@ -26,11 +26,17 @@ var _material := ShaderMaterial.new()        # corps (avec motifs)
 var _layer_material := ShaderMaterial.new()  # queue et antennes (sans motifs)
 var _t := 0.0
 var _bubble_style := StyleBoxFlat.new()
+## Noms, bulles et icônes : au-dessus de la nuit pour rester lisibles.
+var _labels := Node2D.new()
 
 
 func _ready() -> void:
 	SpriteLibrary.ensure()
 	_bubble_style.set_corner_radius_all(14)
+	_labels.z_index = 60
+	_labels.z_as_relative = false
+	_labels.draw.connect(func() -> void: _draw_labels(_labels))
+	add_child(_labels)
 	_material.shader = preload("res://src/view/shaders/creature.gdshader")
 	_layer_material.shader = _material.shader
 	# queue, corps puis antennes : chaque couche est déjà masquée là où le
@@ -47,7 +53,7 @@ func _process(delta: float) -> void:
 		return
 	_t += delta
 	var c := creature
-	position = Vector2(c.x, 0.0)
+	position = Vector2(c.x, -absf(sin(_t * 5.0)) * 70.0 * c.body_size() if c.bounce_left > 0.0 else 0.0)
 	var anim := _animation()
 	var frames: Array = SpriteLibrary.creature_frames[anim]
 	var fps := WALK_FPS if anim == "marche" else 2.0
@@ -72,7 +78,7 @@ func _process(delta: float) -> void:
 		_material.set_shader_parameter("motif_tex", masks[f % masks.size()])
 	_material.set_shader_parameter("motif_strength", c.motif_strength())
 	_material.set_shader_parameter("col_motif", c.motif_color())
-	queue_redraw()
+	_labels.queue_redraw()
 
 
 func _layer(kind: String, variant: int, anim: String, f: int) -> Texture2D:
@@ -101,7 +107,7 @@ func body_center() -> Vector2:
 	return position + Vector2(0, -95.0 * creature.body_size())
 
 
-func _draw() -> void:
+func _draw_labels(cv: CanvasItem) -> void:
 	if creature == null:
 		return
 	var c := creature
@@ -110,23 +116,23 @@ func _draw() -> void:
 	# Nom au-dessus de la tête (et repère si sélectionnée)
 	var top := -215.0 * sz - 18.0
 	var name_col := Color(1, 1, 1, 0.95) if selected else Color(1, 1, 1, 0.55)
-	draw_string(font, Vector2(-100, top), c.creature_name, HORIZONTAL_ALIGNMENT_CENTER, 200, 20 if selected else 16, name_col)
+	cv.draw_string(font, Vector2(-100, top), c.creature_name, HORIZONTAL_ALIGNMENT_CENTER, 200, 20 if selected else 16, name_col)
 	if selected:
 		var p := Vector2(0, top - 34)
-		draw_colored_polygon(PackedVector2Array([p + Vector2(-11, -12), p + Vector2(11, -12), p + Vector2(0, 2)]), Color(1, 0.9, 0.3))
+		cv.draw_colored_polygon(PackedVector2Array([p + Vector2(-11, -12), p + Vector2(11, -12), p + Vector2(0, 2)]), Color(1, 0.9, 0.3))
 	if c.alive and c.pregnant_time >= 0.0:
-		draw_string(font, Vector2(-100, top + 22), "attend un œuf", HORIZONTAL_ALIGNMENT_CENTER, 200, 14, Color(1, 0.85, 0.9, 0.9))
+		cv.draw_string(font, Vector2(-100, top + 22), "attend un œuf", HORIZONTAL_ALIGNMENT_CENTER, 200, 14, Color(1, 0.85, 0.9, 0.9))
 	if c.is_asleep():
 		var zy := -150.0 - fmod(_t * 20.0, 30.0)
-		draw_string(font, Vector2(40, zy) * sz, "z z", HORIZONTAL_ALIGNMENT_LEFT, -1, 32, Color(1, 1, 1, 0.9))
+		cv.draw_string(font, Vector2(40, zy) * sz, "z z", HORIZONTAL_ALIGNMENT_LEFT, -1, 32, Color(1, 1, 1, 0.9))
 	if c.alive and c.get_verb() == Verb.PARLER and c.is_acting():
-		draw_string(font, Vector2(20, -230) * sz, "?!", HORIZONTAL_ALIGNMENT_LEFT, -1, 34, Color(1, 1, 1, 0.95))
+		cv.draw_string(font, Vector2(20, -230) * sz, "?!", HORIZONTAL_ALIGNMENT_LEFT, -1, 34, Color(1, 1, 1, 0.95))
 	if c.alive and c.language.speech != "":
-		_draw_bubble(Vector2(0, top - (52 if selected else 22)), c.language.speech, font)
+		_draw_bubble(cv, Vector2(0, top - (52 if selected else 22)), c.language.speech, font)
 	var L := c.language
 	if c.alive and L.progress_left > 0.0:
 		var rise := (Language.PROGRESS_TIME - L.progress_left) * 25.0
-		draw_string(font, Vector2(70, top + 10 - rise), L.progress_text,     # à droite du nom
+		cv.draw_string(font, Vector2(70, top + 10 - rise), L.progress_text,     # à droite du nom
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 26, Color(0.55, 1.0, 0.6, minf(1.0, L.progress_left)))
 	if selected and c.alive and L.shown_left > 0.0 and L.shown_object != null:
 		# flèche au-dessus de ce qu'on lui montre
@@ -134,30 +140,30 @@ func _draw() -> void:
 		var tip := Vector2(o.x - c.x, (-o.h - 60.0) if o is WorldObject else -230.0 * o.body_size())
 		tip.y -= 8.0 * sin(_t * 6.0)
 		var col := Color(1, 0.9, 0.3, minf(1.0, L.shown_left))
-		draw_colored_polygon(PackedVector2Array([tip, tip + Vector2(-16, -22), tip + Vector2(16, -22)]), col)
-		draw_rect(Rect2(tip + Vector2(-6, -48), Vector2(12, 28)), col)
+		cv.draw_colored_polygon(PackedVector2Array([tip, tip + Vector2(-16, -22), tip + Vector2(16, -22)]), col)
+		cv.draw_rect(Rect2(tip + Vector2(-6, -48), Vector2(12, 28)), col)
 	var reward := c.level("Récompense")
 	if reward > 0.05:
-		_draw_heart(Vector2(0, -250) * sz, Color(0.95, 0.25, 0.4, minf(reward, 1.0)))
+		_draw_heart(cv, Vector2(0, -250) * sz, Color(0.95, 0.25, 0.4, minf(reward, 1.0)))
 	var punish := c.level("Punition")
 	if punish > 0.05:
-		draw_string(font, Vector2(-8, -240) * sz, "!", HORIZONTAL_ALIGNMENT_LEFT, -1, 52, Color(0.95, 0.15, 0.1, minf(punish, 1.0)))
+		cv.draw_string(font, Vector2(-8, -240) * sz, "!", HORIZONTAL_ALIGNMENT_LEFT, -1, 52, Color(0.95, 0.15, 0.1, minf(punish, 1.0)))
 
 
 ## Bulle de paroles au-dessus de la tête.
-func _draw_bubble(p: Vector2, text: String, font: Font) -> void:
+func _draw_bubble(cv: CanvasItem, p: Vector2, text: String, font: Font) -> void:
 	var size := 22
 	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x + 28.0
 	var r := Rect2(p.x - w * 0.5, p.y - 40.0, w, 34.0)
 	var a := clampf(creature.language.speech_left, 0.0, 1.0)
 	_bubble_style.bg_color = Color(1, 1, 1, 0.92 * a)
-	draw_style_box(_bubble_style, r)
-	draw_colored_polygon(PackedVector2Array([Vector2(p.x - 8, r.end.y - 1), Vector2(p.x + 8, r.end.y - 1),
+	cv.draw_style_box(_bubble_style, r)
+	cv.draw_colored_polygon(PackedVector2Array([Vector2(p.x - 8, r.end.y - 1), Vector2(p.x + 8, r.end.y - 1),
 		Vector2(p.x, r.end.y + 12)]), _bubble_style.bg_color)
-	draw_string(font, Vector2(r.position.x, r.position.y + 25), text, HORIZONTAL_ALIGNMENT_CENTER, w, size, Color(0.1, 0.1, 0.15, a))
+	cv.draw_string(font, Vector2(r.position.x, r.position.y + 25), text, HORIZONTAL_ALIGNMENT_CENTER, w, size, Color(0.1, 0.1, 0.15, a))
 
 
-func _draw_heart(p: Vector2, col: Color) -> void:
-	draw_circle(p + Vector2(-8, 0), 9.0, col)
-	draw_circle(p + Vector2(8, 0), 9.0, col)
-	draw_colored_polygon(PackedVector2Array([p + Vector2(-17, 3), p + Vector2(17, 3), p + Vector2(0, 22)]), col)
+func _draw_heart(cv: CanvasItem, p: Vector2, col: Color) -> void:
+	cv.draw_circle(p + Vector2(-8, 0), 9.0, col)
+	cv.draw_circle(p + Vector2(8, 0), 9.0, col)
+	cv.draw_colored_polygon(PackedVector2Array([p + Vector2(-17, 3), p + Vector2(17, 3), p + Vector2(0, 22)]), col)

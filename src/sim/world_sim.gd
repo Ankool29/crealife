@@ -3,6 +3,9 @@ extends RefCounted
 ## Le monde : un sol en vue de côté, des arbres à fruits, des buissons à baies,
 ## un distributeur de graines, des jouets, les créatures et leurs œufs.
 ## Aucune dépendance à l'affichage.
+##
+## Phase 5 : trois zones côte à côte (salle d'apprentissage | jardin |
+## loisirs) et un climat (jour et nuit, saisons, météo, température).
 
 const GRAVITY := 900.0
 const MAX_POPULATION := 10       # créatures vivantes + œufs (décision D4)
@@ -15,6 +18,18 @@ const SYLLABLES: Array[String] = ["ka", "lo", "mi", "ny", "ta", "vi", "ru", "se"
 ## "vide" (aucune nourriture) — les deux derniers servent aux tests.
 var scenario := "normal"
 var width := 3000.0
+## Zones de gauche à droite : {key, label, x0, x1, indoor}.
+var zones: Array[Dictionary] = []
+var climate := Climate.new()
+## Écran d'apprentissage : ce qu'il montre (mode 0 noms, 1 verbes, 2 besoins).
+var screen := {"mode": 0, "index": 0, "timer": 0.0}
+const SCREEN_PERIOD := 6.0
+const SCREEN_MODES: Array[String] = ["noms", "verbes", "besoins"]
+const SCREEN_RANGE := 600.0
+const MUSIC_RANGE := 450.0
+const ROOM_W := 1800.0
+const GARDEN_W := 3000.0
+const LEISURE_W := 2400.0
 var rng := RandomNumberGenerator.new()
 var creatures: Array[CreatureSim] = []
 var objects: Array[WorldObject] = []
@@ -45,15 +60,118 @@ func _init(seed_value: int = 0, p_scenario: String = "normal", founders: int = 1
 	if scenario != "normal":
 		trees = PackedFloat32Array()
 		bushes = PackedFloat32Array()
+		zones = [{"key": "jardin", "label": "Jardin", "x0": 0.0, "x1": width, "indoor": false}]
 	else:
+		_setup_zones()
+		var g := garden_x()
 		add_object("distributeur", machine_x)
-		add_object("balle", 1150.0)
-		add_object("pierre", 600.0)
-		add_object("pierre", 2600.0)
+		add_object("balle", g + 1150.0)
+		add_object("pierre", g + 600.0)
+		add_object("pierre", g + 2600.0)
+		_add_zone_objects()
 		for i in 3:
 			_spawn_fruit()
 		_spawn_berry()
 	add_founders(founders)
+
+
+func _setup_zones() -> void:
+	zones = [
+		{"key": "salle", "label": "Salle d'apprentissage", "x0": 0.0, "x1": ROOM_W, "indoor": true},
+		{"key": "jardin", "label": "Jardin", "x0": ROOM_W, "x1": ROOM_W + GARDEN_W, "indoor": false},
+		{"key": "loisirs", "label": "Loisirs", "x0": ROOM_W + GARDEN_W, "x1": ROOM_W + GARDEN_W + LEISURE_W, "indoor": false},
+	]
+	width = ROOM_W + GARDEN_W + LEISURE_W
+	var g := ROOM_W
+	trees = PackedFloat32Array([g + 450.0, g + 1350.0, g + 2350.0])
+	bushes = PackedFloat32Array([g + 900.0, g + 2000.0])
+	machine_x = g + 1750.0
+
+
+func _add_zone_objects() -> void:
+	add_object("ecran", ROOM_W * 0.5)
+	var l := ROOM_W + GARDEN_W
+	add_object("trampoline", l + 700.0)
+	add_object("boite_musique", l + 1500.0)
+	add_object("balle", l + 1100.0)
+	add_object("balle", l + 1900.0)
+
+
+## Début du jardin (0 dans les scénarios de test, qui n'ont que le jardin).
+func garden_x() -> float:
+	for z in zones:
+		if z.key == "jardin":
+			return z.x0
+	return 0.0
+
+
+func zone_at(x: float) -> Dictionary:
+	for z in zones:
+		if x < z.x1:
+			return z
+	return zones[-1]
+
+
+func temperature_at(x: float) -> float:
+	return Climate.INDOOR_TEMP if zone_at(x).indoor else climate.outdoor_temp(time)
+
+
+## Lumière : la salle est éclairée, dehors on suit le soleil.
+func light_at(x: float) -> float:
+	return 1.0 if zone_at(x).indoor else climate.daylight(time)
+
+
+func raining_at(x: float) -> bool:
+	return climate.is_raining() and not zone_at(x).indoor
+
+
+## Ce qu'affiche l'écran : [genre, index] ("nom", "verbe" ou "besoin").
+func screen_item() -> Array:
+	var kind: String = ["nom", "verbe", "besoin"][screen.mode]
+	var n: int = [ObjectCatalog.categories.size(), Language.VERB_WORDS.size() - 1, Language.DRIVE_WORDS.size()][screen.mode]
+	var i: int = screen.index % n
+	if kind == "verbe":
+		i += 1                         # pas « rien »
+	return [kind, i]
+
+
+## Le joueur (ou une créature qui le pousse) change ce que montre l'écran.
+func next_screen_mode() -> void:
+	screen.mode = (screen.mode + 1) % SCREEN_MODES.size()
+	screen.index = 0
+	screen.timer = 0.0
+
+
+func _tick_screen(dt: float) -> void:
+	var scr := _first("ecran")
+	if scr == null:
+		return
+	screen.timer += dt
+	if screen.timer < SCREEN_PERIOD:
+		return
+	screen.timer = 0.0
+	# Le mot qui vient d'être montré : celles qui regardaient l'écran l'apprennent
+	var item := screen_item()
+	for c in creatures:
+		if c.alive and not c.is_asleep() and absf(c.x - scr.x) < SCREEN_RANGE and c.watches(scr):
+			c.learn_from_screen(item[0], item[1])
+	screen.index += 1
+
+
+func _tick_music(dt: float) -> void:
+	for o in objects:
+		if o.type_name != "boite_musique" or o.cooldown <= 0.0:
+			continue
+		for c in creatures:
+			if c.alive and absf(c.x - o.x) < MUSIC_RANGE:
+				c.hear_music(dt)
+
+
+func _first(type_name: String) -> WorldObject:
+	for o in objects:
+		if o.type_name == type_name:
+			return o
+	return null
 
 
 ## Fondateurs : souche de départ légèrement mutée, couleurs au hasard,
@@ -67,6 +185,10 @@ func add_founders(count: int) -> void:
 		if look:
 			for k in ["hue", "hue2", "saturation", "brightness", "glow", "glow_power", "size", "speed"]:
 				look.params[k] = rng.randf()
+		var temper := g.find(Gene.Type.LOBE, "lobe", "temperament")
+		if temper:     # des caractères variés dès les fondateurs
+			temper.params.curiosity = rng.randf()
+			temper.params.playfulness = rng.randf()
 		var shape := g.find(Gene.Type.APPEARANCE, "part", "silhouette")
 		if shape:
 			for k in ["tail", "antennae", "corpulence"]:
@@ -78,7 +200,8 @@ func add_founders(count: int) -> void:
 			motif.params.hue3 = rng.randf()
 			motif.params.light3 = rng.randf()
 		var sex := first_sex if i % 2 == 0 else (Gene.Sex.FEMALE if first_sex == Gene.Sex.MALE else Gene.Sex.MALE)
-		_add_creature(g, width * 0.5 + (i - (count - 1) * 0.5) * 200.0, sex, 1, "", "")
+		var mid: float = garden_x() + (float(zone_at(garden_x()).x1) - garden_x()) * 0.5
+		_add_creature(g, mid + (i - (count - 1) * 0.5) * 200.0, sex, 1, "", "")
 
 
 func _add_creature(g: Genome, at_x: float, sex: int, generation: int, mother: String, father: String) -> CreatureSim:
@@ -152,7 +275,10 @@ func egg_info(o: WorldObject) -> Dictionary:
 
 func tick(dt: float) -> void:
 	time += dt
+	climate.tick(dt, rng, time)
 	_spawners(dt)
+	_tick_screen(dt)
+	_tick_music(dt)
 	for o in objects:
 		_physics(o, dt)
 	for c in creatures:
@@ -174,11 +300,28 @@ func _hatch_eggs() -> void:
 			continue
 		if o.holder != null:
 			o.holder.drop_held()
-		var sex := Gene.Sex.MALE if rng.randf() < 0.5 else Gene.Sex.FEMALE
+		var sex := _baby_sex()
 		var baby := _add_creature(e.genome, o.x, sex, e.generation, e.mother, e.father)
 		_eggs.erase(o.id)
 		remove_object(o)
 		last_event = "Naissance de %s (génération %d), enfant de %s et %s." % [baby.creature_name, baby.generation, e.mother, e.father]
+
+
+## Sexe d'un nouveau-né : une chance sur deux, corrigée vers le sexe
+## minoritaire chez les vivants (évite les lignées sans couple possible).
+func _baby_sex() -> int:
+	var males := 0
+	var females := 0
+	for c in creatures:
+		if c.alive and c.stage < Lifecycle.Stage.OLD:
+			if c.sex == Gene.Sex.FEMALE:
+				females += 1
+			else:
+				males += 1
+	var p_female := 0.5
+	if males + females > 0:
+		p_female = clampf(0.5 + 0.35 * float(males - females) / float(males + females), 0.15, 0.85)
+	return Gene.Sex.FEMALE if rng.randf() < p_female else Gene.Sex.MALE
 
 
 func _record_death(c: CreatureSim) -> void:
@@ -213,10 +356,11 @@ func restart_lineage() -> void:
 func _spawners(dt: float) -> void:
 	_fruit_timer -= dt
 	if _fruit_timer <= 0.0:
-		_fruit_timer = rng.randf_range(6.0, 12.0) / maxf(1.0, alive_count() * 0.6)
+		var season_factor := Climate.SEASON_FRUIT[climate.season(time)] if scenario == "normal" else 1.0
+		_fruit_timer = rng.randf_range(6.0, 12.0) / maxf(1.0, alive_count() * 0.6) / season_factor
 		_spawn_fruit()
 	_berry_timer -= dt
-	if _berry_timer <= 0.0:
+	if _berry_timer <= 0.0 and not (scenario == "normal" and climate.season(time) == 3):   # pas de baies l'hiver
 		_berry_timer = rng.randf_range(15.0, 25.0)
 		_spawn_berry()
 	if scenario == "graines":
@@ -299,7 +443,7 @@ func to_dict() -> Dictionary:
 	var cs := []
 	for c in creatures:
 		cs.append(c.to_dict())
-	return {"version": 1, "time": time, "next_id": _next_id, "next_uid": _next_uid,
+	return {"version": 2, "time": time, "climate": climate.to_dict(), "screen": screen, "next_id": _next_id, "next_uid": _next_uid,
 		"names": _used_names.keys(), "objects": objs, "creatures": cs, "history": history}
 
 
@@ -307,12 +451,17 @@ static func from_dict(d: Dictionary) -> WorldSim:
 	var w := WorldSim.new(0, "normal", 0)
 	w.objects.clear()
 	w.time = float(d.time)
+	w.climate.load_dict(d.get("climate", {}))
+	var scr: Dictionary = d.get("screen", {})
+	w.screen = {"mode": int(scr.get("mode", 0)), "index": int(scr.get("index", 0)), "timer": float(scr.get("timer", 0.0))}
+	# Sauvegarde d'avant les zones : le jardin était seul, de 0 à 3000
+	var shift := 0.0 if int(d.get("version", 1)) >= 2 else w.garden_x()
 	w._next_id = int(d.next_id)
 	w._next_uid = int(d.next_uid)
 	for n in d.names:
 		w._used_names[n] = true
 	for od in d.objects:
-		var o := WorldObject.new(int(od.id), str(od.type), float(od.x), float(od.h))
+		var o := WorldObject.new(int(od.id), str(od.type), float(od.x) + shift, float(od.h))
 		o.cooldown = float(od.cooldown)
 		w.objects.append(o)
 		if od.has("egg"):
@@ -321,9 +470,12 @@ static func from_dict(d: Dictionary) -> WorldSim:
 				"generation": int(e.generation), "hatch_at": w.time + float(e.hatch_in)}
 	for cd in d.creatures:
 		var c := CreatureSim.from_dict(cd)
+		c.x += shift
 		if not c.alive:
 			c.set_meta("died_at", w.time)
 		w.creatures.append(c)
 	for h in d.history:
 		w.history.append(h)
+	if shift > 0.0:
+		w._add_zone_objects()
 	return w

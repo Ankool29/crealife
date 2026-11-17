@@ -1838,6 +1838,199 @@
 				"lobe": "parental",
 				"care": 0.6
 			}
+		},
+		{
+			"id": 109,
+			"type": "emetteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"source": "corps.froid_ext",
+				"invert": false,
+				"threshold": 0.0,
+				"gain": 0.01,
+				"chem": "Froid",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 110,
+			"type": "emetteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"source": "corps.chaud_ext",
+				"invert": false,
+				"threshold": 0.0,
+				"gain": 0.01,
+				"chem": "Chaud",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 111,
+			"type": "emetteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"source": "chem:Froid",
+				"invert": false,
+				"threshold": 0.3,
+				"gain": -0.0006,
+				"chem": "Glucose",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 112,
+			"type": "emetteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"source": "chem:Chaud",
+				"invert": false,
+				"threshold": 0.3,
+				"gain": -0.0006,
+				"chem": "Eau",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 113,
+			"type": "recepteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"chem": "Froid",
+				"invert": false,
+				"threshold": 0.85,
+				"gain": 0.004,
+				"locus": "organe.Coeur.degats",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 114,
+			"type": "recepteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"chem": "Chaud",
+				"invert": false,
+				"threshold": 0.85,
+				"gain": 0.004,
+				"locus": "organe.Coeur.degats",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 115,
+			"type": "emetteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"source": "corps.nuit",
+				"invert": false,
+				"threshold": 0.0,
+				"gain": 0.00015,
+				"chem": "Fatigue",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 116,
+			"type": "emetteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"source": "corps.pluie",
+				"invert": false,
+				"threshold": 0.0,
+				"gain": 0.001,
+				"chem": "Eau",
+				"organ": "Corps"
+			}
+		},
+		{
+			"id": 117,
+			"type": "instinct",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"drive": "Froid",
+				"category": "créature",
+				"verb": "approcher",
+				"reward": 0.8,
+				"repeat": 4
+			}
+		},
+		{
+			"id": 118,
+			"type": "instinct",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"drive": "Chaud",
+				"category": "",
+				"verb": "rien",
+				"reward": 0.5,
+				"repeat": 2
+			}
+		},
+		{
+			"id": 119,
+			"type": "lobe",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"lobe": "temperament",
+				"curiosity": 0.5,
+				"playfulness": 0.5
+			}
 		}
 	]
 }

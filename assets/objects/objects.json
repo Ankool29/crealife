@@ -62,5 +62,29 @@
 			288.0
 		],
 		"scale": 0.5
+	},
+	"ecran": {
+		"size": 480,
+		"anchor": [
+			240,
+			432.0
+		],
+		"scale": 0.5
+	},
+	"trampoline": {
+		"size": 360,
+		"anchor": [
+			180,
+			324.0
+		],
+		"scale": 0.5
+	},
+	"boite_musique": {
+		"size": 240,
+		"anchor": [
+			120,
+			216.0
+		],
+		"scale": 0.5
 	}
 }

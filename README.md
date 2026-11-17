@@ -3,8 +3,27 @@
 Jeu de vie artificielle inspiré de la série *Creatures*, conçu pour le mobile (Godot 4, GDScript).
 Tout le contenu est original : aucun fichier ni code du jeu Creatures n'est utilisé.
 
-## État actuel : phase 4 (langage et apparence)
+## État actuel : phase 5 (zones et climat)
 
+- **Trois zones** côte à côte : la **salle d'apprentissage** (intérieur
+  chaud et éclairé), le **jardin** (nourriture) et l'**aire de loisirs**
+  (trampoline, boîte à musique, balles).
+- **Écran d'apprentissage** : il fait défiler une image et son mot toutes
+  les 6 s (noms, verbes ou besoins : toucher l'écran pour changer). Une
+  créature qui le regarde apprend le mot, d'autant mieux qu'elle est
+  **curieuse** (gène de tempérament) ; les curieuses aiment aussi le
+  regarder.
+- **Loisirs** : les **espiègles** (gène de tempérament) s'ennuient plus
+  vite et s'amusent plus avec les jouets. Le trampoline fait sauter, la
+  boîte à musique distrait et console toutes celles qui l'entendent.
+- **Climat** : jour et nuit (24 min), saisons d'une heure (année de 4 h),
+  beau temps, nuages, pluie ou neige. Dehors la température suit la
+  saison, l'heure et la météo ; la salle reste à 19 °C. Froid et chaud
+  sont ressentis (pulsions) : frissons qui brûlent de l'énergie,
+  transpiration, hypothermie si ça dure ; se blottir contre les autres
+  réchauffe, la nuit fatigue, la pluie désaltère. Moins de fruits l'hiver
+  et pas de baies : le distributeur de graines devient précieux.
+- Les naissances tendent à équilibrer mâles et femelles.
 - **Langage** : chaque créature a un vocabulaire (8 noms d'objets, 13
   verbes, 12 besoins). Elle apprend un nom quand on le prononce pendant
   qu'elle regarde l'objet, un verbe pendant qu'elle fait l'action, un
@@ -46,6 +65,7 @@ Tout le contenu est original : aucun fichier ni code du jeu Creatures n'est util
 | **Suivante** | Sélectionne la créature suivante |
 | **Parler** | Ouvre le bandeau de paroles : toucher un mot le dit aussitôt ; une phrase s'écrit puis **Dire**. La créature sélectionnée (et ses voisines) l'entend |
 | Bandeau ouvert : toucher un objet ou une autre créature | Le lui montre (flèche jaune) : elle le regarde 15 s, le temps de lui en dire le nom |
+| Toucher l'écran de la salle | Change ce qu'il montre (noms, verbes, besoins) |
 | **Observer** | Chimie, cerveau, mots connus, gènes, famille de la créature sélectionnée |
 | Bouton **Gronder** | Punit ce qu'elle fait (elle le fera moins dans cette situation) |
 | Toucher le décor / bouton **Fruit** | Fait tomber un fruit |

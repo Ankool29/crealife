@@ -10,6 +10,9 @@ python art/blender/creature.py <dossier> sprites   # poses animées -> assets/cr
 python art/blender/objects.py <dossier>            # objets -> assets/objects/
 python art/blender/background.py <dossier> far     # ciel et collines (parallaxe)
 python art/blender/background.py <dossier> near    # sol, arbres, buissons
+python art/blender/zones.py <dossier> salle        # salle d'apprentissage (intérieur)
+python art/blender/zones.py <dossier> loisirs      # aire de loisirs
+python art/blender/objects.py <dossier> ecran,trampoline   # seulement certains objets
 ```
 
 - Échelle commune : 1 unité Blender = 120 pixels de jeu, sol à z = 0.

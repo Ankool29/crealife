@@ -175,6 +175,21 @@ gene("apparence", {"part": "motif", "spots": 0.0, "stripes": 0.0, "patches": 0.0
 # Nouveaux gènes : toujours à la fin, pour garder les numéros des anciens.
 gene("lobe", {"lobe": "parental", "care": 0.6}, stage="adulte")
 
+# --- Phase 5 : climat et tempérament (à la fin, voir plus haut) ---
+# Froid et chaud ressentis (température de la zone, blottie contre les autres)
+emitter("corps.froid_ext", "Froid", 0.01)
+emitter("corps.chaud_ext", "Chaud", 0.01)
+emitter("chem:Froid", "Glucose", -0.0006, threshold=0.3)                  # frissons : énergie
+emitter("chem:Chaud", "Eau", -0.0006, threshold=0.3)                      # transpiration
+receptor("Froid", "organe.Coeur.degats", 0.004, threshold=0.85)           # hypothermie
+receptor("Chaud", "organe.Coeur.degats", 0.004, threshold=0.85)           # coup de chaleur
+emitter("corps.nuit", "Fatigue", 0.00015)                                  # sommeil la nuit
+emitter("corps.pluie", "Eau", 0.001)                                       # boit la pluie
+instinct("Froid", "créature", "approcher", 0.8, 4)                         # se blottir
+instinct("Chaud", "", "rien", 0.5, 2)                                      # se reposer
+# Tempérament : curiosité (apprend à l'écran) et espièglerie (aime jouer)
+gene("lobe", {"lobe": "temperament", "curiosity": 0.5, "playfulness": 0.5})
+
 catalog = [{"id": i + 1, "name": n, "family": f} for i, (n, f, _h, _v) in enumerate(CHEMICALS)]
 (ROOT / "data").mkdir(exist_ok=True)
 (ROOT / "data/genomes").mkdir(exist_ok=True)
