@@ -89,7 +89,11 @@ Prochaines étapes, dans l'ordre proposé :
    portées, races reconnues, consanguinité.
 7. **Chatterie** : la réputation débloque des choses (étage avec escalier,
    expositions, meilleures familles).
-8. Dessins à venir : formes de tête, queue courte (Manx).
+8. **Animations plus fluides** : marche calée sur la vitesse (pattes qui
+   ne glissent plus), respiration, clignement des yeux, demi-tour et
+   transitions (s'asseoir, se coucher, se relever) ; puis des planches
+   avec plus d'images (8 au lieu de 2 à 4).
+9. Dessins à venir : formes de tête, queue courte (Manx).
 
 ### Commandes
 
