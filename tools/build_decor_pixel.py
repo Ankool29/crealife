@@ -19,6 +19,8 @@ DECORS = {
     "salle": (256, 0.758),
     "chambre": (256, 0.766),
     "entree": (256, 0.79),      # planche retournée : la porte donne à droite, sur le jardin
+    # jardin : on coupe la bande de planches du bas (au-delà de 612 px sur 724)
+    "jardin": (313, 0.758, 612 / 724),
 }
 
 
@@ -41,8 +43,14 @@ def resample(img, gw):
 
 def main():
     meta = {}
-    for name, (gw, floor) in DECORS.items():
-        small = resample(Image.open(os.path.join(SRC, name + ".png")), gw)
+    for name, spec in DECORS.items():
+        gw, floor = spec[0], spec[1]
+        src = Image.open(os.path.join(SRC, name + ".png"))
+        if len(spec) > 2:              # on coupe le bas, le sol se mesure sur l'image coupée
+            h = round(src.height * spec[2])
+            floor = floor / spec[2]
+            src = src.crop((0, 0, src.width, h))
+        small = resample(src, gw)
         big = small.resize((small.width * SCALE, small.height * SCALE), Image.NEAREST)
         big.save(os.path.join(OUT, "px_" + name + ".png"))
         meta[name] = {"size": [big.width, big.height], "floor": round(floor * big.height)}

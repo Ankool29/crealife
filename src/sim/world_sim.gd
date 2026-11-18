@@ -28,7 +28,7 @@ const SCREEN_PERIOD := 6.0
 const SCREEN_MODES: Array[String] = ["noms", "verbes", "besoins"]
 const SCREEN_RANGE := 600.0
 const MUSIC_RANGE := 450.0
-const GARDEN_W := 3000.0
+const GARDEN_W := 2000.0       # largeur du décor pixel art à la densité des pièces
 const BASKET_X := 340.0          # corbeille de fruits, depuis le bord gauche de la cuisine
 ## Pièces de la maison : clé, nom affiché, largeur (celle de leur décor).
 const HOUSE: Array = [
@@ -76,9 +76,9 @@ func _init(seed_value: int = 0, p_scenario: String = "normal", founders: int = 1
 		_setup_zones()
 		var g := garden_x()
 		add_object("distributeur", machine_x)
-		add_object("balle", g + 1150.0)
+		add_object("balle", g + 1300.0)
 		add_object("pierre", g + 600.0)
-		add_object("pierre", g + 2600.0)
+		add_object("pierre", g + 1850.0)
 		_add_zone_objects()
 		for i in 3:
 			_spawn_fruit()
@@ -94,9 +94,9 @@ func _setup_zones() -> void:
 		x += float(r[2])
 	zones.append({"key": "jardin", "label": "Jardin", "x0": x, "x1": x + GARDEN_W, "indoor": false})
 	width = x + GARDEN_W
-	trees = PackedFloat32Array([x + 450.0, x + 1350.0, x + 2350.0])
-	bushes = PackedFloat32Array([x + 900.0, x + 2000.0])
-	machine_x = x + 1750.0
+	trees = PackedFloat32Array([x + 980.0])                # le pommier du décor
+	bushes = PackedFloat32Array([x + 1070.0, x + 1640.0])
+	machine_x = x + 1450.0
 
 
 func zone(key: String) -> Dictionary:
@@ -455,7 +455,7 @@ func _spawn_fruit() -> void:
 	if trees.is_empty() or count_of("fruit") >= 6 + 2 * alive_count():
 		return
 	var tree_x := trees[rng.randi_range(0, trees.size() - 1)]
-	add_object("fruit", tree_x + rng.randf_range(-110.0, 110.0), rng.randf_range(180.0, 260.0))
+	add_object("fruit", tree_x + rng.randf_range(-160.0, 160.0), rng.randf_range(330.0, 450.0))
 
 
 ## La corbeille de la cuisine se remplit toute l'année (quelques fruits).

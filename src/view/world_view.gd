@@ -73,7 +73,7 @@ func _build_zones() -> void:
 				var img := Vector2(s.texture.get_width(), s.texture.get_height()) * s.scale
 				screen_rect = Rect2(s.position + PX_SCREEN.position * img, PX_SCREEN.size * img)
 			var under := ColorRect.new()          # fondations sous le plancher
-			under.color = Color(0.17, 0.1, 0.07)
+			under.color = Color(0.17, 0.1, 0.07) if z.indoor else Color(0.36, 0.24, 0.13)
 			under.position = Vector2(z.x0, s.position.y + s.texture.get_height() * s.scale.y)
 			under.size = Vector2(room_w, 600.0)
 			_near_layer.add_child(under)
