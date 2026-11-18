@@ -49,13 +49,20 @@ void fragment() {
 		col = mix(pale, col, smoothstep(0.08, 0.6, m2.r) * point_strength);
 	}
 	// panachure blanche : les zones dont l'« ordre » est sous le seuil blanchissent
-	if (m2.g < white || white >= 0.999) col = vec3(0.97, 0.96, 0.93);
+	if (m2.g < white || white >= 0.999) col = vec3(1.0, 0.99, 0.96);
 	// ombres et lumières du dessin d'origine
-	vec3 rgb = col * clamp(lum / 0.72, 0.15, 1.35);
+	// (les pelages clairs, le blanc surtout, gardent des ombres plus douces :
+	// sinon un chat blanc paraît gris)
+	float shade = lum / 0.62;
+	float soft = smoothstep(0.55, 0.95, max(col.r, max(col.g, col.b)));
+	shade = 1.0 + (shade - 1.0) * mix(1.0, 0.4, soft);
+	vec3 rgb = col * clamp(shade, 0.15, 1.3);
 	if (lum < 0.2) rgb = col * 0.25 + vec3(0.03, 0.02, 0.03);     // contour : version sombre du pelage
 	if (eye) rgb = eye_color * (0.45 + 0.9 * lum) + vec3(step(0.85, lum) * 0.4);
 	if (pink) rgb = c.rgb;
 	float grey = dot(rgb, vec3(0.299, 0.587, 0.114));
 	rgb = mix(rgb, vec3(grey) * 0.85, desaturate);
-	COLOR = vec4(rgb, c.a) * COLOR;
+	// (pas « * COLOR » : en Godot 4, COLOR contient déjà la texture, ce qui
+	// assombrissait tout le pelage d'environ 40 %)
+	COLOR = vec4(rgb, c.a);
 }
