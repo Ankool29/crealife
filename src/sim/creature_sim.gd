@@ -87,6 +87,7 @@ var _goal_x := 0.0
 var _prev_drives := PackedFloat32Array()
 var _instinct_timer := 0.0
 var _mate_rest := 0.0
+var _screen_time := 0.0           # temps qu'elle compte encore passer devant l'écran
 var _refused := 0.0
 ## Soins aux petits : instinct parental (gène) et tâche en cours
 ## {kind : "nourrir" ou "parler", child, food, time}.
@@ -352,13 +353,15 @@ func _feel_climate(dt: float, world: WorldSim) -> void:
 
 ## Regarde-t-elle l'écran ?
 func watches(scr: WorldObject) -> bool:
+	if _screen_time > 0.0 and absf(scr.x - x) < 300.0 and brain.verb in [Verb.RIEN, Verb.EXPLORER]:
+		return true                  # elle est venue exprès devant l'écran
 	return target == scr and (brain.attention == ObjectCatalog.categories.find("machine"))
 
 
 ## Le mot montré par l'écran : on l'apprend d'autant mieux qu'on est curieuse.
-func learn_from_screen(kind: String, i: int) -> void:
+func learn_from_screen(kind: String, i: int, focus: float = 1.0) -> void:
 	var before := language.knowledge(kind, i)
-	language.learn(kind, i, 0.3 * lerpf(0.3, 1.7, curiosity))
+	language.learn(kind, i, 0.3 * focus * lerpf(0.3, 1.7, curiosity))
 	if language.knowledge(kind, i) > before + 0.005:
 		language.progress_text = "+ " + Language.word_of(kind, i)
 		language.progress_left = Language.PROGRESS_TIME
@@ -543,7 +546,7 @@ func _try_mating(other: CreatureSim, world: WorldSim) -> void:
 	female.pregnant_time = 0.0
 	female._father_genome = male.genome
 	female._father_name = male.creature_name
-	female.last_event = "%s et %s se sont accouplés : %s attend un œuf." % [creature_name, other.creature_name, female.creature_name]
+	female.last_event = "%s et %s se sont accouplés  : %s attend des petits." % [creature_name, other.creature_name, female.creature_name]
 	world.last_event = female.last_event
 
 
@@ -551,6 +554,7 @@ func _try_mating(other: CreatureSim, world: WorldSim) -> void:
 ## quand elle a un bébé, et quand le monde est plein (surpopulation).
 func _regulate_desire(dt: float, world: WorldSim) -> void:
 	_mate_rest = maxf(0.0, _mate_rest - dt)
+	_screen_time = maxf(0.0, _screen_time - dt)
 	_refused = maxf(0.0, _refused - dt)
 	if stage < Lifecycle.Stage.ADULT:
 		return
@@ -934,6 +938,33 @@ func _move_towards(tx: float, dt: float) -> bool:
 ## partenaire : elle part alors plutôt du côté où elle sent les autres
 ## (odorat et ouïe, au-delà de la vue), ce qui les regroupe dans la grande maison.
 func _explore_goal(world: WorldSim, rng: RandomNumberGenerator) -> float:
+	# Affamée sans rien en vue : elle se souvient d'où vient la nourriture
+	# (la corbeille de la cuisine, le pommier) et s'y dirige.
+	if level("Faim") > 0.35 and not _sees_food():
+		var spots: Array[float] = []
+		var k := world.zone("cuisine")
+		if not k.is_empty():
+			spots.append(float(k.x0) + WorldSim.BASKET_X)
+		for tx in world.trees:
+			spots.append(tx)
+		if not spots.is_empty():
+			spots.sort_custom(func(a, b): return absf(a - x) < absf(b - x))
+			if absf(spots[0] - x) > 250.0:
+				return clampf(x + signf(spots[0] - x) * minf(absf(spots[0] - x), 800.0), 60.0, world.width - 60.0)
+	# Les curieuses vont d'elles-mêmes s'installer devant l'écran un moment
+	var scr := world._first("ecran")
+	if scr and _screen_time > 0.0 and level("Faim") < 0.4:     # elle reste devant
+		return clampf(scr.x + rng.randf_range(-150.0, 150.0), 60.0, world.width - 60.0)
+	var needy := maxf(maxf(level("Faim"), level("Soif")), level("Fatigue")) > 0.3
+	if scr and not needy and rng.randf() < curiosity * 0.15 and absf(scr.x - x) < 3000.0:
+		_screen_time = rng.randf_range(30.0, 60.0) * lerpf(0.5, 1.5, curiosity)
+		return clampf(scr.x + rng.randf_range(-150.0, 150.0), 60.0, world.width - 60.0)
+	# Les espiègles, elles, filent vers la salle de jeux
+	var jeux := world.zone("jeux")
+	if not jeux.is_empty() and not needy and rng.randf() < playfulness * 0.15:
+		var mid: float = (jeux.x0 + jeux.x1) * 0.5
+		if absf(mid - x) < 3000.0 and world.zone_at(x).key != "jeux":
+			return clampf(mid + rng.randf_range(-500.0, 500.0), 60.0, world.width - 60.0)
 	var social := level("Solitude")
 	if stage == Lifecycle.Stage.ADULT:
 		social = maxf(social, level("Désir"))
@@ -945,6 +976,13 @@ func _explore_goal(world: WorldSim, rng: RandomNumberGenerator) -> float:
 		if best != null and absf(best.x - x) > 300.0:
 			return clampf(x + signf(best.x - x) * rng.randf_range(300.0, 600.0), 60.0, world.width - 60.0)
 	return _random_goal(world, rng, 500.0)
+
+
+func _sees_food() -> bool:
+	for n in ["fruit", "graine"]:
+		if brain.vision[ObjectCatalog.categories.find(n)] > 0.0:
+			return true
+	return false
 
 
 func _random_goal(world: WorldSim, rng: RandomNumberGenerator, radius: float) -> float:

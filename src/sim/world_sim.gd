@@ -27,6 +27,7 @@ var screen := {"mode": 0, "index": 0, "timer": 0.0}
 const SCREEN_PERIOD := 6.0
 const SCREEN_MODES: Array[String] = ["noms", "verbes", "besoins"]
 const SCREEN_RANGE := 600.0
+const SCREEN_PASSIVE := 0.4     # part retenue sans regarder l'écran
 const SCREEN_NOUNS: Array[String] = ["fruit", "graine", "jouet", "machine", "créature"]
 const MUSIC_RANGE := 450.0
 const GARDEN_W := 2000.0       # largeur du décor pixel art à la densité des pièces
@@ -185,10 +186,12 @@ func _tick_screen(dt: float) -> void:
 		return
 	screen.timer = 0.0
 	# Le mot qui vient d'être montré : celles qui regardaient l'écran l'apprennent
+	# Celles qui le fixent apprennent pleinement ; les autres présentes dans la
+	# pièce en retiennent un peu au passage (surtout les curieuses).
 	var item := screen_item()
 	for c in creatures:
-		if c.alive and not c.is_asleep() and absf(c.x - scr.x) < SCREEN_RANGE and c.watches(scr):
-			c.learn_from_screen(item[0], item[1])
+		if c.alive and not c.is_asleep() and absf(c.x - scr.x) < SCREEN_RANGE:
+			c.learn_from_screen(item[0], item[1], 1.0 if c.watches(scr) else SCREEN_PASSIVE)
 	screen.index += 1
 
 

@@ -469,6 +469,7 @@ func _test_zones_and_climate() -> void:
 		var w3 := WorldSim.new(90 + run / 2, "normal", 1)
 		var c3 := w3.creatures[0]
 		c3.playfulness = 0.95 if playful else 0.05
+		c3.curiosity = 0.0                  # sans aller voir l'écran : seul l'espièglerie change
 		c3.x = w3.zones[2].x0 + 500.0
 		t = 0.0
 		while t < 3600.0:
