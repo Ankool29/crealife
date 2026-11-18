@@ -3,84 +3,93 @@
 Jeu de vie artificielle inspiré de la série *Creatures*, conçu pour le mobile (Godot 4, GDScript).
 Tout le contenu est original : aucun fichier ni code du jeu Creatures n'est utilisé.
 
-## État actuel : les créatures sont des chats
+## État actuel : un élevage de chats
 
-- **Chats en pixel art** (quadrupèdes), dessinés d'après le concept : un
-  chat gris uni en 11 animations (`art/pixel/sources`), que
-  `tools/build_cat_pixel.py` découpe et accompagne de masques de pelage ; le
-  shader les colore selon les gènes. Affichés nets, à ×3. Le cerveau, le
-  langage, la biologie et l'apprentissage sont inchangés.
-- **Génétique réelle du pelage**, mendélienne : chaque gène a deux
-  allèles, un de chaque parent, dominants ou récessifs.
-  - Couleurs : noir, chocolat, cannelle et leurs dilutions bleu, lilas,
-    faon ; roux et crème, liés au chromosome X : les mâles roux sont
-    fréquents, l'écaille de tortue et le calico sont (presque) toujours
-    des femelles.
-  - Tigré (agouti) ou uni ; motifs maquereau, classique, moucheté,
-    tiqueté ; argenté ou « smoke ».
-  - Colourpoint siamois : yeux bleus, extrémités qui foncent au froid,
-    chatons qui naissent pâles.
-  - Blanc : panachure (bicolore, arlequin, van) ou blanc dominant, avec
-    yeux bleus ou vairons ; les blancs aux yeux bleus sont sourds (ils
-    n'entendent pas les mots, mais lisent l'écran).
-  - Poil long (récessif), queue courte (Manx, dominant).
-  - Traits continus : forme de la tête (en coin, moyenne, ronde),
-    couleur des yeux, intensité du roux, quantité de blanc, contraste.
-  - Deux chats noirs peuvent avoir un chaton bleu ou siamois ; le nom du
-    pelage s'affiche dans le panneau, les gènes dans l'onglet Gènes.
+### Graphismes (pixel art, style Stardew Valley)
 
-### Phase 5 (zones et climat)
+- **Chats** : un chat gris dessiné en 11 animations, poil court et poil
+  long (`art/pixel/sources`). `tools/build_cat_pixel.py` les découpe et
+  calcule des masques (rayures, extrémités, blanc, plaques) ; un shader
+  colore chaque chat selon ses gènes. Affichés nets, à ×3.
+- **Maison en coupe** : chambre, cuisine, salle de jeux, salle
+  d'apprentissage, entrée, puis le **jardin** (pommier, potager, mare) et un
+  fond lointain en parallaxe. `tools/build_decor_pixel.py`.
+- **Objets** : gamelle (pleine ou vide), pelote, trampoline, boîte à
+  musique, pomme, graine ; prêts pour plus tard : carotte, pousse, plante,
+  papillon, oiseau, souris, panier, eau. `tools/build_objects_pixel.py`.
 
-- **Trois zones** côte à côte : la **salle d'apprentissage** (intérieur
-  chaud et éclairé), le **jardin** (nourriture) et l'**aire de loisirs**
-  (trampoline, boîte à musique, balles).
-- **Écran d'apprentissage** : il fait défiler une image et son mot toutes
-  les 6 s (noms, verbes ou besoins : toucher l'écran pour changer). Une
-  créature qui le regarde apprend le mot, d'autant mieux qu'elle est
-  **curieuse** (gène de tempérament) ; les curieuses aiment aussi le
-  regarder.
-- **Loisirs** : les **espiègles** (gène de tempérament) s'ennuient plus
-  vite et s'amusent plus avec les jouets. Le trampoline fait sauter, la
-  boîte à musique distrait et console toutes celles qui l'entendent.
-- **Climat** : jour et nuit (24 min), saisons d'une heure (année de 4 h),
-  beau temps, nuages, pluie ou neige. Dehors la température suit la
-  saison, l'heure et la météo ; la salle reste à 19 °C. Froid et chaud
-  sont ressentis (pulsions) : frissons qui brûlent de l'énergie,
-  transpiration, hypothermie si ça dure ; se blottir contre les autres
-  réchauffe, la nuit fatigue, la pluie désaltère. Moins de fruits l'hiver
-  et pas de baies : le distributeur de graines devient précieux.
-- Les naissances tendent à équilibrer mâles et femelles.
-- **Langage** : chaque créature a un vocabulaire (8 noms d'objets, 13
-  verbes, 12 besoins). Elle apprend un nom quand on le prononce pendant
-  qu'elle regarde l'objet, un verbe pendant qu'elle fait l'action, un
-  besoin quand elle le ressent. Elle comprend les ordres (« pousse la
-  balle ») à proportion de ce qu'elle connaît des mots ; obéir reste une
-  tendance, renforcée par les caresses. Elle dit ce qu'elle ressent
-  (« faim ! ») dans une bulle, en babillant au début puis en écorchant
-  les mots, et transmet son vocabulaire aux autres en leur parlant.
-- **L'âge compte** : bébés et enfants apprennent vite (mots comme
-  habitudes), les adultes plus lentement, les vieux encore moins et
-  oublient peu à peu les mots qui ne servent plus. Un gène
-  (« maturation ») règle à quel point l'esprit vieillit selon les lignées.
-- **Apparence** : en plus des couleurs, chaque créature hérite d'une forme
-  de queue (courte, longue, massue), d'antennes (courtes, longues,
-  ramifiées), d'une corpulence et d'une couleur et intensité de lumière
-  des antennes et des taches.
-- **Vie de famille** : après un accouplement, 40 min de repos ; le désir
-  retombe pendant la gestation, tant qu'il y a un bébé, et quand le monde
-  est plein ; après un refus, on n'insiste pas. Les parents (instinct
-  parental héréditaire) apportent à manger à leurs petits affamés et vont
-  leur parler quand ils s'ennuient ou se sentent seuls, ce qui leur
-  transmet leurs mots.
-- **Brassage génétique** : chaque trait d'apparence vient de l'un ou
-  l'autre parent ou d'un mélange des deux (couleurs intermédiaires).
-  Motifs héréditaires : taches, rayures, grandes plaques, avec leur
-  propre couleur ; un motif peut rester « dormant » et réapparaître chez
-  un descendant, ou naître d'une mutation.
-- Phases précédentes : population et reproduction, observation et
-  sauvegarde (phase 3), cerveau à lobes qui apprend (phase 2), 36
-  substances et 6 organes, vie d'environ 10 h (phase 1), graphismes
-  rendus en 3D.
+### Génétique du pelage (réelle, mendélienne)
+
+- Deux allèles par gène, un de chaque parent, dominants ou récessifs.
+- Noir, chocolat, cannelle et leurs dilutions (bleu, lilas, faon) ; roux
+  et crème liés à l'X (écaille de tortue et calico presque toujours
+  femelles).
+- Tigré ou uni ; maquereau, classique, moucheté, tiqueté ; argenté/smoke.
+- Colourpoint siamois : yeux bleus, extrémités qui foncent au froid,
+  chatons pâles.
+- Blanc : panachure (bicolore, arlequin, van) ou blanc dominant ; blancs
+  aux yeux bleus sourds.
+- Poil long (récessif), queue courte Manx (gène présent, pas encore
+  dessiné), traits continus (tête, yeux, roux, blanc, contraste).
+- Chaque chaton d'une portée a son propre mélange.
+
+### Vie, cerveau et langage
+
+- 36 substances et 6 organes, vie d'environ 10 h de jeu en 5 stades.
+- Cerveau à lobes qui apprend par récompense et punition (caresser,
+  gronder) ; l'âge règle la vitesse d'apprentissage.
+- Langage : noms, verbes, besoins appris en écoutant, en regardant ou à
+  l'écran ; ordres compris à proportion des mots connus ; ils parlent
+  (bulles) et se transmettent leurs mots.
+- Tempéraments héréditaires : curiosité (va devant l'écran, apprend
+  mieux), espièglerie (va jouer), instinct parental.
+- Climat : jour et nuit, saisons, météo, température ressentie ; la
+  maison est tempérée.
+
+### Famille et élevage
+
+- Accouplements espacés, refus respectés ; gestation de 25 min puis
+  **portée de 1 à 5 chatons**.
+- **Allaitement** : les bébés tètent collés à leur mère et la suivent ;
+  sevrage au stade enfant. Les parents apportent à manger et parlent aux
+  petits.
+- **Demandes d'adoption** : des familles cherchent un chat selon le
+  pelage, le sexe, l'âge, le caractère ou les mots connus ; on choisit qui
+  leur confier, la chatterie gagne de la réputation.
+- Population maximale de 14 chats ; les naissances équilibrent les sexes.
+- Nourriture : corbeille de fruits en cuisine, pommier, gamelle ; un chat
+  affamé sait où aller. On dort mieux dans la chambre.
+
+## Feuille de route
+
+Prochaines étapes, dans l'ordre proposé :
+
+1. **Nourriture cohérente pour des chats** : distributeur de croquettes en
+   cuisine (toujours disponible, peu appétissant), pâtée donnée par le
+   joueur (très appréciée, limitée), proies au jardin (souris, oiseaux) à
+   chasser avec un instinct héréditaire, gamelle d'eau. **Préférences** :
+   le goût de chaque aliment varie selon les gènes, et chaque chat apprend
+   ce qu'il préfère par la récompense. La pomme et les fruits deviennent
+   du décor.
+2. **Rayures plus naturelles** : motifs ondulés et irréguliers, uniques
+   à chaque chat (bruit déformé calculé dans le shader à partir de
+   coordonnées « le long du corps »), en s'inspirant de la formation réelle
+   des motifs (réaction-diffusion de Turing, gènes Taqpep et Dkk4).
+3. **Caractères plus variés** : nouveaux gènes de tempérament
+   (sociabilité et câlins, peur ou audace, agressivité et territoire,
+   gourmandise, activité nocturne), portés par de la chimie (stress,
+   attachement) ; quelques nouveaux comportements (fuir, se cacher, se
+   frotter, ronronner) ; amitiés et rivalités entre chats.
+4. **Écosystème du jardin** : graines qui germent, plantes qui poussent,
+   papillons, oiseaux, souris ; herbe à chat, plante toxique à éviter.
+5. **Soins et santé** : litière, brossage des poils longs, maladies,
+   vétérinaire ; handicaps (membre en moins, aveugle, sourd) avec
+   adaptation naturelle.
+6. **Outils d'éleveur** : stérilisation, test génétique, prédiction des
+   portées, races reconnues, consanguinité.
+7. **Chatterie** : la réputation débloque des choses (étage avec escalier,
+   expositions, meilleures familles).
+8. Dessins à venir : formes de tête, queue courte (Manx).
 
 ### Commandes
 
@@ -91,12 +100,13 @@ Tout le contenu est original : aucun fichier ni code du jeu Creatures n'est util
 | **Suivante** | Sélectionne la créature suivante |
 | **Parler** | Ouvre le bandeau de paroles : toucher un mot le dit aussitôt ; une phrase s'écrit puis **Dire**. La créature sélectionnée (et ses voisines) l'entend |
 | Bandeau ouvert : toucher un objet ou une autre créature | Le lui montre (flèche jaune) : elle le regarde 15 s, le temps de lui en dire le nom |
-| Toucher l'écran de la salle | Change ce qu'il montre (noms, verbes, besoins) |
+| Toucher l'écran de la salle d'apprentissage | Change ce qu'il montre (noms, verbes, besoins) |
 | **Observer** | Chimie, cerveau, mots connus, gènes, famille de la créature sélectionnée |
 | Bouton **Gronder** | Punit ce qu'elle fait (elle le fera moins dans cette situation) |
 | Toucher le décor / bouton **Fruit** | Fait tomber un fruit |
 | Glisser | Déplace la caméra (**Suivre** pour la recentrer) |
 | **x1 / x2 / x4 / x16** | Vitesse du temps |
+| **Adoptions** | Les demandes des familles ; toucher un chat pour le leur confier |
 | **Nouvelle lignée** | Apparaît si toutes les créatures sont mortes |
 | **Menu** → **Recommencer** | Efface la partie et repart avec deux nouvelles créatures |
 
@@ -132,9 +142,11 @@ src/sim/biology/      Substances, réactions, émetteurs, récepteurs,
                       organes, cycle de vie
 src/sim/brain/        Cerveau à lobes, langage
 src/sim/creature_sim.gd  Assemble corps, chimie et cerveau
-src/sim/world_sim.gd  Monde, arbres, fruits
-src/view/, src/ui/    Affichage et interface tactile
-tools/                Générateur de la souche de départ (Python)
+src/sim/world_sim.gd  Monde : maison, jardin, climat, objets
+src/sim/adoption.gd   Demandes d'adoption, réputation
+src/view/, src/ui/    Affichage (shader du pelage) et interface tactile
+art/                  Planches pixel art d'origine (ChatGPT), Blender (ancien)
+tools/                Souche de départ, découpe des chats, décors et objets (Python)
 tests/                Tests de la simulation
 ```
 
