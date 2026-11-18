@@ -19,11 +19,8 @@ var creature: CreatureSim:
 ## Créature sélectionnée : un repère s'affiche au-dessus d'elle.
 var selected := false
 
-## Trois couches : queue, corps, tête (chacune avec son matériau de pelage).
-var _tail := Sprite2D.new()
 var _sprite := Sprite2D.new()
-var _head := Sprite2D.new()
-var _mats: Array[ShaderMaterial] = []
+var _mat := ShaderMaterial.new()
 var _t := 0.0
 var _bubble_style := StyleBoxFlat.new()
 ## Noms, bulles et icônes : au-dessus de la nuit pour rester lisibles.
@@ -37,15 +34,12 @@ func _ready() -> void:
 	_labels.z_as_relative = false
 	_labels.draw.connect(func() -> void: _draw_labels(_labels))
 	add_child(_labels)
-	var shader := preload("res://src/view/shaders/cat.gdshader")
-	for s in [_tail, _sprite, _head]:
-		var m := ShaderMaterial.new()
-		m.shader = shader
-		s.material = m
-		_mats.append(m)
-		s.centered = false
-		s.offset = -SpriteLibrary.cat_anchor
-		add_child(s)
+	_mat.shader = preload("res://src/view/shaders/cat.gdshader")
+	_sprite.material = _mat
+	_sprite.centered = false
+	_sprite.offset = -SpriteLibrary.cat_anchor
+	_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST     # pixel art net
+	add_child(_sprite)
 
 
 func _process(delta: float) -> void:
@@ -54,24 +48,18 @@ func _process(delta: float) -> void:
 	_t += delta
 	var c := creature
 	position = Vector2(c.x, -absf(sin(_t * 5.0)) * 70.0 * c.body_size() if c.bounce_left > 0.0 else 0.0)
+	position = position.round()
 	var anim := _animation()
 	var count := SpriteLibrary.cat_frame_count(anim)
-	var fps := WALK_FPS if anim == "marche" else 2.0
+	var fps := WALK_FPS if anim == "marche" else (1.2 if anim == "assis" else 2.0)
 	var f := int(_t * fps) % count
-	var coat := c.coat
-	var fur := "l" if coat.get("long_fur", false) else "c"
-	var layers := ["queue1" if coat.get("manx", false) else "queue0", "corps", "tete%d" % int(coat.get("head", 1))]
-	var sprites := [_tail, _sprite, _head]
-	var s := SpriteLibrary.cat_scale * c.body_size()
-	var wide := lerpf(0.9, 1.12, c.corpulence)       # corpulence : svelte à trapu
-	for i in 3:
-		var sp: Sprite2D = sprites[i]
-		var m: ShaderMaterial = _mats[i]
-		sp.texture = SpriteLibrary.cat_texture(anim, f, layers[i], fur, "")
-		m.set_shader_parameter("mask1", SpriteLibrary.cat_texture(anim, f, layers[i], fur, "_m1"))
-		m.set_shader_parameter("mask2", SpriteLibrary.cat_texture(anim, f, layers[i], fur, "_m2"))
-		sp.scale = Vector2(s * wide * c.facing, s)     # retourné quand il regarde à gauche
-		_set_coat(m, c)
+	_sprite.texture = SpriteLibrary.cat_texture(anim, f)
+	_mat.set_shader_parameter("mask1", SpriteLibrary.cat_texture(anim, f, "_m1"))
+	_mat.set_shader_parameter("mask2", SpriteLibrary.cat_texture(anim, f, "_m2"))
+	var s := SpriteLibrary.cat_display_scale(c.body_size())
+	var wide: float = round(s * lerpf(0.94, 1.08, c.corpulence) * 2.0) / 2.0   # corpulence : svelte à trapu
+	_sprite.scale = Vector2(wide * c.facing, s)       # retourné quand il regarde à gauche
+	_set_coat(_mat, c)
 	_labels.queue_redraw()
 
 
@@ -106,12 +94,15 @@ func _animation() -> String:
 		return "marche"
 	if c.is_acting() and ACTION_ANIM.has(c.get_verb()):
 		return ACTION_ANIM[c.get_verb()]
+	# au repos : assis quand il est fatigué, et de temps en temps
+	if c.level("Fatigue") > 0.25 or int(c.age / 45.0) % 3 == 0:
+		return "assis"
 	return "repos"
 
 
 ## Point central du corps en coordonnées monde (pour savoir si on la touche).
 func body_center() -> Vector2:
-	return position + SpriteLibrary.cat_body_center * SpriteLibrary.cat_scale * creature.body_size()
+	return position + SpriteLibrary.cat_body_center * SpriteLibrary.cat_display_scale(creature.body_size())
 
 
 func _draw_labels(cv: CanvasItem) -> void:
@@ -121,7 +112,7 @@ func _draw_labels(cv: CanvasItem) -> void:
 	var sz := c.body_size()
 	var font := ThemeDB.fallback_font
 	# Nom au-dessus de la tête (et repère si sélectionnée)
-	var head := SpriteLibrary.cat_head_top * SpriteLibrary.cat_scale       # haut de la tête (négatif)
+	var head := SpriteLibrary.cat_head_top * SpriteLibrary.CAT_PIXEL      # haut de la tête (négatif)
 	var top := head * sz - 18.0
 	var name_col := Color(1, 1, 1, 0.95) if selected else Color(1, 1, 1, 0.55)
 	cv.draw_string(font, Vector2(-100, top), c.creature_name, HORIZONTAL_ALIGNMENT_CENTER, 200, 20 if selected else 16, name_col)

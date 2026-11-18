@@ -29,6 +29,7 @@ import creature as cr  # noqa: E402  (scène, lumières, formes organiques)
 OUT = Path(sys.argv[1] if len(sys.argv) > 1 else "out")
 MODE = sys.argv[2] if len(sys.argv) > 2 else "test"
 SPRITE_RES = 320
+PIXEL_RES = 120          # pixel art : 50 px par unité, affiché ×3 dans le jeu
 HEADS = ["coin", "moyenne", "ronde"]
 TAILS = ["longue", "courte"]
 FURS = ["c", "l"]                     # poil court, poil long
@@ -144,11 +145,12 @@ def build_cat():
     hair = None
     eye_mat = cr.glow_material("CatEye", (0.15, 0.85, 0.2), 0.6)       # recoloré en jeu
     pupil_mat = cr.simple_material("Pupil", (0.01, 0.01, 0.01), 0.2, 1.0)
+    nose_mat = cr.simple_material("Nose", (0.95, 0.42, 0.55), 0.5, 0.0)
     parts = {"root": root, "legs": {}, "heads": [], "tails": [], "fur": []}
 
     body = cr.organic("Body", (0, 0, 0.5),
-        seg((-0.28, 0, 0.51), (0.06, 0, 0.49), 0.185, 0.175, 18)        # croupe -> ventre
-        + seg((0.06, 0, 0.49), (0.32, 0, 0.53), 0.175, 0.19, 18)        # ventre -> poitrail
+        seg((-0.28, 0, 0.51), (0.06, 0, 0.49), 0.2, 0.19, 18)          # croupe -> ventre (trapu)
+        + seg((0.06, 0, 0.49), (0.32, 0, 0.53), 0.19, 0.205, 18)        # ventre -> poitrail
         + [((0.3, 0, 0.45), (0.13, 0.14, 0.13), 0),                      # épaules
            ((-0.26, 0, 0.43), (0.15, 0.145, 0.15), 0),                   # cuisses
            ((0.43, 0, 0.62), (0.11, 0.1, 0.14), -40)],                   # cou
@@ -160,16 +162,16 @@ def build_cat():
         front = name[0] == "f"
         t = (top[0], y, top[2])
         m = (mid[0], y, mid[2])
-        upper = cr.organic("Up_" + name, t, seg(t, m, 0.09 if front else 0.12, 0.062) +
+        upper = cr.organic("Up_" + name, t, seg(t, m, 0.1 if front else 0.13, 0.07) +
                            ([((t[0] + 0.02, y, t[2] - 0.08), (0.12, 0.075, 0.15), 0)] if not front else
                             [((t[0], y, t[2] - 0.05), (0.08, 0.07, 0.11), 0)]),
                            fur, body, smooth=8)
         upper.location = Vector(t) - Vector((0, 0, 0.5))
         if front:
-            low_pts = seg(m, (0.33, y, 0.06), 0.058, 0.045) + [((0.36, y, 0.032), (0.065, 0.05, 0.035), 0)]
+            low_pts = seg(m, (0.33, y, 0.06), 0.066, 0.055) + [((0.36, y, 0.034), (0.075, 0.058, 0.04), 0)]
         else:
-            low_pts = (seg(m, (-0.3, y, 0.13), 0.065, 0.045) + seg((-0.3, y, 0.13), (-0.27, y, 0.04), 0.045, 0.042)
-                       + [((-0.23, y, 0.032), (0.065, 0.05, 0.035), 0)])
+            low_pts = (seg(m, (-0.3, y, 0.13), 0.072, 0.055) + seg((-0.3, y, 0.13), (-0.27, y, 0.04), 0.055, 0.05)
+                       + [((-0.23, y, 0.034), (0.075, 0.058, 0.04), 0)])
         lower = cr.organic("Low_" + name, m, low_pts, fur, upper, smooth=6)
         lower.location = Vector(m) - Vector(t)
         parts["legs"][name] = (upper, lower)
@@ -187,15 +189,15 @@ def build_cat():
              cheek=((0.66, 0, 0.74), (0.12, 0.14, 0.1)), ear=((0.58, 0.1, 0.9), (0.57, 0.12, 0.96), 0.05),
              eye=(0.748, 0.8)),
     ]
-    def big(p, f=1.22):
+    def big(p, f=1.48):          # grosse tête ronde, comme sur le concept
         return tuple(NECK[i] + (p[i] - NECK[i]) * f for i in range(3))
 
     for sh in shapes:
         for key in ("cran", "muz", "cheek"):
             c, r = sh[key]
-            sh[key] = (big(c), tuple(v * 1.22 for v in r))
+            sh[key] = (big(c), tuple(v * 1.48 for v in r))
         a, b, r = sh["ear"]
-        sh["ear"] = (big(a), big(b), r * 1.25)
+        sh["ear"] = (big(a), big(b), r * 1.45)
         ex, ez = sh["eye"]
         e = big((ex, 0, ez))
         sh["eye"] = (e[0], e[2])
@@ -213,17 +215,21 @@ def build_cat():
             ear.location = (0, 0, 0)
             ex, ez = sh["eye"]
             ey = 0.08 * sy
-            eye = cr.sphere(f"Eye{k}{side}", (ex, ey, ez), 0.04, eye_mat, head, (0.8, 0.6, 1.0), NECK)
-            cr.sphere(f"Pupil{k}{side}", (ex + 0.03, ey + 0.004 * sy, ez), 0.015, pupil_mat, head, (0.5, 0.6, 2.2), NECK)
-            lid = cr.sphere(f"Lid{k}{side}", (ex + 0.004, ey, ez), 0.045, fur, head, (0.85, 0.65, 1.05), NECK)
+            ey = 0.1 * sy
+            eye = cr.sphere(f"Eye{k}{side}", (ex, ey, ez), 0.058, eye_mat, head, (0.8, 0.6, 1.0), NECK)
+            cr.sphere(f"Pupil{k}{side}", (ex + 0.042, ey + 0.004 * sy, ez), 0.02, pupil_mat, head, (0.5, 0.6, 2.0), NECK)
+            lid = cr.sphere(f"Lid{k}{side}", (ex + 0.006, ey, ez), 0.064, fur, head, (0.85, 0.65, 1.05), NECK)
             lid.hide_render = True
+        mc, mr = sh["muz"]                                           # truffe rose
+        cr.sphere(f"Nose{k}", (mc[0] + mr[0] * 0.92, 0, mc[2] + mr[2] * 0.35), 0.026, nose_mat, head,
+                  (0.8, 1.2, 0.8), NECK)
         parts["fur"].append(add_long_fur(head, hair, 0.012))   # fin : les yeux restent visibles
         into(objs, f"Tete{k}")
         parts["heads"].append(head)
 
     tails = [
-        seg((-0.4, 0, 0.56), (-0.62, 0, 0.5), 0.065, 0.055) + seg((-0.62, 0, 0.5), (-0.82, 0, 0.6), 0.055, 0.048)
-        + seg((-0.82, 0, 0.6), (-0.9, 0, 0.78), 0.048, 0.038),
+        seg((-0.4, 0, 0.56), (-0.62, 0, 0.5), 0.075, 0.066) + seg((-0.62, 0, 0.5), (-0.82, 0, 0.6), 0.066, 0.058)
+        + seg((-0.82, 0, 0.6), (-0.9, 0, 0.78), 0.058, 0.048),
         seg((-0.4, 0, 0.56), (-0.52, 0, 0.6), 0.06, 0.05),
     ]
     for k, el in enumerate(tails):
@@ -489,6 +495,23 @@ if __name__ == "__main__":
     parts = build_cat()
     if MODE == "sprites":
         render_sprites(OUT, parts)
+        sys.exit(0)
+    if MODE == "pixeltest":     # couches et masques en basse résolution, sans lissage
+        sc = bpy.context.scene
+        sc.render.resolution_x = sc.render.resolution_y = PIXEL_RES
+        sc.render.filter_size = 0.01
+        sc.cycles.samples = 16
+        layers = ["corps", "tete0", "tete1", "tete2", "queue0", "queue1"]
+        for nm, spec in [("repos_0", ANIMATIONS["repos"][0]), ("marche_2", ANIMATIONS["marche"][2]),
+                         ("manger_0", ANIMATIONS["manger"][0]), ("dormir_0", "loaf")]:
+            apply_pose(parts, spec)
+            for fur in FURS:
+                set_fur(parts, fur == "l")
+                for layer in layers:
+                    show_layer(layer)
+                    cr.render(OUT / f"{nm}_{layer}_{fur}.png")
+                    render_mask(OUT / f"{nm}_{layer}_{fur}_m1.png", 1)
+                    render_mask(OUT / f"{nm}_{layer}_{fur}_m2.png", 2)
         sys.exit(0)
     # Aperçu : plusieurs poses, toutes les couches visibles (tête moyenne, queue longue)
     bpy.context.scene.render.resolution_x = 480

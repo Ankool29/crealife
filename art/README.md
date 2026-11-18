@@ -45,3 +45,14 @@ couche, deux masques guident le shader du pelage
   bleu = plaques d'écaille de tortue.
 
 Les images sont réduites à 240 px, les masques à 120 px.
+
+## Chats en pixel art (version actuelle)
+
+Les planches `art/pixel/sources/*.png` ont été dessinées avec un générateur
+d'images : cases à cadre noir, fond magenta #FF00FF, chat gris uni regardant
+à droite, yeux vert pur #00FF00, nez et oreilles roses. Une planche par
+animation (repos, assis, marche, mange, pousse, frappe, prend, renifle,
+miaule, dort, mort). `python tools/build_cat_pixel.py` les découpe (une case
+= 64 pixels), retire le fond, pose les pattes sur la même ligne, et calcule
+les masques de pelage d'après la silhouette et la pose. Le modèle 3D
+(`blender/cat.py`) n'est plus utilisé pour les chats.

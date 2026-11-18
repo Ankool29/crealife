@@ -1,0 +1,80 @@
+{
+	"size": [
+		76,
+		60
+	],
+	"anchor": [
+		38.0,
+		59
+	],
+	"animations": {
+		"repos": [
+			"repos_0",
+			"repos_1",
+			"repos_2",
+			"repos_3"
+		],
+		"assis": [
+			"assis_0",
+			"assis_1",
+			"assis_2",
+			"assis_3"
+		],
+		"marche": [
+			"marche_0",
+			"marche_1",
+			"marche_2",
+			"marche_3",
+			"marche_4",
+			"marche_5",
+			"marche_6",
+			"marche_7"
+		],
+		"manger": [
+			"manger_0",
+			"manger_1",
+			"manger_2",
+			"manger_3"
+		],
+		"pousser": [
+			"pousser_0",
+			"pousser_1",
+			"pousser_2",
+			"pousser_3"
+		],
+		"frapper": [
+			"frapper_0",
+			"frapper_1",
+			"frapper_2",
+			"frapper_3"
+		],
+		"prendre": [
+			"prendre_0",
+			"prendre_1"
+		],
+		"examiner": [
+			"examiner_0",
+			"examiner_1"
+		],
+		"parler": [
+			"parler_0",
+			"parler_1"
+		],
+		"dormir": [
+			"dormir_0",
+			"dormir_1"
+		],
+		"mort": [
+			"mort_0"
+		]
+	},
+	"head_top": -48,
+	"body_center": [
+		0,
+		-22
+	],
+	"mouth": [
+		26,
+		-14
+	]
+}

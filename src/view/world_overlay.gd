@@ -6,7 +6,7 @@ extends Node2D
 
 const NOUN_SPRITES := {"fruit": "fruit", "graine": "graine", "baie": "baie", "jouet": "balle",
 	"machine": "distributeur_on", "pierre": "pierre", "œuf": "oeuf"}
-const VERB_ANIM := {"approcher": "marche", "fuir": "marche", "explorer": "marche", "examiner": "examiner",
+const VERB_ANIM := {"approcher": "marche", "fuir": "marche", "explorer": "marche", "examiner": "examiner", "rien": "assis",
 	"prendre": "prendre", "lâcher": "prendre", "manger": "manger", "pousser": "pousser", "tirer": "pousser",
 	"frapper": "frapper", "parler": "parler", "dormir": "dormir", "accoupler": "parler"}
 const PANE_CENTER := Vector2(0, -150)     # centre de la dalle de l'écran, au-dessus de son pied
@@ -20,6 +20,7 @@ var _t := 0.0
 
 func _ready() -> void:
 	z_index = 40
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	SpriteLibrary.ensure()
 
 
@@ -65,8 +66,7 @@ func _draw_screen(w: WorldSim, o: WorldObject, font: Font) -> void:
 		# un chat gris, en trois couches, sur l'écran
 		var f := int(_t * 3.0) % SpriteLibrary.cat_frame_count(cat_anim)
 		var big := Rect2(c + Vector2(-46, -46), Vector2(92, 74))
-		for layer in ["queue0", "corps", "tete1"]:
-			draw_texture_rect(SpriteLibrary.cat_texture(cat_anim, f, layer, "c", ""), big, false, Color(0.8, 1.0, 0.92))
+		draw_texture_rect(SpriteLibrary.cat_texture(cat_anim, f), big, false, Color(0.8, 1.0, 0.92))
 	elif tex:
 		draw_texture_rect(tex, pic, false)
 	elif kind == "besoin":

@@ -5,9 +5,11 @@ Tout le contenu est original : aucun fichier ni code du jeu Creatures n'est util
 
 ## État actuel : les créatures sont des chats
 
-- **Apparence de chat** (quadrupède), rendue en 3D comme avant. Le cerveau,
-  le langage, la biologie, l'apprentissage et le comportement sont
-  inchangés.
+- **Chats en pixel art** (quadrupèdes), dessinés d'après le concept : un
+  chat gris uni en 11 animations (`art/pixel/sources`), que
+  `tools/build_cat_pixel.py` découpe et accompagne de masques de pelage ; le
+  shader les colore selon les gènes. Affichés nets, à ×3. Le cerveau, le
+  langage, la biologie et l'apprentissage sont inchangés.
 - **Génétique réelle du pelage**, mendélienne : chaque gène a deux
   allèles, un de chaque parent, dominants ou récessifs.
   - Couleurs : noir, chocolat, cannelle et leurs dilutions bleu, lilas,
