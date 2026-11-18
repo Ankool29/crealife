@@ -34,13 +34,14 @@ var screen_rect := Rect2()
 
 
 func _ready() -> void:
-	var far_tex: Texture2D = load(DECOR_DIR + "decor_lointain.png")
+	var far_tex: Texture2D = load(DECOR_DIR + "px_lointain.png")
 	for i in 3:                     # centre, puis copies en miroir de chaque côté
 		var s := Sprite2D.new()
 		s.centered = false
 		s.texture = far_tex
 		s.flip_h = i != 1
 		s.z_index = -20
+		s.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		add_child(s)
 		_far.append(s)
 	_near_layer.z_index = -10
@@ -96,7 +97,7 @@ func _process(_delta: float) -> void:
 		var half := world.width * 0.5
 		var x := half - far_w * 0.5 + (camera.position.x - half) * (1.0 - FAR_PARALLAX)
 		for i in 3:
-			_far[i].position = Vector2(x + (i - 1) * far_w, DECOR_TOP)
+			_far[i].position = Vector2(x + (i - 1) * far_w, -float(_far[1].texture.get_height()))
 	var seen := {}
 	for o in world.objects:
 		seen[o.id] = true

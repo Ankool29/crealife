@@ -21,6 +21,8 @@ DECORS = {
     "entree": (256, 0.79),      # planche retournée : la porte donne à droite, sur le jardin
     # jardin : on coupe la bande de planches du bas (au-delà de 612 px sur 724)
     "jardin": (313, 0.758, 612 / 724),
+    # couche lointaine (parallaxe) : on coupe l'aplat vert du bas
+    "lointain": (313, 1.0, 525 / 724),
 }
 
 
