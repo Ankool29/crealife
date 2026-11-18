@@ -1,90 +1,214 @@
 {
-	"fruit": {
-		"size": 128,
-		"anchor": [
-			64,
-			115.2
-		],
-		"scale": 0.5
-	},
-	"graine": {
-		"size": 96,
-		"anchor": [
-			48,
-			86.4
-		],
-		"scale": 0.5
-	},
-	"baie": {
-		"size": 96,
-		"anchor": [
-			48,
-			86.4
-		],
-		"scale": 0.5
-	},
-	"balle": {
-		"size": 128,
-		"anchor": [
-			64,
-			115.2
-		],
-		"scale": 0.5
-	},
-	"pierre": {
-		"size": 128,
-		"anchor": [
-			64,
-			115.2
-		],
-		"scale": 0.5
-	},
-	"oeuf": {
-		"size": 128,
-		"anchor": [
-			64,
-			115.2
-		],
-		"scale": 0.5
-	},
-	"distributeur_on": {
-		"size": 320,
-		"anchor": [
-			160,
-			288.0
-		],
-		"scale": 0.5
-	},
-	"distributeur_off": {
-		"size": 320,
-		"anchor": [
-			160,
-			288.0
-		],
-		"scale": 0.5
-	},
-	"ecran": {
-		"size": 480,
-		"anchor": [
-			240,
-			432.0
-		],
-		"scale": 0.5
-	},
-	"trampoline": {
-		"size": 360,
-		"anchor": [
-			180,
-			324.0
-		],
-		"scale": 0.5
-	},
-	"boite_musique": {
-		"size": 240,
-		"anchor": [
-			120,
-			216.0
-		],
-		"scale": 0.5
-	}
+ "fruit": {
+  "size": [
+   23,
+   26
+  ],
+  "anchor": [
+   11.5,
+   26
+  ],
+  "scale": 2.4,
+  "pixel": true
+ },
+ "graine": {
+  "size": [
+   18,
+   17
+  ],
+  "anchor": [
+   9.0,
+   17
+  ],
+  "scale": 2.0,
+  "pixel": true
+ },
+ "baie": {
+  "size": 96,
+  "anchor": [
+   48,
+   86.4
+  ],
+  "scale": 0.5
+ },
+ "balle": {
+  "size": [
+   32,
+   30
+  ],
+  "anchor": [
+   16.0,
+   30
+  ],
+  "scale": 2.0,
+  "pixel": true
+ },
+ "pierre": {
+  "size": 128,
+  "anchor": [
+   64,
+   115.2
+  ],
+  "scale": 0.5
+ },
+ "oeuf": {
+  "size": 128,
+  "anchor": [
+   64,
+   115.2
+  ],
+  "scale": 0.5
+ },
+ "distributeur_on": {
+  "size": [
+   31,
+   21
+  ],
+  "anchor": [
+   15.5,
+   21
+  ],
+  "scale": 3.0,
+  "pixel": true
+ },
+ "distributeur_off": {
+  "size": [
+   31,
+   21
+  ],
+  "anchor": [
+   15.5,
+   21
+  ],
+  "scale": 3.0,
+  "pixel": true
+ },
+ "ecran": {
+  "size": 480,
+  "anchor": [
+   240,
+   432.0
+  ],
+  "scale": 0.5
+ },
+ "trampoline": {
+  "size": [
+   47,
+   31
+  ],
+  "anchor": [
+   23.5,
+   31
+  ],
+  "scale": 3.0,
+  "pixel": true
+ },
+ "boite_musique": {
+  "size": [
+   40,
+   39
+  ],
+  "anchor": [
+   20.0,
+   39
+  ],
+  "scale": 3.0,
+  "pixel": true
+ },
+ "eau": {
+  "size": [
+   32,
+   21
+  ],
+  "anchor": [
+   16.0,
+   21
+  ],
+  "scale": 3.0,
+  "pixel": true
+ },
+ "panier": {
+  "size": [
+   59,
+   40
+  ],
+  "anchor": [
+   29.5,
+   40
+  ],
+  "scale": 3.0,
+  "pixel": true
+ },
+ "carotte": {
+  "size": [
+   26,
+   29
+  ],
+  "anchor": [
+   13.0,
+   29
+  ],
+  "scale": 3.0,
+  "pixel": true
+ },
+ "pousse": {
+  "size": [
+   25,
+   20
+  ],
+  "anchor": [
+   12.5,
+   20
+  ],
+  "scale": 3.0,
+  "pixel": true
+ },
+ "plante": {
+  "size": [
+   27,
+   32
+  ],
+  "anchor": [
+   13.5,
+   32
+  ],
+  "scale": 3.0,
+  "pixel": true
+ },
+ "papillon": {
+  "size": [
+   31,
+   22
+  ],
+  "anchor": [
+   15.5,
+   22
+  ],
+  "scale": 3.0,
+  "pixel": true
+ },
+ "oiseau": {
+  "size": [
+   31,
+   24
+  ],
+  "anchor": [
+   15.5,
+   24
+  ],
+  "scale": 3.0,
+  "pixel": true
+ },
+ "souris": {
+  "size": [
+   43,
+   21
+  ],
+  "anchor": [
+   21.5,
+   21
+  ],
+  "scale": 3.0,
+  "pixel": true
+ }
 }

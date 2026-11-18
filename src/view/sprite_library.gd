@@ -36,6 +36,7 @@ static func ensure() -> void:
 			"texture": load(OBJECTS_DIR + name + ".png"),
 			"anchor": Vector2(o[name].anchor[0], o[name].anchor[1]),
 			"scale": float(o[name].scale),
+			"pixel": o[name].get("pixel", false),
 		}
 
 
@@ -70,3 +71,4 @@ static func setup_object_sprite(sprite: Sprite2D, sprite_name: String) -> void:
 	sprite.centered = false
 	sprite.scale = Vector2.ONE * info.scale
 	sprite.offset = -info.anchor
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST if info.pixel else CanvasItem.TEXTURE_FILTER_PARENT_NODE
