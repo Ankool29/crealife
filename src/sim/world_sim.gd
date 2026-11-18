@@ -36,6 +36,7 @@ const HOUSE: Array = [
 	["cuisine", "Cuisine", 1536.0],
 	["jeux", "Salle de jeux", 1800.0],
 	["salle", "Salle d'apprentissage", 1400.0],
+	["entree", "Entrée", 1200.0],
 ]
 ## Anciennes sauvegardes (version 2) : salle | jardin | loisirs.
 const V2_ZONES := {"salle": [0.0, 1800.0], "jardin": [1800.0, 4800.0], "loisirs": [4800.0, 7200.0]}

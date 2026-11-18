@@ -18,6 +18,7 @@ DECORS = {
     "jeux": (256, 0.742),
     "salle": (256, 0.758),
     "chambre": (256, 0.766),
+    "entree": (256, 0.79),      # planche retournée : la porte donne à droite, sur le jardin
 }
 
 

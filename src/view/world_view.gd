@@ -12,7 +12,7 @@ const ZONE_DECOR := {"salle": "decor_salle.png", "jardin": "decor_proche.png", "
 	"chambre": "decor_salle.png"}
 ## Décors pixel art (tools/build_decor_pixel.py) : prioritaires quand ils existent.
 const PX_DECOR := {"cuisine": "px_cuisine.png", "chambre": "px_chambre.png", "jeux": "px_jeux.png",
-	"salle": "px_salle.png", "jardin": "px_jardin.png"}
+	"salle": "px_salle.png", "entree": "px_entree.png", "jardin": "px_jardin.png"}
 ## Écran peint dans le décor de la salle (fractions de l'image).
 const PX_SCREEN := Rect2(655.0 / 1774.0, 165.0 / 887.0, 495.0 / 1774.0, 285.0 / 887.0)
 const FLOOR_DEPTH := 50.0          # les chats marchent un peu en avant du fond du plancher
