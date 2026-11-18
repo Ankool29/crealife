@@ -13,6 +13,8 @@ const ZONE_DECOR := {"salle": "decor_salle.png", "jardin": "decor_proche.png", "
 ## Décors pixel art (tools/build_decor_pixel.py) : prioritaires quand ils existent.
 const PX_DECOR := {"cuisine": "px_cuisine.png", "chambre": "px_chambre.png", "jeux": "px_jeux.png",
 	"salle": "px_salle.png", "jardin": "px_jardin.png"}
+## Écran peint dans le décor de la salle (fractions de l'image).
+const PX_SCREEN := Rect2(655.0 / 1774.0, 165.0 / 887.0, 495.0 / 1774.0, 285.0 / 887.0)
 const FLOOR_DEPTH := 50.0          # les chats marchent un peu en avant du fond du plancher
 
 var world: WorldSim:
@@ -27,6 +29,8 @@ var _sprites := {}                 # id d'objet -> Sprite2D
 var _objects_layer := Node2D.new()
 var _overlay := WorldOverlay.new()
 var _zones_built := false
+## Zone de l'écran d'apprentissage dans le monde, si le décor le dessine.
+var screen_rect := Rect2()
 
 
 func _ready() -> void:
@@ -48,6 +52,7 @@ func _ready() -> void:
 
 func _build_zones() -> void:
 	_zones_built = true
+	screen_rect = Rect2()
 	for c in _near_layer.get_children():
 		c.queue_free()
 	var px_meta := {}
@@ -64,6 +69,9 @@ func _build_zones() -> void:
 			var room_w: float = z.x1 - z.x0
 			s.scale = Vector2.ONE * room_w / float(s.texture.get_width())
 			s.position = Vector2(z.x0, -FLOOR_DEPTH - float(px_meta[z.key].floor) * s.scale.y)
+			if z.key == "salle":
+				var img := Vector2(s.texture.get_width(), s.texture.get_height()) * s.scale
+				screen_rect = Rect2(s.position + PX_SCREEN.position * img, PX_SCREEN.size * img)
 			var under := ColorRect.new()          # fondations sous le plancher
 			under.color = Color(0.17, 0.1, 0.07)
 			under.position = Vector2(z.x0, s.position.y + s.texture.get_height() * s.scale.y)
@@ -101,6 +109,7 @@ func _process(_delta: float) -> void:
 		if o.type_name == "distributeur":
 			sprite_name = "distributeur_on" if o.cooldown <= 0.0 else "distributeur_off"
 		SpriteLibrary.setup_object_sprite(s, sprite_name)
+		s.visible = not (o.type_name == "ecran" and screen_rect.has_area())
 		s.position = Vector2(o.x, -o.h)
 		s.z_index = 5 if o.holder != null else 0
 	for id in _sprites.keys():

@@ -43,7 +43,19 @@ func _draw() -> void:
 
 
 func _draw_screen(w: WorldSim, o: WorldObject, font: Font) -> void:
-	var c := Vector2(o.x, -o.h) + PANE_CENTER
+	# Écran peint dans le décor pixel art : on y dessine, agrandi
+	var big_screen: Rect2 = view.screen_rect
+	if big_screen.has_area():
+		var k := minf(big_screen.size.x / PANE_SIZE.x, big_screen.size.y / PANE_SIZE.y)
+		draw_set_transform(big_screen.get_center(), 0.0, Vector2(k, k))
+	else:
+		draw_set_transform(Vector2(o.x, -o.h) + PANE_CENTER)
+	_draw_pane(w, font)
+	draw_set_transform(Vector2.ZERO)
+
+
+func _draw_pane(w: WorldSim, font: Font) -> void:
+	var c := Vector2.ZERO
 	var item := w.screen_item()
 	var kind: String = item[0]
 	var i: int = item[1]
