@@ -15,6 +15,7 @@ SCALE = 8
 # nom : (largeur de la grille en gros pixels, haut du plancher en fraction de l'image)
 DECORS = {
     "cuisine": (256, 0.745),
+    "jeux": (256, 0.742),
 }
 
 
