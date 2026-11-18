@@ -464,6 +464,8 @@ func _execute(dt: float, world: WorldSim, rng: RandomNumberGenerator) -> void:
 			if _move_towards(_goal_x, dt):
 				_goal_x = _explore_goal(world, rng)
 		Verb.DORMIR:
+			if world.zone_at(x).key == "chambre":     # dans les paniers : sommeil plus réparateur
+				biochem.add(_chem["Fatigue"], -0.003 * dt)
 			if level("Fatigue") <= 0.03 or level("Douleur") > 0.5:
 				naps += 1
 				_finish()
