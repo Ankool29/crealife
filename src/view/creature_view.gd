@@ -53,9 +53,10 @@ func _process(delta: float) -> void:
 	var count := SpriteLibrary.cat_frame_count(anim)
 	var fps := WALK_FPS if anim == "marche" else (1.2 if anim == "assis" else 2.0)
 	var f := int(_t * fps) % count
-	_sprite.texture = SpriteLibrary.cat_texture(anim, f)
-	_mat.set_shader_parameter("mask1", SpriteLibrary.cat_texture(anim, f, "_m1"))
-	_mat.set_shader_parameter("mask2", SpriteLibrary.cat_texture(anim, f, "_m2"))
+	var lf: bool = c.coat.get("long_fur", false)
+	_sprite.texture = SpriteLibrary.cat_texture(anim, f, "", lf)
+	_mat.set_shader_parameter("mask1", SpriteLibrary.cat_texture(anim, f, "_m1", lf))
+	_mat.set_shader_parameter("mask2", SpriteLibrary.cat_texture(anim, f, "_m2", lf))
 	var s := SpriteLibrary.cat_display_scale(c.body_size())
 	var wide: float = round(s * lerpf(0.94, 1.08, c.corpulence) * 2.0) / 2.0   # corpulence : svelte à trapu
 	_sprite.scale = Vector2(wide * c.facing, s)       # retourné quand il regarde à gauche
@@ -76,7 +77,7 @@ func _set_coat(m: ShaderMaterial, c: CreatureSim) -> void:
 	m.set_shader_parameter("contrast", coat.contrast)
 	m.set_shader_parameter("points", coat.points)
 	# siamois : extrémités plus foncées au froid ; les chatons naissent pâles
-	var cold := clampf(0.55 + (20.0 - c.felt_temp) / 30.0, 0.35, 1.0)
+	var cold := clampf(0.75 + (20.0 - c.felt_temp) / 30.0, 0.5, 1.0)
 	var age_f: float = [0.2, 0.6, 0.9, 1.0, 1.0][c.stage]
 	m.set_shader_parameter("point_strength", cold * age_f)
 	m.set_shader_parameter("white", coat.white)

@@ -7,6 +7,8 @@ de pelage que le shader du jeu colore selon les gènes :
   _m1 : r = tigré maquereau, v = tigré classique, b = moucheté
   _m2 : r = extrémités (siamois), v = ordre d'apparition du blanc,
         b = plaques d'écaille de tortue
+Les planches de art/pixel/sources/long/ donnent la version à poil long
+(images suffixées « _l »).
 Sortie : assets/chat_px/ (PNG + chat.json).
 
 Usage : python tools/build_cat_pixel.py
@@ -93,6 +95,31 @@ def cut_sheet(path):
     return frames
 
 
+REF_LUM = 0.62     # luminosité médiane du pelage du chat de référence (poil court)
+
+
+def normalize_light(frames):
+    """Égalise la luminosité du pelage d'une planche sur celle de référence,
+    sans toucher aux contours, aux yeux ni aux parties roses."""
+    vals = []
+    for rgb, a in frames:
+        lum = rgb @ [0.299, 0.587, 0.114]
+        sat = rgb.max(-1) - rgb.min(-1)
+        fur = a & (lum > 0.3) & (sat < 0.12)
+        vals.append(lum[fur])
+    med = float(np.median(np.concatenate(vals)))
+    k = REF_LUM / med
+    out = []
+    for rgb, a in frames:
+        lum = rgb @ [0.299, 0.587, 0.114]
+        sat = rgb.max(-1) - rgb.min(-1)
+        fur = a & (lum > 0.25) & (sat < 0.12)
+        rgb = rgb.copy()
+        rgb[fur] = np.clip(rgb[fur] * k, 0, 1)
+        out.append((rgb, a))
+    return out
+
+
 def place(frames):
     """Pose chaque image sur une toile W×H : pattes sur la dernière ligne,
     centre du corps (plus grande tache) au milieu."""
@@ -155,7 +182,7 @@ def regions(a, pose):
         reg[(Y > 0.76) & (reg == 0)] = 3
     elif pose == "assis":
         reg[(X > 0.42) & (Y < 0.42)] = 1
-        reg[(X < 0.3)] = 2
+        reg[(X < 0.32) & (Y > 0.58)] = 2          # queue enroulée en bas, derrière
         reg[(Y > 0.82) & (X > 0.55)] = 3
     else:                                   # couché : tête à droite, queue à gauche
         reg[(X > 0.7)] = 1
@@ -179,7 +206,11 @@ def make_masks(img, pose):
     rr = np.hypot((xx - cx) * 0.8, yy - cy) + 3 * n2
     classic = np.where(body, np.sin(rr * 2 * np.pi / 9.0) > 0.25, mack)
     spotted = np.where(body, smooth_noise(H, W, 3, 5) > 0.68, mack)
-    points = np.select([reg == 1, reg == 2, reg == 3], [0.95, 1.0, 0.45 + 0.55 * Y], 0.0)
+    # Siamois : plus c'est loin du tronc (plus froid), plus c'est foncé.
+    span = max(1.0, float(np.hypot(*np.ptp(np.argwhere(a), axis=0))))
+    dist = np.hypot(xx - cx, (yy - cy) * 1.2) / span
+    far = np.clip((dist * np.select([reg == 1, reg == 2], [1.5, 1.3], 1.0) - 0.30) / 0.22, 0, 1)   # masque facial marqué
+    points = np.where(reg > 0, far, 0.0) * np.select([reg == 3], [np.clip((Y - 0.8) / 0.15, 0, 1)], 1.0)
     points = blur(points, a, 2)
     rank = 0.85 - 0.75 * Y
     rank = np.where(reg == 3, 0.05 + 0.2 * (1 - Y), rank)
@@ -204,18 +235,24 @@ def main():
     manifest = {"size": [W, H], "anchor": [W / 2, H - 1], "animations": {},
                 # positions en pixels de sprite, depuis l'ancre (bas, milieu)
                 "head_top": -48, "body_center": [0, -22], "mouth": [26, -14]}
+    manifest["long_fur"] = True
     for sheet, (anim, pose) in SHEETS.items():
-        frames = place(cut_sheet(SRC / f"{sheet}.png"))
-        names = []
-        for i, img in enumerate(frames):
-            name = f"{anim}_{i}"
-            m1, m2 = make_masks(img, pose)
-            save(img, OUT / f"{name}.png")
-            save(m1, OUT / f"{name}_m1.png")
-            save(m2, OUT / f"{name}_m2.png")
-            names.append(name)
-        manifest["animations"][anim] = names
-        print(f"{sheet:8s} -> {anim:9s} {len(frames)} images")
+        for folder, suffix in ((SRC, ""), (SRC / "long", "_l")):
+            frames = place(normalize_light(cut_sheet(folder / f"{sheet}.png")))
+            names = []
+            for i, img in enumerate(frames):
+                name = f"{anim}_{i}"
+                m1, m2 = make_masks(img, pose)
+                save(img, OUT / f"{name}{suffix}.png")
+                save(m1, OUT / f"{name}{suffix}_m1.png")
+                save(m2, OUT / f"{name}{suffix}_m2.png")
+                names.append(name)
+            if suffix == "":
+                manifest["animations"][anim] = names
+            elif len(names) != len(manifest["animations"][anim]):
+                raise SystemExit(f"{sheet} : {len(names)} images à poil long contre "
+                                 f"{len(manifest['animations'][anim])} à poil court")
+            print(f"{sheet:8s} -> {anim:9s}{suffix:3s} {len(frames)} images")
     (OUT / "chat.json").write_text(json.dumps(manifest, indent="\t"))
 
 

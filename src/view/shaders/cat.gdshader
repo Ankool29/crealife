@@ -46,7 +46,7 @@ void fragment() {
 	}
 	if (points) {
 		vec3 pale = mix(vec3(0.96, 0.92, 0.84), col, 0.1);
-		col = mix(pale, col, clamp(m2.r * point_strength, 0.0, 1.0));
+		col = mix(pale, col, smoothstep(0.08, 0.6, m2.r) * point_strength);
 	}
 	// panachure blanche : les zones dont l'« ordre » est sous le seuil blanchissent
 	if (m2.g < white || white >= 0.999) col = vec3(0.97, 0.96, 0.93);

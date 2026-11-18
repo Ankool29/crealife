@@ -44,11 +44,13 @@ static func cat_frame_count(anim: String) -> int:
 	return (cat.animations[anim] as Array).size()
 
 
-## Image d'un chat : anim, numéro d'image, suffixe ("" sprite, "_m1" ou "_m2" masques).
-static func cat_texture(anim: String, f: int, suffix: String = "") -> Texture2D:
+## Image d'un chat : anim, numéro d'image, suffixe ("" sprite, "_m1" ou "_m2"
+## masques), poil long ou court.
+static func cat_texture(anim: String, f: int, suffix: String = "", long_fur: bool = false) -> Texture2D:
 	ensure()
 	var frames: Array = cat.animations[anim]
-	var path: String = "%s%s%s.png" % [CAT_DIR, frames[f % frames.size()], suffix]
+	var fur := "_l" if long_fur and cat.get("long_fur", false) else ""
+	var path: String = "%s%s%s%s.png" % [CAT_DIR, frames[f % frames.size()], fur, suffix]
 	if not _cache.has(path):
 		_cache[path] = load(path)
 	return _cache[path]
