@@ -16,6 +16,11 @@ const DRIVE_REWARD_GAIN := 3.0   # baisse d'une pulsion -> récompense
 const ACTIVITY: Array[float] = [0.1, 0.5, 0.8, 0.2, 0.3, 0.1, 0.3, 0.5, 0.5, 0.6, 0.2, 0.0, 0.5, 0.4]
 const COMPANY_RANGE := 400.0     # au-delà, elle se sent seule
 const GESTATION := 1500.0        # 25 min de jeu avant la mise bas
+## Allaitement : un bébé tète quand il est collé à sa mère (jusqu'au sevrage,
+## c'est-à-dire au stade enfant). La mère a plus faim pendant qu'elle allaite.
+const NURSE_RANGE := 140.0
+const NURSE_RATE := 0.03         # faim et soif du bébé en moins par seconde
+const NURSE_COST := 0.004        # faim de la mère en plus, par bébé qui tète
 const MATING_DESIRE := 0.3       # désir minimal du partenaire pour accepter
 const MATING_REST := 2400.0      # après un accouplement : 40 min sans désir
 const REFUSED_PAUSE := 240.0     # après un refus : elle n'insiste pas tout de suite
@@ -44,6 +49,8 @@ var held: WorldObject = null
 var target: Object = null
 ## Gestation (femelle) : temps écoulé, -1 si elle n'attend pas d'œuf.
 var pregnant_time := -1.0
+var litter_size := 0             # chatons attendus
+var nursing := 0.0               # > 0 : en train d'allaiter, ou de téter (affichage)
 var _father_genome: Genome = null
 var _father_name := ""
 ## Instant où l'action en cours a produit son effet (pour l'animation).
@@ -286,6 +293,9 @@ func tick(dt: float, world: WorldSim, rng: RandomNumberGenerator) -> void:
 	_perceive(world)
 	language.tick(dt)
 	_gestation(dt, world)
+	nursing = maxf(0.0, nursing - dt)
+	if sex == Gene.Sex.FEMALE and stage >= Lifecycle.Stage.ADULT:
+		_nurse(dt, world)
 	_action_time -= dt
 	is_moving = false
 	acted = false
@@ -544,6 +554,7 @@ func _try_mating(other: CreatureSim, world: WorldSim) -> void:
 		c.biochem.conc[c._chem["Hormone sexuelle"]] = 0.0
 		c._mate_rest = MATING_REST
 	female.pregnant_time = 0.0
+	female.litter_size = world.litter_size_for(female)
 	female._father_genome = male.genome
 	female._father_name = male.creature_name
 	female.last_event = "%s et %s se sont accouplés  : %s attend des petits." % [creature_name, other.creature_name, female.creature_name]
@@ -593,7 +604,11 @@ func _start_care(world: WorldSim, rng: RandomNumberGenerator) -> bool:
 			continue
 		var hunger := maxf(c.level("Faim"), c.level("Soif"))
 		var social := maxf(c.level("Solitude"), c.level("Ennui"))
-		if hunger > 0.45 and hunger > best_need:
+		if hunger > 0.3 and c.stage == Lifecycle.Stage.BABY and c.mother == creature_name and hunger + 0.3 > best_need:
+			best_need = hunger + 0.3           # la mère va allaiter : prioritaire
+			best = c
+			kind = "allaiter"
+		elif hunger > 0.45 and hunger > best_need:
 			best_need = hunger
 			best = c
 			kind = "nourrir"
@@ -601,8 +616,16 @@ func _start_care(world: WorldSim, rng: RandomNumberGenerator) -> bool:
 			best_need = social * 0.8
 			best = c
 			kind = "parler"
-	if best == null or rng.randf() > care_instinct * (0.4 + best_need):
+	if best == null or rng.randf() > care_instinct * (0.4 + best_need) and kind != "allaiter":
 		return false
+	if kind == "allaiter":
+		_care = {"kind": kind, "child": best, "food": null, "time": 0.0}
+		brain.verb = Verb.APPROCHER
+		brain.clear_trace()
+		target = best
+		_done = false
+		_action_time = CARE_TIMEOUT
+		return true
 	var food: WorldObject = held if held != null else null
 	if kind == "nourrir" and food == null:
 		food = _food_near(world, best.x)
@@ -636,6 +659,14 @@ func _execute_care(dt: float, world: WorldSim) -> void:
 	_care.time += dt
 	if _care.time > CARE_TIMEOUT or not child.alive or not child in world.creatures:
 		_end_care()
+		return
+	if _care.kind == "allaiter":
+		if not _approach(child.x, dt, NURSE_RANGE * 0.5):
+			return
+		brain.verb = Verb.RIEN           # elle se couche et le laisse téter
+		if maxf(child.level("Faim"), child.level("Soif")) < 0.05 or level("Faim") > 0.8:
+			last_event = "%s a allaité %s." % [creature_name, child.creature_name]
+			_end_care()
 		return
 	if _care.kind == "nourrir":
 		var food: WorldObject = _care.food
@@ -683,10 +714,39 @@ func _gestation(dt: float, world: WorldSim) -> void:
 	pregnant_time += dt
 	if pregnant_time >= GESTATION:
 		pregnant_time = -1.0
-		var child := Genome.cross(genome, _father_genome, world.rng, 0.03)
-		world.give_birth(x, child, creature_name, _father_name, maxi(generation, 1) + 1)
+		var names: Array[String] = []
+		var n := maxi(1, litter_size)
+		for i in n:                      # chaque chaton a son propre mélange
+			var child := Genome.cross(genome, _father_genome, world.rng, 0.03)
+			var at := clampf(x + (i - (n - 1) * 0.5) * 45.0, 60.0, world.width - 60.0)
+			names.append(world.give_birth(at, child, creature_name, _father_name, maxi(generation, 1) + 1).creature_name)
+		var gen := maxi(generation, 1) + 1
+		if n == 1:
+			world.last_event = "%s a mis bas : naissance de %s (génération %d)." % [creature_name, names[0], gen]
+		else:
+			world.last_event = "%s a mis bas %d chatons : %s (génération %d)." % [creature_name, n, ", ".join(names), gen]
 		last_event = world.last_event
+		litter_size = 0
 		_father_genome = null
+
+
+## Les bébés collés à leur mère tètent, éveillés ou endormis.
+func _nurse(dt: float, world: WorldSim) -> void:
+	var fed := 0
+	for c in world.creatures:
+		if not c.alive or c.stage != Lifecycle.Stage.BABY or c.mother != creature_name:
+			continue
+		if absf(c.x - x) > NURSE_RANGE or maxf(c.level("Faim"), c.level("Soif")) < 0.1:
+			continue
+		c.biochem.add(c._chem["Faim"], -NURSE_RATE * dt)
+		c.biochem.add(c._chem["Soif"], -NURSE_RATE * dt)
+		c.biochem.add(c._chem["Solitude"], -0.01 * dt)
+		c.nursing = 0.5
+		fed += 1
+	if fed > 0:
+		nursing = 0.5
+		biochem.add(_chem["Faim"], NURSE_COST * fed * dt)
+		biochem.add(_chem["Solitude"], -0.005 * dt)
 
 
 ## Elle dit parfois ce qu'elle ressent, ou ce qu'elle va faire.
@@ -866,7 +926,7 @@ func to_dict() -> Dictionary:
 		"generation": generation, "mother": mother, "father": father,
 		"x": x, "facing": facing, "age": age, "alive": alive, "death_cause": death_cause,
 		"meals": meals, "naps": naps, "eaten": eaten,
-		"pregnant_time": pregnant_time, "father_genome": _father_genome.to_dict() if _father_genome else null,
+		"pregnant_time": pregnant_time, "litter_size": litter_size, "father_genome": _father_genome.to_dict() if _father_genome else null,
 		"father_name": _father_name, "mate_rest": _mate_rest,
 		"biochem": biochem.to_dict(), "brain": brain.to_dict(), "language": language.to_dict(),
 	}
@@ -888,6 +948,7 @@ static func from_dict(d: Dictionary) -> CreatureSim:
 	c.naps = int(d.naps)
 	c.eaten = d.eaten
 	c.pregnant_time = float(d.pregnant_time)
+	c.litter_size = int(d.get("litter_size", 1))
 	if d.father_genome != null:
 		c._father_genome = Genome.from_dict(d.father_genome)
 	c._father_name = str(d.father_name)
@@ -938,6 +999,21 @@ func _move_towards(tx: float, dt: float) -> bool:
 ## partenaire : elle part alors plutôt du côté où elle sent les autres
 ## (odorat et ouïe, au-delà de la vue), ce qui les regroupe dans la grande maison.
 func _explore_goal(world: WorldSim, rng: RandomNumberGenerator) -> float:
+	# Un bébé ne s'éloigne pas de sa mère : il la suit
+	if stage == Lifecycle.Stage.BABY:
+		var mum := world.find_creature(mother)
+		if mum != null and mum.alive and absf(mum.x - x) > 120.0:
+			return clampf(mum.x - signf(mum.x - x) * rng.randf_range(20.0, 80.0), 60.0, world.width - 60.0)
+	# Une mère qui a des bébés ne s'en éloigne pas beaucoup
+	if sex == Gene.Sex.FEMALE and level("Faim") < 0.5:
+		var sum := 0.0
+		var nb := 0
+		for c in world.creatures:
+			if c.alive and c.stage == Lifecycle.Stage.BABY and c.mother == creature_name:
+				sum += c.x
+				nb += 1
+		if nb > 0:
+			return clampf(sum / nb + rng.randf_range(-150.0, 150.0), 60.0, world.width - 60.0)
 	# Affamée sans rien en vue : elle se souvient d'où vient la nourriture
 	# (la corbeille de la cuisine, le pommier) et s'y dirige.
 	if level("Faim") > 0.35 and not _sees_food():

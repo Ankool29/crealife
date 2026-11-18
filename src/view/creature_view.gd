@@ -91,6 +91,8 @@ func _animation() -> String:
 		return "mort"
 	if c.is_asleep():
 		return "dormir"
+	if c.nursing > 0.0 and not c.is_moving:      # la mère couchée, les petits qui tètent
+		return "manger" if c.stage == Lifecycle.Stage.BABY else "dormir"
 	if c.is_moving:
 		return "marche"
 	if c.is_acting() and ACTION_ANIM.has(c.get_verb()):

@@ -9,7 +9,7 @@ extends RefCounted
 ## météo, température (la maison est tempérée et éclairée).
 
 const GRAVITY := 900.0
-const MAX_POPULATION := 10       # créatures vivantes + œufs (décision D4)
+const MAX_POPULATION := 14       # chats vivants + chatons attendus
 const HATCH_TIME := 600.0        # 10 min de jeu avant l'éclosion
 const CORPSE_TIME := 180.0       # le corps reste 3 min puis disparaît
 const SYLLABLES: Array[String] = ["ka", "lo", "mi", "ny", "ta", "vi", "ru", "se", "pa", "lu", "ze", "no",
@@ -297,8 +297,30 @@ func population_full() -> bool:
 	var pregnant := 0
 	for c in creatures:
 		if c.alive and c.pregnant_time >= 0.0:
-			pregnant += 1
+			pregnant += maxi(1, c.litter_size)
 	return alive_count() + _eggs.size() + pregnant >= MAX_POPULATION
+
+
+## Taille de la portée : souvent 3 ou 4, parfois 1-2 ou 5 ; les jeunes et
+## vieilles mères en ont moins, et on ne dépasse pas la population maximale.
+func litter_size_for(mother: CreatureSim) -> int:
+	var n: int = [1, 2, 2, 3, 3, 3, 4, 4, 4, 5][rng.randi_range(0, 9)]
+	if mother.age > 7.0 * 3600.0:
+		n = maxi(1, n - 1)
+	var room := MAX_POPULATION - alive_count() - _eggs.size()
+	for c in creatures:
+		if c.alive and c.pregnant_time >= 0.0 and c != mother:
+			room -= maxi(1, c.litter_size)
+	return clampi(n, 1, maxi(1, room))
+
+
+func find_creature(n: String) -> CreatureSim:
+	if n == "":
+		return null
+	for c in creatures:
+		if c.creature_name == n:
+			return c
+	return null
 
 
 ## Mise bas : le chaton naît aux pieds de sa mère.

@@ -19,6 +19,7 @@ func _init() -> void:
 	_test_language()
 	_test_appearance_genes()
 	_test_family_life()
+	_test_litter()
 	_test_zones_and_climate()
 	_test_cat_genetics()
 	print("RÉSULTAT : %s" % ("OK" if _failures == 0 else "%d échec(s)" % _failures))
@@ -350,6 +351,52 @@ func _test_appearance_genes() -> void:
 		ants[c.antennae] = true
 	print("    variantes de queue : %s, d'antennes : %s" % [tails.keys(), ants.keys()])
 	_check(tails.size() >= 2 and ants.size() >= 2, "les fondateurs ont des silhouettes variées")
+
+
+func _test_litter() -> void:
+	print("Portées et allaitement :")
+	var w := WorldSim.new(31, "normal", 2)
+	var mum: CreatureSim = null
+	var dad: CreatureSim = null
+	for c in w.creatures:
+		c.age = 3.0 * 3600.0
+		if c.sex == Gene.Sex.FEMALE:
+			mum = c
+		else:
+			dad = c
+	if mum == null or dad == null:
+		_check(false, "un couple pour le test")
+		return
+	mum.pregnant_time = CreatureSim.GESTATION - 1.0
+	mum.litter_size = 3
+	mum._father_genome = dad.genome
+	mum._father_name = dad.creature_name
+	_run(w, 0.001)
+	var kits: Array = w.creatures.filter(func(c): return c.mother == mum.creature_name)
+	_check(kits.size() == 3, "elle met bas 3 chatons à la fois")
+	var coats := {}
+	for k in kits:
+		coats[k.coat.get("name", "") + str(k.body_size())] = true
+	_check(coats.size() >= 2, "les chatons ne sont pas des copies")
+	var nursed := 0.0
+	var hunger := 0.0
+	var near := 0.0
+	var n := 0
+	var t := 0.0
+	while t < 1500.0:
+		w.tick(STEP)
+		t += STEP
+		if mum.nursing > 0.0:
+			nursed += STEP
+		for k in kits:
+			if k.alive:
+				hunger += k.level("Faim")
+				near += 1.0 if absf(k.x - mum.x) < 300.0 else 0.0
+				n += 1
+	print("    25 min : allaitement %d s, faim moyenne des chatons %.2f, près de la mère %d %%" % [nursed, hunger / n, 100.0 * near / n])
+	_check(kits.all(func(k): return k.alive), "les chatons survivent")
+	_check(nursed > 60.0, "la mère allaite")
+	_check(near / n > 0.5, "les bébés restent près de leur mère")
 
 
 func _test_family_life() -> void:
