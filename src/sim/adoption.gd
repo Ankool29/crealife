@@ -134,29 +134,36 @@ static func words_known(c: CreatureSim) -> int:
 	return n
 
 
-static func label(k: Dictionary) -> String:
+static func label(k: Dictionary, fem: bool = false) -> String:
 	match str(k.kind):
 		"sexe": return "une femelle" if int(k.value) == Gene.Sex.FEMALE else "un mâle"
 		"age": return "jeune" if k.value == "jeune" else "adulte"
 		"pelage":
-			return {"blanc": "tout blanc", "noir": "noir", "roux": "roux", "écaille": "écaille de tortue ou calico",
-				"tigré": "tigré", "gris": "gris (bleu)", "siamois": "colourpoint (siamois)",
-				"bicolore": "avec du blanc"}.get(k.value, str(k.value))
+			var m := {"blanc": ["tout blanc", "toute blanche"], "noir": ["noir", "noire"], "roux": ["roux", "rousse"],
+				"écaille": ["écaille de tortue ou calico", "écaille de tortue ou calico"], "tigré": ["tigré", "tigrée"],
+				"gris": ["gris (bleu)", "grise (bleue)"], "siamois": ["colourpoint (siamois)", "colourpoint (siamoise)"],
+				"bicolore": ["avec du blanc", "avec du blanc"]}
+			return m[k.value][1 if fem else 0] if m.has(k.value) else str(k.value)
 		"poil": return "à poil long" if k.value == "long" else "à poil court"
 		"caractère":
-			return {"joueur": "joueur", "calme": "calme", "curieux": "curieux", "maternel": "affectueux"}.get(k.value, "")
+			var m := {"joueur": ["joueur", "joueuse"], "calme": ["calme", "calme"], "curieux": ["curieux", "curieuse"],
+				"maternel": ["affectueux", "affectueuse"]}
+			return m[k.value][1 if fem else 0] if m.has(k.value) else ""
 		"mots": return "qui connaît au moins %d mots" % int(k.value)
 	return ""
 
 
 static func describe(r: Dictionary) -> String:
 	var head := "un chat"
-	var parts: Array[String] = []
+	var fem := false
 	for k in r.criteria:
 		if k.kind == "sexe":
-			head = "une chatte" if int(k.value) == Gene.Sex.FEMALE else "un chat mâle"
-		else:
-			parts.append(label(k))
+			fem = int(k.value) == Gene.Sex.FEMALE
+			head = "une chatte" if fem else "un chat mâle"
+	var parts: Array[String] = []
+	for k in r.criteria:
+		if k.kind != "sexe":
+			parts.append(label(k, fem))
 	return head + (" " + ", ".join(parts) if not parts.is_empty() else "")
 
 
