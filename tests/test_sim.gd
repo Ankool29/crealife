@@ -20,6 +20,7 @@ func _init() -> void:
 	_test_appearance_genes()
 	_test_family_life()
 	_test_litter()
+	_test_adoption()
 	_test_zones_and_climate()
 	_test_cat_genetics()
 	print("RÉSULTAT : %s" % ("OK" if _failures == 0 else "%d échec(s)" % _failures))
@@ -397,6 +398,32 @@ func _test_litter() -> void:
 	_check(kits.all(func(k): return k.alive), "les chatons survivent")
 	_check(nursed > 60.0, "la mère allaite")
 	_check(near / n > 0.5, "les bébés restent près de leur mère")
+
+
+func _test_adoption() -> void:
+	print("Demandes d'adoption :")
+	var w := WorldSim.new(41, "normal", 4)
+	for c in w.creatures:
+		c.age = 3.0 * 3600.0
+	_run(w, 0.75)
+	_check(not w.adoption.requests.is_empty(), "une famille demande un chat")
+	var r: Dictionary = w.adoption.requests[0]
+	print("    " + str(r.family) + " cherche " + Adoption.describe(r))
+	var pool := Adoption.adoptable(w)
+	pool.sort_custom(func(a, b): return Adoption.score(r, a) > Adoption.score(r, b))
+	var best: CreatureSim = pool[0]
+	var before := w.alive_count()
+	var saved := WorldSim.from_dict(JSON.parse_string(JSON.stringify(w.to_dict())))
+	_check(saved.adoption.requests.size() == w.adoption.requests.size(), "les demandes sont sauvegardées")
+	w.adoption.adopt(w, r, best)
+	_check(w.alive_count() == before - 1 and not best in w.creatures, "le chat adopté quitte la maison")
+	_check(w.adoption.reputation > 0, "la réputation monte (%d)" % w.adoption.reputation)
+	var h: Array = w.history.filter(func(x): return x.uid == best.uid)
+	_check(h.size() == 1 and str(h[0].cause).begins_with("adopté"), "l'arbre garde la trace de l'adoption")
+	var white := {"kind": "pelage", "value": "blanc"}
+	var cw := w.creatures[0]
+	cw.coat["white"] = 1.0
+	_check(Adoption.meets(white, cw), "un chat blanc correspond au critère « tout blanc »")
 
 
 func _test_family_life() -> void:

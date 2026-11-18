@@ -38,6 +38,8 @@ var _new_button: Button
 var _speech_panel: PanelContainer
 var _speech_line: LineEdit
 var _menu_button: Button
+var _adopt_button: Button
+var adoption_panel: AdoptionPanel
 var _state_panel: PanelContainer
 
 ## Mots proposés sous forme de boutons (on peut aussi taper la phrase).
@@ -154,6 +156,20 @@ func _ready() -> void:
 	_follow_button = _add_button(buttons, "Suivre", follow_pressed)
 	_build_speech_panel(root)
 	_build_menu(root)
+	# --- Adoptions : bouton à gauche du Menu, fenêtre par-dessus tout ---
+	_adopt_button = Button.new()
+	_adopt_button.text = "Adoptions"
+	_adopt_button.focus_mode = Control.FOCUS_NONE
+	_adopt_button.custom_minimum_size = Vector2(190, 64)
+	_adopt_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE, 16)
+	_adopt_button.offset_left -= 130
+	_adopt_button.offset_right -= 130
+	_adopt_button.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	root.add_child(_adopt_button)
+	adoption_panel = AdoptionPanel.new()
+	adoption_panel.visible = false
+	root.add_child(adoption_panel)
+	_adopt_button.pressed.connect(func() -> void: adoption_panel.visible = true)
 	buttons.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, MARGIN * 0.5)
 	buttons.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	buttons.grow_vertical = Control.GROW_DIRECTION_BEGIN
@@ -298,6 +314,11 @@ func update_from(c: CreatureSim, world: WorldSim, event_text: String, sim_speed:
 	observe.world = world
 	# le Menu se cache derrière les panneaux ouverts (bouton de fermeture, bandeau)
 	_menu_button.visible = not observe.visible and not _speech_panel.visible
+	adoption_panel.world = world
+	_adopt_button.visible = _menu_button.visible and world.scenario == "normal"
+	var n := world.adoption.requests.size()
+	_adopt_button.text = "Adoptions (%d)" % n if n > 0 else "Adoptions"
+	_adopt_button.modulate = Color(1.0, 0.95, 0.6) if n > 0 else Color.WHITE
 	_event_label.position.y = 282 if _speech_panel.visible else 20
 	_event_label.text = event_text
 	_speed_button.text = "x%d" % int(sim_speed)

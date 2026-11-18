@@ -22,6 +22,7 @@ var width := 3000.0
 ## Zones de gauche à droite : {key, label, x0, x1, indoor}.
 var zones: Array[Dictionary] = []
 var climate := Climate.new()
+var adoption := Adoption.new()
 ## Écran d'apprentissage : ce qu'il montre (mode 0 noms, 1 verbes, 2 besoins).
 var screen := {"mode": 0, "index": 0, "timer": 0.0}
 const SCREEN_PERIOD := 6.0
@@ -345,6 +346,8 @@ func egg_info(o: WorldObject) -> Dictionary:
 func tick(dt: float) -> void:
 	time += dt
 	climate.tick(dt, rng, time)
+	if scenario == "normal":
+		adoption.tick(self)
 	_spawners(dt)
 	_tick_screen(dt)
 	_tick_music(dt)
@@ -530,7 +533,8 @@ func to_dict() -> Dictionary:
 	for c in creatures:
 		cs.append(c.to_dict())
 	return {"version": 3, "time": time, "climate": climate.to_dict(), "screen": screen, "next_id": _next_id, "next_uid": _next_uid,
-		"names": _used_names.keys(), "objects": objs, "creatures": cs, "history": history}
+		"names": _used_names.keys(), "objects": objs, "creatures": cs, "history": history,
+		"adoption": adoption.to_dict()}
 
 
 static func from_dict(d: Dictionary) -> WorldSim:
@@ -538,6 +542,7 @@ static func from_dict(d: Dictionary) -> WorldSim:
 	w.objects.clear()
 	w.time = float(d.time)
 	w.climate.load_dict(d.get("climate", {}))
+	w.adoption.load_dict(d.get("adoption", {}))
 	var scr: Dictionary = d.get("screen", {})
 	w.screen = {"mode": int(scr.get("mode", 0)), "index": int(scr.get("index", 0)), "timer": float(scr.get("timer", 0.0))}
 	# v1 : le jardin seul (0 à 3000) ; v2 : salle | jardin | loisirs ; v3 : la maison
