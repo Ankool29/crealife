@@ -121,7 +121,7 @@ func _draw_labels(cv: CanvasItem) -> void:
 		var p := Vector2(0, top - 34)
 		cv.draw_colored_polygon(PackedVector2Array([p + Vector2(-11, -12), p + Vector2(11, -12), p + Vector2(0, 2)]), Color(1, 0.9, 0.3))
 	if c.alive and c.pregnant_time >= 0.0:
-		cv.draw_string(font, Vector2(-100, top + 22), "attend un œuf", HORIZONTAL_ALIGNMENT_CENTER, 200, 14, Color(1, 0.85, 0.9, 0.9))
+		cv.draw_string(font, Vector2(-100, top + 22), "attend des petits", HORIZONTAL_ALIGNMENT_CENTER, 200, 14, Color(1, 0.85, 0.9, 0.9))
 	if c.is_asleep():
 		var zy := head * 0.55 - fmod(_t * 20.0, 30.0)
 		cv.draw_string(font, Vector2(c.facing * 60.0, zy) * sz, "z z", HORIZONTAL_ALIGNMENT_LEFT, -1, 32, Color(1, 1, 1, 0.9))

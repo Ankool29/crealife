@@ -15,7 +15,7 @@ const MIN_FATIGUE_TO_SLEEP := 0.2
 const DRIVE_REWARD_GAIN := 3.0   # baisse d'une pulsion -> récompense
 const ACTIVITY: Array[float] = [0.1, 0.5, 0.8, 0.2, 0.3, 0.1, 0.3, 0.5, 0.5, 0.6, 0.2, 0.0, 0.5, 0.4]
 const COMPANY_RANGE := 400.0     # au-delà, elle se sent seule
-const GESTATION := 900.0         # 15 min de jeu avant la ponte
+const GESTATION := 1500.0        # 25 min de jeu avant la mise bas
 const MATING_DESIRE := 0.3       # désir minimal du partenaire pour accepter
 const MATING_REST := 2400.0      # après un accouplement : 40 min sans désir
 const REFUSED_PAUSE := 240.0     # après un refus : elle n'insiste pas tout de suite
@@ -672,7 +672,7 @@ func _end_care() -> void:
 	_finish()
 
 
-## Gestation : au bout du temps voulu, la femelle pond un œuf.
+## Gestation : au bout du temps voulu, la chatte met bas un chaton.
 func _gestation(dt: float, world: WorldSim) -> void:
 	if pregnant_time < 0.0:
 		return
@@ -680,9 +680,8 @@ func _gestation(dt: float, world: WorldSim) -> void:
 	if pregnant_time >= GESTATION:
 		pregnant_time = -1.0
 		var child := Genome.cross(genome, _father_genome, world.rng, 0.03)
-		world.lay_egg(x, child, creature_name, _father_name, maxi(generation, 1) + 1)
-		last_event = "%s a pondu un œuf." % creature_name
-		world.last_event = last_event
+		world.give_birth(x, child, creature_name, _father_name, maxi(generation, 1) + 1)
+		last_event = world.last_event
 		_father_genome = null
 
 

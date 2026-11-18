@@ -27,6 +27,7 @@ var screen := {"mode": 0, "index": 0, "timer": 0.0}
 const SCREEN_PERIOD := 6.0
 const SCREEN_MODES: Array[String] = ["noms", "verbes", "besoins"]
 const SCREEN_RANGE := 600.0
+const SCREEN_NOUNS: Array[String] = ["fruit", "graine", "jouet", "machine", "créature"]
 const MUSIC_RANGE := 450.0
 const GARDEN_W := 2000.0       # largeur du décor pixel art à la densité des pièces
 const BASKET_X := 340.0          # corbeille de fruits, depuis le bord gauche de la cuisine
@@ -77,8 +78,6 @@ func _init(seed_value: int = 0, p_scenario: String = "normal", founders: int = 1
 		var g := garden_x()
 		add_object("distributeur", machine_x)
 		add_object("balle", g + 1300.0)
-		add_object("pierre", g + 600.0)
-		add_object("pierre", g + 1850.0)
 		_add_zone_objects()
 		for i in 3:
 			_spawn_fruit()
@@ -95,7 +94,7 @@ func _setup_zones() -> void:
 	zones.append({"key": "jardin", "label": "Jardin", "x0": x, "x1": x + GARDEN_W, "indoor": false})
 	width = x + GARDEN_W
 	trees = PackedFloat32Array([x + 980.0])                # le pommier du décor
-	bushes = PackedFloat32Array([x + 1070.0, x + 1640.0])
+	bushes = PackedFloat32Array()         # plus de baies dans le jeu (les tests en ajoutent)
 	machine_x = x + 1450.0
 
 
@@ -160,7 +159,10 @@ func raining_at(x: float) -> bool:
 ## Ce qu'affiche l'écran : [genre, index] ("nom", "verbe" ou "besoin").
 func screen_item() -> Array:
 	var kind: String = ["nom", "verbe", "besoin"][screen.mode]
-	var n: int = [ObjectCatalog.categories.size(), Language.VERB_WORDS.size() - 1, Language.DRIVE_WORDS.size()][screen.mode]
+	if kind == "nom":                  # seulement les choses qui existent dans le jeu
+		var shown := SCREEN_NOUNS.map(func(n): return ObjectCatalog.categories.find(n))
+		return [kind, shown[screen.index % shown.size()]]
+	var n: int = [0, Language.VERB_WORDS.size() - 1, Language.DRIVE_WORDS.size()][screen.mode]
 	var i: int = screen.index % n
 	if kind == "verbe":
 		i += 1                         # pas « rien »
@@ -296,6 +298,15 @@ func population_full() -> bool:
 	return alive_count() + _eggs.size() + pregnant >= MAX_POPULATION
 
 
+## Mise bas : le chaton naît aux pieds de sa mère.
+func give_birth(at_x: float, g: Genome, mother: String, father: String, generation: int) -> CreatureSim:
+	var baby := _add_creature(g, at_x, _baby_sex(), generation, mother, father)
+	last_event = "%s a mis bas : naissance de %s (génération %d), enfant de %s et %s." % [mother, baby.creature_name,
+		baby.generation, mother, father]
+	return baby
+
+
+## Anciennes sauvegardes seulement : les chats ne pondent plus.
 func lay_egg(at_x: float, g: Genome, mother: String, father: String, generation: int) -> void:
 	var egg := add_object("oeuf", at_x, 20.0)
 	_eggs[egg.id] = {"genome": g, "mother": mother, "father": father, "generation": generation,
@@ -523,6 +534,8 @@ static func from_dict(d: Dictionary) -> WorldSim:
 		w._add_zone_objects()
 	for od in d.objects:
 		if old_objects and str(od.type) in fixed:
+			continue
+		if str(od.type) in ["baie", "pierre"]:      # retirés du jeu
 			continue
 		var o := WorldObject.new(int(od.id), str(od.type), place.call(float(od.x)), float(od.h))
 		o.cooldown = float(od.cooldown)

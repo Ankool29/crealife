@@ -13,7 +13,6 @@ func _init() -> void:
 	_test_instincts_and_reinforcement()
 	_test_starvation()
 	_test_learns_seeds()
-	_test_avoids_berries()
 	_test_full_life()
 	_test_save_load()
 	_test_generations()
@@ -158,18 +157,6 @@ func _test_learns_seeds() -> void:
 	_check(c.alive, "elle survit 3 h avec uniquement des graines")
 	_check(c.eaten.get("graine", 0) >= 30, "elle mange régulièrement des graines")
 	_check(wgt > 0.5, "elle a appris : faim + graine -> manger")
-
-
-func _test_avoids_berries() -> void:
-	print("Apprendre à éviter les baies toxiques :")
-	var w := WorldSim.new(8)
-	var c := w.creatures[0]
-	_run(w, 3.0)
-	var baie := ObjectCatalog.categories.find("baie")
-	var wgt := c.brain.weight("Faim", baie, Brain.Verb.MANGER)
-	print("    repas : %s, poids faim×baie→manger : %.2f" % [c.eaten, wgt])
-	_check(c.alive, "elle est vivante à 3 h")
-	_check(c.eaten.get("baie", 0) < c.eaten.get("fruit", 0) / 5, "elle mange bien moins de baies que de fruits")
 
 
 func _test_full_life() -> void:
@@ -416,7 +403,7 @@ func _test_family_life() -> void:
 	var mum := w2.creatures[0]
 	mum.age = 3.0 * 3600.0
 	w2.tick(STEP)
-	w2.lay_egg(mum.x + 300.0, Genome.starter(), mum.creature_name, "Papa", 2)
+	w2.give_birth(mum.x + 300.0, Genome.starter(), mum.creature_name, "Papa", 2)
 	var fed := false
 	t = 0.0
 	while t < 2400.0 and not fed:

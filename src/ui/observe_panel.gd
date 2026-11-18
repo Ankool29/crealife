@@ -229,7 +229,7 @@ func _family_text() -> String:
 			var c := _find(int(h.uid))
 			line += "  — vivante" + (", %s" % c.format_age() if c else "")
 			if c and c.pregnant_time >= 0.0:
-				line += ", attend un œuf"
+				line += ", attend des petits"
 		else:
 			var m := int(float(h.age) / 60.0)
 			line += "  — morte %s à %d h %02d" % [h.cause, m / 60, m % 60]

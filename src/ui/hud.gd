@@ -42,7 +42,7 @@ var _state_panel: PanelContainer
 
 ## Mots proposés sous forme de boutons (on peut aussi taper la phrase).
 const CHIPS := [
-	["fruit", "graine", "baie", "balle", "machine", "pierre", "créature", "œuf"],
+	["fruit", "graine", "balle", "machine", "créature"],
 	["viens", "mange", "pousse", "prends", "lâche", "examine", "tire", "frappe", "parle", "dors", "explore", "repose"],
 	["faim", "soif", "fatigue", "ennui", "solitude", "douleur", "peur", "désir"],
 ]
@@ -311,7 +311,7 @@ func update_from(c: CreatureSim, world: WorldSim, event_text: String, sim_speed:
 	if c.mother != "":
 		info += " · enfant de %s et %s" % [c.mother, c.father]
 	if c.pregnant_time >= 0.0:
-		info += " · attend un œuf"
+		info += " · attend des petits"
 	info += " · %d vivantes" % world.alive_count()
 	_info_label.text = info
 	var values := [c.level("Faim"), c.level("Soif"), c.level("Fatigue"), c.level("Ennui"),
