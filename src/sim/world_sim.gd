@@ -4,8 +4,9 @@ extends RefCounted
 ## un distributeur de graines, des jouets, les créatures et leurs œufs.
 ## Aucune dépendance à l'affichage.
 ##
-## Phase 5 : trois zones côte à côte (salle d'apprentissage | jardin |
-## loisirs) et un climat (jour et nuit, saisons, météo, température).
+## La maison en coupe, de gauche à droite : chambre | cuisine | salle de jeux |
+## salle d'apprentissage, puis le jardin. Climat : jour et nuit, saisons,
+## météo, température (la maison est tempérée et éclairée).
 
 const GRAVITY := 900.0
 const MAX_POPULATION := 10       # créatures vivantes + œufs (décision D4)
@@ -27,9 +28,17 @@ const SCREEN_PERIOD := 6.0
 const SCREEN_MODES: Array[String] = ["noms", "verbes", "besoins"]
 const SCREEN_RANGE := 600.0
 const MUSIC_RANGE := 450.0
-const ROOM_W := 1800.0
 const GARDEN_W := 3000.0
-const LEISURE_W := 2400.0
+const BASKET_X := 340.0          # corbeille de fruits, depuis le bord gauche de la cuisine
+## Pièces de la maison : clé, nom affiché, largeur (celle de leur décor).
+const HOUSE: Array = [
+	["chambre", "Chambre", 1400.0],
+	["cuisine", "Cuisine", 1536.0],
+	["jeux", "Salle de jeux", 1800.0],
+	["salle", "Salle d'apprentissage", 1400.0],
+]
+## Anciennes sauvegardes (version 2) : salle | jardin | loisirs.
+const V2_ZONES := {"salle": [0.0, 1800.0], "jardin": [1800.0, 4800.0], "loisirs": [4800.0, 7200.0]}
 var rng := RandomNumberGenerator.new()
 var creatures: Array[CreatureSim] = []
 var objects: Array[WorldObject] = []
@@ -46,6 +55,7 @@ var _next_id := 1
 var _next_uid := 1
 var _eggs := {}                  # id d'œuf -> {genome, mother, father, generation, hatch_at}
 var _fruit_timer := 3.0
+var _kitchen_timer := 5.0
 var _berry_timer := 10.0
 var _seed_timer := 5.0
 var _used_names := {}
@@ -76,25 +86,46 @@ func _init(seed_value: int = 0, p_scenario: String = "normal", founders: int = 1
 
 
 func _setup_zones() -> void:
-	zones = [
-		{"key": "salle", "label": "Salle d'apprentissage", "x0": 0.0, "x1": ROOM_W, "indoor": true},
-		{"key": "jardin", "label": "Jardin", "x0": ROOM_W, "x1": ROOM_W + GARDEN_W, "indoor": false},
-		{"key": "loisirs", "label": "Loisirs", "x0": ROOM_W + GARDEN_W, "x1": ROOM_W + GARDEN_W + LEISURE_W, "indoor": false},
-	]
-	width = ROOM_W + GARDEN_W + LEISURE_W
-	var g := ROOM_W
-	trees = PackedFloat32Array([g + 450.0, g + 1350.0, g + 2350.0])
-	bushes = PackedFloat32Array([g + 900.0, g + 2000.0])
-	machine_x = g + 1750.0
+	zones = []
+	var x := 0.0
+	for r in HOUSE:
+		zones.append({"key": r[0], "label": r[1], "x0": x, "x1": x + float(r[2]), "indoor": true})
+		x += float(r[2])
+	zones.append({"key": "jardin", "label": "Jardin", "x0": x, "x1": x + GARDEN_W, "indoor": false})
+	width = x + GARDEN_W
+	trees = PackedFloat32Array([x + 450.0, x + 1350.0, x + 2350.0])
+	bushes = PackedFloat32Array([x + 900.0, x + 2000.0])
+	machine_x = x + 1750.0
+
+
+func zone(key: String) -> Dictionary:
+	for z in zones:
+		if z.key == key:
+			return z
+	return {}
 
 
 func _add_zone_objects() -> void:
-	add_object("ecran", ROOM_W * 0.5)
-	var l := ROOM_W + GARDEN_W
-	add_object("trampoline", l + 700.0)
-	add_object("boite_musique", l + 1500.0)
-	add_object("balle", l + 1100.0)
-	add_object("balle", l + 1900.0)
+	add_object("distributeur", zone("cuisine").x0 + 1000.0)      # la gamelle de la cuisine
+	var s := zone("salle")
+	add_object("ecran", (s.x0 + s.x1) * 0.5)
+	var j: float = zone("jeux").x0
+	add_object("trampoline", j + 450.0)
+	add_object("boite_musique", j + 1350.0)
+	add_object("balle", j + 900.0)
+	add_object("balle", j + 1600.0)
+
+
+## Position d'une sauvegarde version 2 dans la maison actuelle : même place
+## relative dans la zone équivalente (les loisirs deviennent la salle de jeux).
+func _from_v2(x: float) -> float:
+	for k in V2_ZONES:
+		var r: Array = V2_ZONES[k]
+		if x < r[1] or k == "loisirs":
+			var z := zone("jeux" if k == "loisirs" else k)
+			var t := clampf((x - r[0]) / (r[1] - r[0]), 0.0, 1.0)
+			return z.x0 + t * (z.x1 - z.x0)
+	return x
 
 
 ## Début du jardin (0 dans les scénarios de test, qui n'ont que le jardin).
@@ -360,6 +391,10 @@ func _spawners(dt: float) -> void:
 		var season_factor := Climate.SEASON_FRUIT[climate.season(time)] if scenario == "normal" else 1.0
 		_fruit_timer = rng.randf_range(6.0, 12.0) / maxf(1.0, alive_count() * 0.6) / season_factor
 		_spawn_fruit()
+	_kitchen_timer -= dt
+	if _kitchen_timer <= 0.0:
+		_kitchen_timer = rng.randf_range(15.0, 25.0)
+		_fill_basket()
 	_berry_timer -= dt
 	if _berry_timer <= 0.0 and not (scenario == "normal" and climate.season(time) == 3):   # pas de baies l'hiver
 		_berry_timer = rng.randf_range(15.0, 25.0)
@@ -422,6 +457,19 @@ func _spawn_fruit() -> void:
 	add_object("fruit", tree_x + rng.randf_range(-110.0, 110.0), rng.randf_range(180.0, 260.0))
 
 
+## La corbeille de la cuisine se remplit toute l'année (quelques fruits).
+func _fill_basket() -> void:
+	var k := zone("cuisine")
+	if k.is_empty():
+		return
+	var n := 0
+	for o in objects:
+		if o.type_name == "fruit" and o.holder == null and o.x >= k.x0 and o.x < k.x1:
+			n += 1
+	if n < 3:
+		add_object("fruit", k.x0 + BASKET_X + rng.randf_range(-60.0, 60.0), 0.0)
+
+
 func _spawn_berry() -> void:
 	if bushes.is_empty() or count_of("baie") >= 6:
 		return
@@ -444,7 +492,7 @@ func to_dict() -> Dictionary:
 	var cs := []
 	for c in creatures:
 		cs.append(c.to_dict())
-	return {"version": 2, "time": time, "climate": climate.to_dict(), "screen": screen, "next_id": _next_id, "next_uid": _next_uid,
+	return {"version": 3, "time": time, "climate": climate.to_dict(), "screen": screen, "next_id": _next_id, "next_uid": _next_uid,
 		"names": _used_names.keys(), "objects": objs, "creatures": cs, "history": history}
 
 
@@ -455,14 +503,27 @@ static func from_dict(d: Dictionary) -> WorldSim:
 	w.climate.load_dict(d.get("climate", {}))
 	var scr: Dictionary = d.get("screen", {})
 	w.screen = {"mode": int(scr.get("mode", 0)), "index": int(scr.get("index", 0)), "timer": float(scr.get("timer", 0.0))}
-	# Sauvegarde d'avant les zones : le jardin était seul, de 0 à 3000
-	var shift := 0.0 if int(d.get("version", 1)) >= 2 else w.garden_x()
+	# v1 : le jardin seul (0 à 3000) ; v2 : salle | jardin | loisirs ; v3 : la maison
+	var version := int(d.get("version", 1))
+	var place := func(x: float) -> float:
+		if version == 1:
+			return w.garden_x() + x
+		if version == 2:
+			return w._from_v2(x)
+		return x
+	var fixed := ["distributeur", "ecran", "trampoline", "boite_musique"]
 	w._next_id = int(d.next_id)
 	w._next_uid = int(d.next_uid)
 	for n in d.names:
 		w._used_names[n] = true
+	var old_objects := version < 3
+	if old_objects:          # les meubles changent de place : on les recrée
+		w.add_object("distributeur", w.machine_x)
+		w._add_zone_objects()
 	for od in d.objects:
-		var o := WorldObject.new(int(od.id), str(od.type), float(od.x) + shift, float(od.h))
+		if old_objects and str(od.type) in fixed:
+			continue
+		var o := WorldObject.new(int(od.id), str(od.type), place.call(float(od.x)), float(od.h))
 		o.cooldown = float(od.cooldown)
 		w.objects.append(o)
 		if od.has("egg"):
@@ -471,12 +532,10 @@ static func from_dict(d: Dictionary) -> WorldSim:
 				"generation": int(e.generation), "hatch_at": w.time + float(e.hatch_in)}
 	for cd in d.creatures:
 		var c := CreatureSim.from_dict(cd)
-		c.x += shift
+		c.x = place.call(c.x)
 		if not c.alive:
 			c.set_meta("died_at", w.time)
 		w.creatures.append(c)
 	for h in d.history:
 		w.history.append(h)
-	if shift > 0.0:
-		w._add_zone_objects()
 	return w

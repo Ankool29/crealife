@@ -420,7 +420,7 @@ func _decide(world: WorldSim, rng: RandomNumberGenerator) -> void:
 			_action_time = rng.randf_range(2.0, 4.0)
 		Verb.EXPLORER:
 			_action_time = rng.randf_range(4.0, 8.0)
-			_goal_x = _random_goal(world, rng, 500.0)
+			_goal_x = _explore_goal(world, rng)
 		Verb.DORMIR:
 			_action_time = 400.0
 		Verb.FUIR:
@@ -462,7 +462,7 @@ func _execute(dt: float, world: WorldSim, rng: RandomNumberGenerator) -> void:
 		Verb.EXPLORER:
 			biochem.add(_chem["Ennui"], -0.02 * dt)
 			if _move_towards(_goal_x, dt):
-				_goal_x = _random_goal(world, rng, 500.0)
+				_goal_x = _explore_goal(world, rng)
 		Verb.DORMIR:
 			if level("Fatigue") <= 0.03 or level("Douleur") > 0.5:
 				naps += 1
@@ -927,6 +927,23 @@ func _move_towards(tx: float, dt: float) -> bool:
 	x = move_toward(x, tx, speed * dt)
 	is_moving = true
 	return false
+
+
+## Exploration : au hasard, sauf quand elle se sent seule ou cherche un
+## partenaire : elle part alors plutôt du côté où elle sent les autres
+## (odorat et ouïe, au-delà de la vue), ce qui les regroupe dans la grande maison.
+func _explore_goal(world: WorldSim, rng: RandomNumberGenerator) -> float:
+	var social := level("Solitude")
+	if stage == Lifecycle.Stage.ADULT:
+		social = maxf(social, level("Désir"))
+	if rng.randf() < social:
+		var best: CreatureSim = null
+		for c in world.creatures:
+			if c != self and c.alive and (best == null or absf(c.x - x) < absf(best.x - x)):
+				best = c
+		if best != null and absf(best.x - x) > 300.0:
+			return clampf(x + signf(best.x - x) * rng.randf_range(300.0, 600.0), 60.0, world.width - 60.0)
+	return _random_goal(world, rng, 500.0)
 
 
 func _random_goal(world: WorldSim, rng: RandomNumberGenerator, radius: float) -> float:

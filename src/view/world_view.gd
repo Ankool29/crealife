@@ -1,14 +1,19 @@
 class_name WorldView
 extends Node2D
 ## Décor rendu en 3D et sprites des objets, synchronisés avec la simulation.
-## Phase 5 : un décor par zone (salle, jardin, loisirs), la couche lointaine
+## Un décor par zone (pièces de la maison, jardin), la couche lointaine
 ## répétée en miroir, la nuit, la pluie et la neige, l'écran d'apprentissage
 ## et la musique.
 
 const DECOR_DIR := "res://assets/decor/"
 const DECOR_TOP := -560.0          # haut des images de décor, en pixels de jeu
 const FAR_PARALLAX := 0.4          # la couche lointaine se déplace à 40 % de la caméra
-const ZONE_DECOR := {"salle": "decor_salle.png", "jardin": "decor_proche.png", "loisirs": "decor_loisirs.png"}
+const ZONE_DECOR := {"salle": "decor_salle.png", "jardin": "decor_proche.png", "jeux": "decor_loisirs.png",
+	"chambre": "decor_salle.png"}
+## Décors pixel art (tools/build_decor_pixel.py) : prioritaires quand ils existent.
+const PX_DECOR := {"cuisine": "px_cuisine.png", "chambre": "px_chambre.png", "jeux": "px_jeux.png",
+	"salle": "px_salle.png", "jardin": "px_jardin.png"}
+const FLOOR_DEPTH := 50.0          # les chats marchent un peu en avant du fond du plancher
 
 var world: WorldSim:
 	set(value):
@@ -45,11 +50,30 @@ func _build_zones() -> void:
 	_zones_built = true
 	for c in _near_layer.get_children():
 		c.queue_free()
+	var px_meta := {}
+	var f := FileAccess.open(DECOR_DIR + "px_decors.json", FileAccess.READ)
+	if f:
+		px_meta = JSON.parse_string(f.get_as_text())
 	for z in world.zones:
 		var s := Sprite2D.new()
 		s.centered = false
-		s.texture = load(DECOR_DIR + ZONE_DECOR.get(z.key, "decor_proche.png"))
-		s.position = Vector2(z.x0, DECOR_TOP)
+		var px: String = PX_DECOR.get(z.key, "")
+		if px_meta.has(z.key) and ResourceLoader.exists(DECOR_DIR + px):
+			s.texture = load(DECOR_DIR + px)
+			s.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			var room_w: float = z.x1 - z.x0
+			s.scale = Vector2.ONE * room_w / float(s.texture.get_width())
+			s.position = Vector2(z.x0, -FLOOR_DEPTH - float(px_meta[z.key].floor) * s.scale.y)
+			var under := ColorRect.new()          # fondations sous le plancher
+			under.color = Color(0.17, 0.1, 0.07)
+			under.position = Vector2(z.x0, s.position.y + s.texture.get_height() * s.scale.y)
+			under.size = Vector2(room_w, 600.0)
+			_near_layer.add_child(under)
+		else:
+			s.texture = load(DECOR_DIR + ZONE_DECOR.get(z.key, "decor_proche.png"))
+			s.position = Vector2(z.x0, DECOR_TOP)
+			if z.key == "chambre":          # en attendant son décor : la salle, de nuit
+				s.modulate = Color(0.55, 0.6, 0.85)
 		_near_layer.add_child(s)
 
 

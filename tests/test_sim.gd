@@ -430,7 +430,7 @@ func _test_family_life() -> void:
 func _test_zones_and_climate() -> void:
 	print("Critère phase 5 : zones et climat :")
 	var w := WorldSim.new(71, "normal", 2)
-	_check(w.zones.size() == 3 and w.width == 7200.0, "trois zones côte à côte")
+	_check(w.zones.size() == 5 and w.zones[2].key == "jeux" and w.zones[-1].key == "jardin", "la maison (4 pièces) puis le jardin")
 	_check(w.zone_at(w.creatures[0].x).key == "jardin", "les fondateurs naissent au jardin")
 	# Hiver : froid dehors, doux dedans, peu de fruits
 	w.time = 3.0 * Climate.SEASON + 0.2 * Climate.DAY
