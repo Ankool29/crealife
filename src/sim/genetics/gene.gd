@@ -84,12 +84,29 @@ func mutate(rng: RandomNumberGenerator, rate: float) -> bool:
 	return changed
 
 
+## Les valeurs par défaut ne sont pas écrites et les nombres sont arrondis à
+## 5 décimales : la sauvegarde est bien plus légère (relue à l'identique par
+## from_dict, qui connaît les défauts).
 func to_dict() -> Dictionary:
-	return {
-		"id": id, "type": TYPE_KEYS[type], "stage": Lifecycle.STAGE_KEYS[stage],
-		"sex": SEX_KEYS[sex], "mut": mutability, "dup": can_duplicate,
-		"del": can_delete, "silent": silent, "p": params.duplicate(true),
-	}
+	var d := {"id": id, "type": TYPE_KEYS[type]}
+	if stage != Lifecycle.Stage.BABY:
+		d.stage = Lifecycle.STAGE_KEYS[stage]
+	if sex != Sex.BOTH:
+		d.sex = SEX_KEYS[sex]
+	if mutability != 1.0:
+		d.mut = snappedf(mutability, 0.00001)
+	if not can_duplicate:
+		d.dup = false
+	if not can_delete:
+		d.del = false
+	if silent:
+		d.silent = true
+	var p := {}
+	for k in params:
+		var v = params[k]
+		p[k] = snappedf(v, 0.00001) if typeof(v) == TYPE_FLOAT else v
+	d.p = p
+	return d
 
 
 ## Renvoie null pour un type inconnu (génome d'une version future) : il est ignoré.

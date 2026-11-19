@@ -108,7 +108,8 @@ var affinity := {}
 var _caress_recent := 0.0          # câlins rapprochés : les indépendants s'en lassent
 var _threat_uid := -1              # le chat qui lui fait peur
 var hunting := 0.5
-var catches := 0           # temps qu'elle compte encore passer devant l'écran
+var catches := 0
+var _last_pleasure := 0.0         # plaisir du dernier repas (tests, affichage)           # temps qu'elle compte encore passer devant l'écran
 var _refused := 0.0
 ## Soins aux petits : instinct parental (gène) et tâche en cours
 ## {kind : "nourrir" ou "parler", child, food, time}.
@@ -737,8 +738,7 @@ func _fear_reflex(dt: float, world: WorldSim) -> void:
 	if level("Peur") > 0.55 and brain.verb != Verb.FUIR:
 		var threat := world.find_uid(_threat_uid)
 		if threat != null and absf(threat.x - x) < 400.0:
-			brain.verb = Verb.FUIR
-			brain.clear_trace()
+			brain.force(ObjectCatalog.categories.find("créature"), Verb.FUIR)
 			target = threat
 			_done = false
 			_action_time = 6.0
@@ -752,8 +752,7 @@ func _fear_reflex(dt: float, world: WorldSim) -> void:
 		for c in world.creatures:
 			if c != self and c.alive and c.stage == Lifecycle.Stage.ADULT and c.sex == sex \
 					and absf(c.x - x) < 200.0 and affinity_with(c) < 0.3:
-				brain.verb = Verb.FRAPPER
-				brain.clear_trace()
+				brain.force(ObjectCatalog.categories.find("créature"), Verb.FRAPPER)
 				target = c
 				_done = false
 				_action_time = 8.0
@@ -792,6 +791,11 @@ func personality() -> Array[String]:
 ## de l'eau, elle mange ou boit, quoi que son cerveau ait appris d'autre.
 func _survival_reflex(world: WorldSim) -> void:
 	var cats := ObjectCatalog.categories
+	# épuisée (et ni affamée ni assoiffée) : elle s'endort où elle est
+	if level("Fatigue") > 0.85 and level("Faim") < 0.6 and level("Soif") < 0.5 and brain.verb != Verb.DORMIR:
+		brain.force(-1, Verb.DORMIR)
+		target = null
+		return
 	var want := ""
 	if level("Soif") > 0.6 and level("Soif") >= level("Faim"):
 		want = "soif"
@@ -815,14 +819,11 @@ func _survival_reflex(world: WorldSim) -> void:
 	if best == null:
 		# rien en vue : elle part chercher (vers le distributeur ou l'eau qu'elle connaît)
 		if brain.verb != Verb.EXPLORER and brain.verb != Verb.DORMIR:
-			brain.verb = Verb.EXPLORER
-			brain.clear_trace()
+			brain.force(-1, Verb.EXPLORER)
 			target = null
 			_goal_x = _explore_goal(world, world.rng)
 		return
-	brain.attention = best.category
-	brain.verb = Verb.MANGER
-	brain.clear_trace()          # réflexe : rien à apprendre de travers
+	brain.force(best.category, Verb.MANGER)     # le cerveau en tirera la leçon
 	target = best
 
 
@@ -1006,6 +1007,7 @@ func _act_on(o: WorldObject, v: int, world: WorldSim) -> void:
 			o.vx = 0.0
 		return
 	var r := ObjectCatalog.response(o.type_name, Brain.VERB_KEYS[v])
+	var hunger_before := level("Faim")
 	if r.get("prey", false) and not o.dead:
 		_hunt(o, v, world)
 		return
@@ -1043,7 +1045,7 @@ func _act_on(o: WorldObject, v: int, world: WorldSim) -> void:
 		target = null
 		meals += 1
 		eaten[o.type_name] = eaten.get(o.type_name, 0) + 1
-		_taste(str(ObjectCatalog.types[o.type_name].get("food", "")))
+		_taste(str(ObjectCatalog.types[o.type_name].get("food", "")), hunger_before)
 
 
 ## Tente d'attraper une proie vivante : réussite selon l'instinct de chasse
@@ -1072,9 +1074,15 @@ func _hunt(o: WorldObject, v: int, world: WorldSim) -> void:
 ## plus de la faim calmée). Le cerveau apprend ainsi ses préférences ; un
 ## aliment peu aimé reste mangé quand on a faim (pas de punition : sinon un
 ## chat pourrait se laisser mourir devant sa gamelle).
-func _taste(food: String) -> void:
+func _taste(food: String, hunger: float = 1.0) -> void:
+	# le plaisir dépend de l'appétit : manger sans faim n'apporte presque rien
+	# (sinon le cerveau apprend à manger sans arrêt, par gourmandise)
+	# Le plaisir renforce « faim -> manger cet aliment » (et lui seul : pas de
+	# grignotage par ennui). Moins de plaisir sans appétit.
 	if taste.has(food):
-		biochem.add(_chem["Récompense"], float(taste[food]) * 0.5)
+		var r := float(taste[food]) * 0.5 * clampf(hunger * 1.5, 0.25, 1.0)
+		brain.reinforce_drive(Brain.DRIVE_NAMES.find("Faim"), r)
+		_last_pleasure = r
 
 
 ## L'aliment préféré parmi ceux qu'elle a déjà goûtés ("" si aucun).

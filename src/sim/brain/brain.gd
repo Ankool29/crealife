@@ -188,6 +188,19 @@ func _compute_concepts() -> void:
 			concepts[_heard_base + v] = lang.heard_verb[v] * f
 
 
+## Un réflexe impose une action (manger devant la gamelle quand on meurt de
+## faim, fuir quand on a peur...). Le cerveau la note comme s'il l'avait
+## choisie : ce qui suit (faim calmée, peur apaisée) lui apprend à la
+## refaire de lui-même.
+func force(category: int, v: int) -> void:
+	attention = category
+	_compute_concepts()
+	verb = v
+	_elig = concepts.duplicate()
+	_elig_drives = drives.duplicate()
+	_elig_cat = attention
+
+
 ## Oublie la trace de la dernière décision (rien ne sera renforcé).
 func clear_trace() -> void:
 	_elig.fill(0.0)
@@ -287,14 +300,39 @@ func obedience(v: int) -> float:
 
 
 ## Mémoire du cerveau pour la sauvegarde.
+## Sauvegarde compacte : chaque poids (entre -3 et 3) est arrondi sur 16 bits
+## et le tout encodé en base64 (environ 4 fois plus léger qu'une liste JSON).
+const PACK_RANGE := 3.0
+
+
 func to_dict() -> Dictionary:
-	return {"stw": Array(stw), "ltw": Array(ltw), "attn_w": Array(attn_w),
-		"attn_bias": Array(attn_bias), "verb_bias": Array(verb_bias)}
+	var d := {"packed": true}
+	for key in ["stw", "ltw", "attn_w", "attn_bias", "verb_bias"]:
+		d[key] = pack(get(key))
+	return d
+
+
+static func pack(a: PackedFloat32Array) -> String:
+	var b := PackedByteArray()
+	b.resize(a.size() * 2)
+	for i in a.size():
+		b.encode_s16(i * 2, int(round(clampf(a[i] / PACK_RANGE, -1.0, 1.0) * 32767.0)))
+	return Marshalls.raw_to_base64(b)
+
+
+static func unpack(s: String) -> Array:
+	var b := Marshalls.base64_to_raw(s)
+	var out := []
+	out.resize(b.size() / 2)
+	for i in out.size():
+		out[i] = b.decode_s16(i * 2) / 32767.0 * PACK_RANGE
+	return out
 
 
 func load_dict(d: Dictionary) -> void:
 	for key in ["stw", "ltw", "attn_w", "attn_bias", "verb_bias"]:
-		var src: Array = d.get(key, [])
+		var raw = d.get(key, [])
+		var src: Array = unpack(raw) if typeof(raw) == TYPE_STRING else raw
 		var dst: PackedFloat32Array = get(key)
 		if src.size() == dst.size():
 			set(key, PackedFloat32Array(src))

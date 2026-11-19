@@ -6,9 +6,9 @@ extends Node2D
 ## Pas fixe de simulation (5 par seconde de jeu), découplé de l'affichage.
 const STEP := 0.2
 const MAX_STEPS_PER_FRAME := 60
+const FRAME_BUDGET_MSEC := 12      # temps de calcul maximal par image (le reste pour l'affichage)
 const SPEEDS: Array[float] = [1.0, 2.0, 4.0, 16.0]
 const TAP_SLOP := 16.0
-const SAVE_PATH := "user://crealife_sauvegarde.json"
 const AUTOSAVE_PERIOD := 120.0     # secondes réelles
 const EVENT_DURATION := 6.0
 
@@ -29,13 +29,18 @@ var _autosave := 0.0
 var _event_text := ""
 var _event_timer := 0.0
 var _last_world_event := ""
+var _store := SaveStore.new()
 
 
 func _ready() -> void:
 	RenderingServer.set_default_clear_color(Color(0.62, 0.82, 0.95))
-	world = _load_game()
+	var loaded := SaveStore.load_world()
+	world = loaded[0]
 	if world == null:
 		world = WorldSim.new(randi(), "normal", 2)
+	if loaded[1] != "":
+		_event_text = loaded[1]
+		_event_timer = EVENT_DURATION * 2.0
 
 	world_view = WorldView.new()
 	world_view.world = world
@@ -105,12 +110,15 @@ func _process(delta: float) -> void:
 	var speed := SPEEDS[_speed_index]
 	_accumulator += minf(delta, 0.1) * speed
 	var steps := 0
+	var start := Time.get_ticks_msec()
 	while _accumulator >= STEP and steps < MAX_STEPS_PER_FRAME:
 		world.tick(STEP)
 		_accumulator -= STEP
 		steps += 1
-	if steps == MAX_STEPS_PER_FRAME:
-		_accumulator = 0.0   # appareil trop lent : on ralentit plutôt que de figer
+		if Time.get_ticks_msec() - start > FRAME_BUDGET_MSEC:
+			break
+	if _accumulator > STEP * 4.0:
+		_accumulator = STEP * 4.0   # appareil trop lent : on ralentit plutôt que de figer
 
 	_sync_views()
 	var c := _selected()
@@ -231,7 +239,8 @@ func _thing_at(world_pos: Vector2, _unused: CreatureView) -> Object:
 
 ## Efface la sauvegarde et recommence avec deux nouveaux fondateurs.
 func new_game() -> void:
-	DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
+	for ext in ["", ".bak", ".tmp"]:
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(SaveStore.PATH + ext))
 	world = WorldSim.new(randi(), "normal", 2)
 	world_view.world = world
 	for v in _views.values():
@@ -250,21 +259,13 @@ func new_game() -> void:
 	save_game()
 
 
-func save_game() -> void:
+## Sauvegarde périodique en arrière-plan ; à la fermeture, tout de suite.
+func save_game(now: bool = false) -> void:
 	_autosave = 0.0
-	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
-	if f:
-		f.store_string(JSON.stringify(world.to_dict()))
-
-
-func _load_game() -> WorldSim:
-	if not FileAccess.file_exists(SAVE_PATH):
-		return null
-	var data = JSON.parse_string(FileAccess.get_file_as_string(SAVE_PATH))
-	if typeof(data) != TYPE_DICTIONARY:
-		return null
-	var w := WorldSim.from_dict(data)
-	return w if not w.creatures.is_empty() else null
+	if now:
+		SaveStore.save_now(world)
+	else:
+		_store.save_async(world)
 
 
 ## Le jeu se met en pause quand l'appli passe en arrière-plan (décision D3) :
@@ -273,4 +274,4 @@ func _notification(what: int) -> void:
 	if world == null:
 		return
 	if what in [NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_WM_CLOSE_REQUEST]:
-		save_game()
+		save_game(true)

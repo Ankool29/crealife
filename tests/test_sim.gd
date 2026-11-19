@@ -15,6 +15,7 @@ func _init() -> void:
 	_test_learns_seeds()
 	_test_full_life()
 	_test_save_load()
+	_test_save_safety()
 	_test_generations()
 	_test_language()
 	_test_appearance_genes()
@@ -154,13 +155,15 @@ func _test_learns_seeds() -> void:
 	print("Critère phase 2 : découvrir seule une nourriture inconnue (pâtée) :")
 	var w := WorldSim.new(21, "graines")
 	var c := w.creatures[0]
+	c.age = 1.0 * 3600.0               # sevrée : elle a vraiment faim entre deux repas
 	_run(w, 3.0)
 	var patee := ObjectCatalog.categories.find("pâtée")
-	var wgt := c.brain.weight("Faim", patee, Brain.Verb.MANGER)
-	print("    pâtées mangées : %d, poids faim×pâtée→manger : %.2f, vivante : %s" % [c.eaten.get("patee", 0), wgt, c.alive])
+	# la pâtée calme la faim et un peu la soif : elle peut l'apprendre par l'une ou l'autre
+	var wgt := maxf(c.brain.weight("Faim", patee, Brain.Verb.MANGER), c.brain.weight("Soif", patee, Brain.Verb.MANGER))
+	print("    pâtées mangées : %d, poids faim ou soif×pâtée→manger : %.2f, vivante : %s" % [c.eaten.get("patee", 0), wgt, c.alive])
 	_check(c.alive, "elle survit 3 h avec uniquement de la pâtée")
 	_check(c.eaten.get("patee", 0) >= 30, "elle mange régulièrement de la pâtée")
-	_check(wgt > 0.5, "elle a appris : faim + pâtée -> manger")
+	_check(wgt > 0.5, "elle a appris : besoin + pâtée -> manger")
 
 
 func _test_full_life() -> void:
@@ -186,6 +189,44 @@ func _test_full_life() -> void:
 	_check(stages.size() == 5, "elle traverse les 5 stades de vie")
 	_check(not c.alive and c.death_cause == "de vieillesse", "elle meurt de vieillesse")
 	_check(t > 9.0 * 3600.0 and t < 11.5 * 3600.0, "durée de vie autour de 10 h")
+
+
+func _test_save_safety() -> void:
+	print("Sauvegarde sûre :")
+	var path := "user://test_sauvegarde.json"
+	for ext in ["", ".bak", ".tmp", ".abimee"]:
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(path + ext))
+	var w := WorldSim.new(3, "normal", 3)
+	_run(w, 0.2)
+	var text := JSON.stringify(w.to_dict())
+	var per := text.length() / 1024.0 / w.creatures.size()
+	print("    taille : %d Ko, %.0f Ko par chat" % [text.length() / 1024, per])
+	_check(per < 40.0, "sauvegarde compacte (moins de 40 Ko par chat ; environ 100 avant)")
+	_check(SaveStore.save_now(w, path), "écriture via un fichier temporaire")
+	var r := SaveStore.load_world(path)
+	_check(r[0] != null and r[1] == "" and r[0].alive_count() == w.alive_count(), "relecture normale")
+	var c0: CreatureSim = w.creatures[0]
+	var c1: CreatureSim = r[0].creatures[0]
+	_check(absf(c0.brain.stw[5] - c1.brain.stw[5]) < 0.001, "les cerveaux reviennent à l'identique (à 0,001 près)")
+	SaveStore.save_now(w, path)                      # la précédente devient la copie de secours
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	f.store_string(text.substr(0, text.length() / 2))   # appli tuée en pleine écriture
+	f.close()
+	r = SaveStore.load_world(path)
+	_check(r[0] != null and r[1].contains("secours"), "sauvegarde coupée : reprise depuis la copie de secours")
+	for ext in [".bak", ".tmp"]:
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(path + ext))
+	f = FileAccess.open(path, FileAccess.WRITE)
+	f.store_string("{\"creatures\": []}")
+	f.close()
+	r = SaveStore.load_world(path)
+	_check(r[0] == null and FileAccess.file_exists(path + ".abimee") and not FileAccess.file_exists(path),
+		"illisible : mise de côté, jamais écrasée")
+	var d: Dictionary = JSON.parse_string(text)
+	d.creatures[0].erase("genome")
+	_check(not SaveStore.valid(d), "une donnée manquante est détectée avant le chargement")
+	for ext in ["", ".bak", ".tmp", ".abimee"]:
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(path + ext))
 
 
 func _test_save_load() -> void:
@@ -470,19 +511,17 @@ func _test_food() -> void:
 	_check(caught2 < caught, "une piètre chasseuse rate plus souvent (%d/40)" % caught2)
 	var prey := w.add_object("souris", hunter.x + 60.0)
 	prey.dead = true
+	var before: int = hunter.eaten.get("souris", 0)
 	hunter._act_on(prey, Brain.Verb.MANGER, w)
-	_check(not prey in w.objects and hunter.eaten.get("souris", 0) == 1, "une souris attrapée se mange")
+	_check(not prey in w.objects and hunter.eaten.get("souris", 0) == before + 1, "une souris attrapée se mange")
 	# goûts : la préférence vient du plaisir pris
 	hunter.taste = {"patee": 0.95, "croquettes": 0.1, "proie": 0.2}
 	hunter.eaten["patee"] = 1
 	_check(hunter.favorite_food() == "patee", "elle préfère ce qu'elle aime le plus parmi ce qu'elle a goûté")
-	var rid := Chemicals.id_of("Récompense")
-	hunter.biochem.conc[rid] = 0.0
 	hunter._taste("patee")
-	var r_patee := hunter.level("Récompense")
-	hunter.biochem.conc[rid] = 0.0
+	var r_patee := hunter._last_pleasure
 	hunter._taste("croquettes")
-	_check(r_patee > hunter.level("Récompense") * 3.0, "la pâtée lui fait bien plus plaisir que les croquettes")
+	_check(r_patee > hunter._last_pleasure * 3.0, "la pâtée lui fait bien plus plaisir que les croquettes")
 
 
 func _test_character() -> void:
@@ -686,6 +725,9 @@ func _test_zones_and_climate() -> void:
 		var c3 := w3.creatures[0]
 		c3.playfulness = 0.95 if playful else 0.05
 		c3.curiosity = 0.0                  # sans aller voir l'écran : seul l'espièglerie change
+		c3.hunting = 0.0                    # ni chasse, ni autre trait qui change
+		c3.energy = 0.5
+		c3.sociable = 0.5
 		c3.x = w3.zones[2].x0 + 500.0
 		t = 0.0
 		while t < 3600.0:

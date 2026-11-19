@@ -465,8 +465,8 @@ func _spawners(dt: float) -> void:
 	if scenario == "graines":       # test : de la pâtée tombe, sans instinct pour elle
 		_seed_timer -= dt
 		if _seed_timer <= 0.0:
-			_seed_timer = rng.randf_range(6.0, 12.0)
-			if count_of("patee") < 10:
+			_seed_timer = rng.randf_range(25.0, 45.0)
+			if count_of("patee") < 4:
 				add_object("patee", rng.randf_range(100.0, width - 100.0), 300.0)
 	if scenario == "vide":
 		return
