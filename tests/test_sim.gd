@@ -9,7 +9,7 @@ var _failures := 0
 ## Batterie rapide (quelques secondes à une minute) : à chaque modification.
 const QUICK := ["_test_genome_file", "_test_cross_and_mutation", "_test_stage_expression",
 	"_test_instincts_and_reinforcement", "_test_save_load", "_test_save_safety", "_test_appearance_genes",
-	"_test_cat_genetics", "_test_adoption", "_test_food", "_test_character"]
+	"_test_cat_genetics", "_test_adoption", "_test_food", "_test_character", "_test_ecosystem"]
 ## Batterie longue (vies entières, générations : plusieurs minutes) : aux grosses étapes.
 const LONG := ["_test_starvation", "_test_learns_seeds", "_test_full_life", "_test_generations",
 	"_test_language", "_test_family_life", "_test_litter", "_test_zones_and_climate", "_test_roaming"]
@@ -851,3 +851,200 @@ func _test_cat_genetics() -> void:
 func _hm(t: float) -> String:
 	var m := int(t / 60.0)
 	return "%d h %02d" % [m / 60, m % 60]
+
+
+## Fait tourner le monde (sans chat) jusqu'à l'instant `until`, par pas d'une seconde.
+func _run_world_until(w: WorldSim, until: float) -> void:
+	while w.time < until:
+		w.tick(1.0)
+
+
+func _stages(w: WorldSim) -> Array[int]:
+	var n: Array[int] = [0, 0, 0, 0]
+	for o in w.objects:
+		if o.is_plant():
+			n[o.growth] += 1
+	return n
+
+
+func _test_ecosystem() -> void:
+	print("Écosystème du jardin :")
+	# --- Plantes : graines, pousses, plantes ; fanées l'hiver, repoussent au printemps
+	var w := WorldSim.new(41, "normal", 0)
+	_run_world_until(w, 1.2 * 3600.0)
+	var s := _stages(w)
+	print("    après 1 h 12 de printemps et d'été : %d graines, %d pousses, %d plantes" % [s[0], s[1], s[2]])
+	_check(s[0] + s[1] + s[2] >= 4 and s[2] >= 1, "des graines tombent, germent et deviennent des plantes")
+	var garden := w.zone("jardin")
+	_check(w.objects.all(func(o): return not o.is_plant() or (o.x >= garden.x0 and o.x <= garden.x1)),
+		"les plantes ne poussent qu'au jardin")
+	var most := 0
+	while w.time < 3.0 * Climate.SEASON + 1200.0:        # jusqu'au cœur de l'hiver
+		w.tick(1.0)
+		most = maxi(most, w.garden.plants(w).size())
+	s = _stages(w)
+	print("    en hiver : %d graines, %d pousses, %d plantes, %d fanées (au plus %d plantes)" % [s[0], s[1], s[2], s[3], most])
+	_check(most <= Garden.MAX_PLANTS, "pas plus de %d plantes" % Garden.MAX_PLANTS)
+	_check(s[3] >= 3 and s[2] + s[1] <= 1, "l'hiver, elles fanent")
+	_run_world_until(w, 4.0 * Climate.SEASON + 1500.0)   # le printemps suivant
+	s = _stages(w)
+	print("    au printemps : %d graines, %d pousses, %d plantes, %d fanées" % [s[0], s[1], s[2], s[3]])
+	_check(s[3] == 0 and s[1] + s[2] >= 3, "au printemps, elles repoussent")
+	var w2 := WorldSim.from_dict(JSON.parse_string(JSON.stringify(w.to_dict())))
+	_check(_stages(w2) == _stages(w), "les stades des plantes sont sauvegardés")
+
+	# --- Herbe à chat : héréditaire (sensible dominant), environ un tiers d'insensibles
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 5
+	var deaf := 0
+	for i in 300:
+		var g := Genome.starter()
+		CreatureSim.ensure_cat_genes(g, rng, true)
+		if not CatGarden.sensitive(g.find(Gene.Type.LOBE, "lobe", "gout").params):
+			deaf += 1
+	print("    fondateurs insensibles à l'herbe à chat : %d sur 300" % deaf)
+	_check(deaf > 70 and deaf < 130, "environ un chat sur trois est insensible")
+	var mum := Genome.starter()
+	var dad := Genome.starter()
+	CreatureSim.ensure_cat_genes(mum, rng, true)
+	CreatureSim.ensure_cat_genes(dad, rng, true)
+	var gm := mum.find(Gene.Type.LOBE, "lobe", "gout")
+	var gd := dad.find(Gene.Type.LOBE, "lobe", "gout")
+	gm.params.herbe1 = 0.0
+	gm.params.herbe2 = 0.0
+	gd.params.herbe1 = 0.0
+	gd.params.herbe2 = 0.0
+	var all_deaf := true
+	for i in 30:
+		all_deaf = all_deaf and not CatGarden.sensitive(Genome.cross(mum, dad, rng).find(Gene.Type.LOBE, "lobe", "gout").params)
+	gd.params.herbe1 = 1.0
+	gd.params.herbe2 = 1.0
+	var all_sens := true
+	for i in 30:
+		all_sens = all_sens and CatGarden.sensitive(Genome.cross(mum, dad, rng).find(Gene.Type.LOBE, "lobe", "gout").params)
+	gd.params.herbe2 = 0.0
+	var half := 0
+	for i in 200:
+		if CatGarden.sensitive(Genome.cross(mum, dad, rng).find(Gene.Type.LOBE, "lobe", "gout").params):
+			half += 1
+	print("    insensible × porteur (S/i) : %d chatons sensibles sur 200" % half)
+	_check(all_deaf and all_sens and half > 70 and half < 130,
+		"hérédité mendélienne : i/i × i/i -> insensibles ; i/i × S/S -> sensibles ; i/i × S/i -> moitié")
+
+	w = WorldSim.new(43, "normal", 3)
+	var cats := w.creatures
+	for c in cats:
+		c.age = 3.0 * 3600.0
+		c.stage = Lifecycle.Stage.ADULT
+		c.x = w.garden_x() + 800.0
+	var herbe := w.add_object("herbe_chat", w.garden_x() + 900.0)
+	herbe.growth = Garden.PLANT
+	var fan := cats[0]
+	fan.catnip_sensitive = true
+	fan.biochem.add(fan._chem["Ennui"], 0.6)
+	var ennui := fan.level("Ennui")
+	fan._act_on(herbe, Brain.Verb.EXAMINER, w)
+	_check(fan.catnip_left > 0.0 and fan.level("Ennui") < ennui - 0.3, "une chatte sensible qui renifle l'herbe à chat est grisée (ennui %.2f -> %.2f)" % [ennui, fan.level("Ennui")])
+	var t := 0.0
+	var after_sniff := fan.level("Ennui")
+	var max_ennui := 0.0
+	while t < 60.0:
+		w.tick(STEP)
+		t += STEP
+		max_ennui = maxf(max_ennui, fan.level("Ennui"))
+	_check(max_ennui <= after_sniff + 0.01 and fan.level("Ennui") < after_sniff - 0.1,
+		"grisée, son ennui continue de baisser (%.2f -> %.2f)" % [after_sniff, fan.level("Ennui")])
+	fan.catnip_left = 0.0
+	fan._act_on(herbe, Brain.Verb.MANGER, w)
+	_check(fan.catnip_left == 0.0 and fan.catnip_rest > 0.0, "puis elle s'en lasse un bon moment")
+	var cold := cats[1]
+	cold.catnip_sensitive = false
+	cold._act_on(herbe, Brain.Verb.EXAMINER, w)
+	var kitten := cats[2]
+	kitten.age = 0.6 * 3600.0
+	kitten.stage = Lifecycle.Stage.CHILD
+	kitten.catnip_sensitive = true
+	kitten._act_on(herbe, Brain.Verb.MANGER, w)
+	_check(cold.catnip_left == 0.0 and kitten.catnip_left == 0.0, "aucun effet sur une insensible ni sur un chaton")
+
+	# --- Lys : malade, punition liée à « manger cette plante », dégoût appris
+	var plant_cat := ObjectCatalog.categories.find("plante")
+	var lys := w.add_object("lys", cold.x + 100.0)
+	lys.growth = Garden.PLANT
+	cold.biochem.add(cold._chem["Ennui"], 0.6)
+	cold.biochem.step(STEP, cold.age)                       # elle ressent son ennui
+	cold._perceive(w)
+	cold.brain.force(plant_cat, Brain.Verb.MANGER)          # elle a décidé d'y goûter
+	cold.target = lys
+	var wb := cold.brain.weight("Ennui", plant_cat, Brain.Verb.MANGER)
+	var other := cold.brain.weight("Ennui", ObjectCatalog.categories.find("jouet"), Brain.Verb.POUSSER)
+	cold._act_on(lys, Brain.Verb.MANGER, w)
+	var wa := cold.brain.weight("Ennui", plant_cat, Brain.Verb.MANGER)
+	print("    lys mangé : toxines %.2f, douleur %.2f ; « ennui + plante -> manger » %.2f -> %.2f" % [
+		cold.level("Toxines"), cold.level("Douleur"), wb, wa])
+	_check(cold.level("Toxines") > 0.2 and cold.level("Douleur") > 0.2, "manger le lys rend malade")
+	_check(wa < wb - 0.2 and is_equal_approx(other, cold.brain.weight("Ennui", ObjectCatalog.categories.find("jouet"), Brain.Verb.POUSSER)),
+		"la punition porte sur « manger une plante », pas sur le reste")
+	var near_lys := cold._nearest(w, plant_cat, Brain.Verb.MANGER)
+	_check(near_lys != lys and cold._nearest(w, plant_cat, Brain.Verb.EXAMINER) != null,
+		"ensuite elle ne vise plus le lys pour le manger (elle peut encore renifler)")
+	t = 0.0
+	while t < 1800.0:
+		w.tick(STEP)
+		t += STEP
+	_check(cold.alive and cold.heart_health() > 0.7, "un adulte n'en meurt pas (cœur %.2f, toxines %.2f)" % [cold.heart_health(), cold.level("Toxines")])
+	w2 = WorldSim.from_dict(JSON.parse_string(JSON.stringify(w.to_dict())))
+	_check(CatGarden.averse(w2.find_uid(cold.uid), "lys"), "le dégoût du lys est sauvegardé")
+
+	# --- Papillons : jeu, pas repas ; de jour aux beaux jours, partis la nuit
+	var hungry := cats[0]
+	hungry.biochem.add(hungry._chem["Faim"], 0.9)
+	var pap := w.add_object("papillon", hungry.x + 80.0, 100.0)
+	_check(hungry._nearest(w, ObjectCatalog.categories.find("proie"), Brain.Verb.MANGER) != pap,
+		"une affamée ne vise pas un papillon pour le manger")
+	hungry.hunting = 1.0
+	for i in 30:
+		pap.x = hungry.x + 80.0
+		hungry._act_on(pap, Brain.Verb.MANGER if i % 2 == 0 else Brain.Verb.FRAPPER, w)
+	_check(pap in w.objects and not pap.dead and hungry.eaten.get("papillon", 0) == 0 and hungry.butterflies > 0,
+		"un papillon touché s'envole, il ne se mange pas (%d touchés)" % hungry.butterflies)
+	w = WorldSim.new(44, "normal", 0)
+	w.time = 240.0 + 3.0 * Climate.DAY                      # l'été, à midi
+	w.climate.weather = 0
+	w.climate._weather_left = 99999.0
+	for i in 4:
+		var f := w.add_object("lys" if i % 2 == 0 else "herbe_chat", w.garden_x() + 300.0 + i * 350.0)
+		f.growth = Garden.PLANT
+	print("    %s" % w.climate.describe(w.time))
+	_run_world_until(w, w.time + 240.0)                   # 4 h de jeu (une heure dure une minute)
+	var flying := w.objects.filter(func(o): return o.type_name == "papillon")
+	print("    en été, de midi à 16 h : %d papillons" % flying.size())
+	_check(flying.size() >= 2 and flying.all(func(o): return o.h > 0.0 and o.x >= w.garden_x()),
+		"des papillons volent au jardin, près des fleurs")
+	w.time = 960.0 + 3.0 * Climate.DAY                      # minuit, toujours l'été
+	_run_world_until(w, w.time + 120.0)
+	_check(w.count_of("papillon") == 0, "la nuit, ils sont partis")
+
+	# --- Souris : la population monte jusqu'à un plafond, baisse si l'on chasse
+	var peaks := 0
+	var lows := 0
+	for seed in [51, 52, 53]:
+		w = WorldSim.new(seed, "normal", 0)
+		_run_world_until(w, 2.0 * 3600.0)
+		var peak := Garden.mice(w).size()
+		var t0 := w.time
+		var next_kill := t0
+		while w.time < t0 + 3600.0:
+			w.tick(1.0)
+			if w.time >= next_kill:               # des chats qui chassent beaucoup
+				next_kill += 120.0
+				var m := Garden.mice(w)
+				if not m.is_empty():
+					m[0].dead = true
+					m[0].timer = Garden.CORPSE_TIME
+		var low := Garden.mice(w).size()
+		print("    souris (monde %d) : 2 au départ, %d après 2 h sans chasse, %d après 1 h de chasse intense" % [seed, peak, low])
+		peaks += peak
+		lows += low
+	_check(peaks >= 15 and peaks <= 3 * Garden.MAX_MICE, "sans chasse, les souris se multiplient (plafond %d)" % Garden.MAX_MICE)
+	_check(lows <= 6, "quand les chats chassent beaucoup, elles diminuent")

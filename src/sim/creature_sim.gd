@@ -100,6 +100,15 @@ var _caress_recent := 0.0          # câlins rapprochés : les indépendants s'e
 var _threat_uid := -1              # le chat qui lui fait peur
 var hunting := 0.5
 var catches := 0
+## Herbe à chat (gène « gout », allèles herbe1/herbe2) : sensible ou non ;
+## effet en cours (s) et lassitude qui suit (s). Papillons touchés (jeu).
+var catnip_sensitive := true
+var catnip_left := 0.0
+var catnip_rest := 0.0
+var butterflies := 0
+## Dégoûts appris (type d'objet -> force, de 0 à 1) : après avoir été malade
+## d'une plante, elle évite d'en manger. S'efface lentement.
+var aversion := {}
 var _last_pleasure := 0.0         # plaisir du dernier repas (tests, affichage)           # temps qu'elle compte encore passer devant l'écran
 var _refused := 0.0
 ## Soins aux petits : instinct parental (gène) et tâche en cours
@@ -187,6 +196,10 @@ static func ensure_cat_genes(g: Genome, rng: RandomNumberGenerator, random: bool
 	if random:
 		for k in ["patee", "croquettes", "proie", "chasse"]:
 			taste_gene.params[k] = clampf(float(taste_gene.params[k]) + r.randf_range(-0.35, 0.35), 0.0, 1.0)
+	if random or not taste_gene.params.has("herbe1"):
+		# herbe à chat : allèle insensible fréquent (0,58² ≈ un tiers d'insensibles)
+		for k in ["herbe1", "herbe2"]:
+			taste_gene.params[k] = 0.0 if r.randf() < CatGarden.CATNIP_RESISTANT_ALLELE else 1.0
 	var char_gene := g.find(Gene.Type.LOBE, "lobe", "caractere")
 	var char_new := char_gene == null
 	if char_new:
@@ -215,6 +228,7 @@ func _express(first_time: bool) -> void:
 			for k in taste:
 				taste[k] = float(g.params.get(k, taste[k]))
 			hunting = float(g.params.get("chasse", 0.5))
+			catnip_sensitive = CatGarden.sensitive(g.params)
 		if g.type == Gene.Type.LOBE and g.params.get("lobe", "") == "caractere":
 			sociable = float(g.params.get("sociable", 0.5))
 			boldness = float(g.params.get("audace", 0.5))
@@ -307,6 +321,9 @@ func tick(dt: float, world: WorldSim, rng: RandomNumberGenerator) -> void:
 	l[_l_act] = ACTIVITY[brain.verb] * lerpf(1.5, 0.6, energy)     # les énergiques se fatiguent moins
 	l[_l_dort] = 1.0 if brain.verb == Verb.DORMIR else 0.0
 	l[_l_ennui] = 0.0 if brain.verb == Verb.EXPLORER else lerpf(0.5, 1.8, playfulness)
+	CatGarden.tick(self, dt)
+	if catnip_left > 0.0:
+		l[_l_ennui] = 0.0               # grisée : elle ne s'ennuie pas
 	l[_l_seul] = brain.situation[3] * lerpf(0.3, 1.8, sociable)    # les indépendants s'ennuient peu des autres
 	_caress_recent = maxf(0.0, _caress_recent - dt / 30.0)
 	if is_asleep():                    # dormir côte à côte rapproche
@@ -423,9 +440,10 @@ func _decide(world: WorldSim, rng: RandomNumberGenerator) -> void:
 	elif brain.attention == ObjectCatalog.categories.find("créature"):
 		target = _nearest_creature(world)
 	else:
-		target = _nearest(world, brain.attention) if brain.attention >= 0 else null
+		target = _nearest(world, brain.attention, v) if brain.attention >= 0 else null
 	if v in Brain.OBJECT_VERBS and target == null:
 		brain.verb = Verb.RIEN
+	CatGarden.play_reflex(self, world, rng)
 	_survival_reflex(world)
 	_go_to_bed(world, rng)
 	_done = false
@@ -461,13 +479,15 @@ func _nearest_creature(world: WorldSim) -> CreatureSim:
 	return best
 
 
-func _nearest(world: WorldSim, category: int) -> WorldObject:
+## L'objet le plus proche de cette catégorie. Pour manger, elle ignore ce
+## qui ne se mange pas (papillon) et les plantes qui l'ont rendue malade.
+func _nearest(world: WorldSim, category: int, v: int = -1) -> WorldObject:
 	if held != null and held.category == category:
 		return held
 	var best: WorldObject = null
 	var best_d := VISION_RANGE
 	for o in world.objects:
-		if o.category == category and o.holder == null:
+		if o.category == category and o.holder == null and (v != Verb.MANGER or CatGarden.edible_for(self, o)):
 			var d := absf(o.x - x)
 			if d < best_d:
 				best_d = d
@@ -697,11 +717,15 @@ func _act_on(o: WorldObject, v: int, world: WorldSim) -> void:
 	if r.get("prey", false) and not o.dead:
 		_hunt(o, v, world)
 		return
+	if o.is_plant() and not o.is_grown():
+		if v in [Verb.EXAMINER, Verb.MANGER]:     # graine, pousse ou plante fanée : à peine intéressante
+			biochem.add(_chem["Ennui"], -0.01)
+		return
 	for chem_name in r.get("chems", {}):
 		var amount := float(r.chems[chem_name])
 		if chem_name == "Ennui" and amount < 0.0:
 			if o.category == ObjectCatalog.categories.find("jouet"):
-				amount *= lerpf(0.8, 1.3, playfulness)       # les espiègles s'amusent plus
+				amount *= lerpf(0.8, 1.3, playfulness) * (1.5 if catnip_left > 0.0 else 1.0)   # les espiègles (et les grisées) s'amusent plus
 			elif r.get("curious", false):
 				amount *= lerpf(0.4, 1.8, curiosity)         # les curieuses aiment l'écran
 		biochem.add(Chemicals.id_of(chem_name), amount)
@@ -732,6 +756,8 @@ func _act_on(o: WorldObject, v: int, world: WorldSim) -> void:
 		meals += 1
 		eaten[o.type_name] = eaten.get(o.type_name, 0) + 1
 		_taste(str(ObjectCatalog.types[o.type_name].get("food", "")), hunger_before)
+	if o.is_plant():
+		CatGarden.plant_effect(self, o, v, world)
 
 
 func _hunt(o: WorldObject, v: int, world: WorldSim) -> void:
@@ -827,6 +853,7 @@ func to_dict() -> Dictionary:
 		"generation": generation, "mother": mother, "father": father,
 		"x": x, "facing": facing, "age": age, "alive": alive, "death_cause": death_cause,
 		"meals": meals, "naps": naps, "eaten": eaten, "catches": catches, "affinity": affinity,
+		"catnip_left": catnip_left, "catnip_rest": catnip_rest, "aversion": aversion, "butterflies": butterflies,
 		"pregnant_time": pregnant_time, "litter_size": litter_size, "father_genome": _father_genome.to_dict() if _father_genome else null,
 		"father_name": _father_name, "mate_rest": _mate_rest,
 		"biochem": biochem.to_dict(), "brain": brain.to_dict(), "language": language.to_dict(),
@@ -848,6 +875,12 @@ static func from_dict(d: Dictionary) -> CreatureSim:
 	c.meals = int(d.meals)
 	c.naps = int(d.naps)
 	c.catches = int(d.get("catches", 0))
+	c.catnip_left = float(d.get("catnip_left", 0.0))
+	c.catnip_rest = float(d.get("catnip_rest", 0.0))
+	c.butterflies = int(d.get("butterflies", 0))
+	var av: Dictionary = d.get("aversion", {})
+	for k in av:
+		c.aversion[str(k)] = float(av[k])
 	for k in d.get("affinity", {}):
 		c.affinity[int(k)] = float(d.affinity[k])
 	c.eaten = d.eaten

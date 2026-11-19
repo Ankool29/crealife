@@ -22,13 +22,15 @@ var width := 3000.0
 var zones: Array[Dictionary] = []
 var climate := Climate.new()
 var adoption := Adoption.new()
+## Écosystème du jardin : plantes, papillons, souris (voir Garden).
+var garden := Garden.new()
 ## Écran d'apprentissage : ce qu'il montre (mode 0 noms, 1 verbes, 2 besoins).
 var screen := {"mode": 0, "index": 0, "timer": 0.0}
 const SCREEN_PERIOD := 6.0
 const SCREEN_MODES: Array[String] = ["noms", "verbes", "besoins"]
 const SCREEN_RANGE := 600.0
 const SCREEN_PASSIVE := 0.4     # part retenue sans regarder l'écran
-const SCREEN_NOUNS: Array[String] = ["pâtée", "croquettes", "proie", "eau", "jouet", "machine", "créature"]
+const SCREEN_NOUNS: Array[String] = ["pâtée", "croquettes", "proie", "eau", "jouet", "machine", "créature", "plante"]
 const MUSIC_RANGE := 450.0
 const GARDEN_W := 2000.0
 const FEEDER_PERIOD := 45.0       # le distributeur remet des croquettes (jusqu'à 3) toutes les ~45 s
@@ -82,6 +84,8 @@ func _init(seed_value: int = 0, p_scenario: String = "normal", founders: int = 1
 		_add_zone_objects()
 		for i in 2:
 			add_object("croquettes", machine_x + 60.0 + i * 25.0, 0.0)
+		for i in 2:              # un couple de souris au jardin, qui fera des petits
+			add_object("souris", g + 500.0 + i * 600.0, 0.0)
 	add_founders(founders)
 
 
@@ -431,6 +435,7 @@ func _spawners(dt: float) -> void:
 			patee_stock += 1
 	if scenario == "normal":
 		_tick_prey_spawn(dt)
+		garden.tick(self, dt)
 	if scenario == "graines":       # test : de la pâtée tombe, sans instinct pour elle
 		_seed_timer -= dt
 		if _seed_timer <= 0.0:
@@ -454,7 +459,8 @@ func _food_around(at_x: float, r: float) -> int:
 
 # ------------------------------------------------------------- proies --
 
-## Des souris et des oiseaux viennent au jardin (moins l'hiver).
+## Des oiseaux viennent au jardin (pas l'hiver). Les souris, elles, font
+## des petits (voir Garden).
 func _tick_prey_spawn(dt: float) -> void:
 	_prey_timer -= dt
 	if _prey_timer > 0.0:
@@ -465,9 +471,7 @@ func _tick_prey_spawn(dt: float) -> void:
 	if g.is_empty():
 		return
 	var x := rng.randf_range(float(g.x0) + 150.0, float(g.x1) - 100.0)
-	if _live_prey("souris") < 3 and rng.randf() < 0.6:
-		add_object("souris", x, 0.0)
-	elif _live_prey("oiseau") < 2 and not winter:
+	if _live_prey("oiseau") < 2 and not winter and rng.randf() < 0.45:
 		add_object("oiseau", x, 260.0)          # il se pose
 
 
@@ -494,6 +498,9 @@ func _move_prey(o: WorldObject, dt: float) -> void:
 			near = c
 	var d := absf(near.x - o.x) if near else 1e9
 	o.flee = maxf(0.0, o.flee - dt)
+	if info.get("butterfly", false):
+		Garden.move_butterfly(self, o, near, dt)
+		return
 	if info.get("flies", false):
 		if d < 170.0 and rng.randf() < dt * (3.0 if o.flee > 0.0 else 0.8):
 			remove_object(o)                       # envolé
@@ -523,7 +530,7 @@ func drop_patee(at_x: float) -> bool:
 func _physics(o: WorldObject, dt: float) -> void:
 	if o.cooldown > 0.0:
 		o.cooldown -= dt
-	if o.holder != null:
+	if o.holder != null or o.type_name == "papillon":     # le papillon vole tout seul
 		return
 	if o.h > 0.0 or o.vy != 0.0:
 		o.vy += GRAVITY * dt
@@ -566,13 +573,18 @@ func to_dict() -> Dictionary:
 		# Un objet tenu est sauvegardé posé au sol, aux pieds de la créature.
 		var od := {"id": o.id, "type": o.type_name, "x": o.x, "h": 0.0 if o.holder else o.h, "cooldown": o.cooldown,
 			"dead": o.dead}
+		if o.is_plant():
+			od.growth = o.growth
+			od.bites = o.bites
+		if o.is_plant() or o.dead:
+			od.timer = o.timer
 		objs.append(od)
 	var cs := []
 	for c in creatures:
 		cs.append(c.to_dict())
 	return {"version": 4, "time": time, "climate": climate.to_dict(), "screen": screen, "next_id": _next_id, "next_uid": _next_uid,
 		"names": _used_names.keys(), "objects": objs, "creatures": cs, "history": history,
-		"adoption": adoption.to_dict()}
+		"adoption": adoption.to_dict(), "garden": garden.to_dict()}
 
 
 static func from_dict(d: Dictionary) -> WorldSim:
@@ -582,6 +594,7 @@ static func from_dict(d: Dictionary) -> WorldSim:
 	w.time = float(d.time)
 	w.climate.load_dict(d.get("climate", {}))
 	w.adoption.load_dict(d.get("adoption", {}))
+	w.garden.load_dict(d.get("garden", {}))
 	var scr: Dictionary = d.get("screen", {})
 	w.screen = {"mode": int(scr.get("mode", 0)), "index": int(scr.get("index", 0)), "timer": float(scr.get("timer", 0.0))}
 	# v1 : le jardin seul (0 à 3000) ; v2 : salle | jardin | loisirs ; v3 : la maison
@@ -612,6 +625,9 @@ static func from_dict(d: Dictionary) -> WorldSim:
 		var o := WorldObject.new(int(od.id), str(od.type), place.call(float(od.x)), float(od.h))
 		o.cooldown = float(od.cooldown)
 		o.dead = bool(od.get("dead", false))
+		o.growth = int(od.get("growth", Garden.PLANT))
+		o.bites = int(od.get("bites", 0))
+		o.timer = float(od.get("timer", Garden.CORPSE_TIME if o.dead else 0.0))
 		w.objects.append(o)
 	for cd in d.creatures:
 		var c := CreatureSim.from_dict(cd)

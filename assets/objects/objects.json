@@ -210,5 +210,29 @@
   ],
   "scale": 2.0,
   "pixel": true
+ },
+ "lys": {
+  "size": [
+   27,
+   32
+  ],
+  "anchor": [
+   13.5,
+   32
+  ],
+  "scale": 3.0,
+  "pixel": true
+ },
+ "herbe_chat": {
+  "size": [
+   27,
+   32
+  ],
+  "anchor": [
+   13.5,
+   32
+  ],
+  "scale": 3.0,
+  "pixel": true
  }
 }

@@ -101,6 +101,8 @@ func _process(_delta: float) -> void:
 			_objects_layer.add_child(s)
 			_sprites[o.id] = s
 		var sprite_name := o.type_name
+		if o.is_plant() and o.growth != Garden.PLANT and o.growth != Garden.WILTED:
+			sprite_name = "graine" if o.growth == Garden.SEED else "pousse"
 		if o.type_name == "distributeur":
 			sprite_name = "distributeur_on" if o.cooldown <= 0.0 else "distributeur_off"
 		if ObjectCatalog.types[o.type_name].get("invisible", false):     # la mare est dans le décor
@@ -112,6 +114,12 @@ func _process(_delta: float) -> void:
 			if absf(o.vx) > 1.0:
 				s.flip_h = o.vx > 0.0
 			s.flip_v = o.dead
+		# plante fanée : brunie ; papillon : il bat des ailes
+		s.modulate = Color(0.75, 0.55, 0.35) if o.is_plant() and o.growth == Garden.WILTED else Color.WHITE
+		if o.type_name == "papillon":
+			if absf(o.vx) > 1.0:
+				s.flip_h = o.vx > 0.0
+			s.scale.y *= 0.6 + 0.4 * absf(sin(world.time * 9.0 + o.id))
 		s.position = Vector2(o.x, -o.h)
 		s.z_index = 5 if o.holder != null else 0
 	for id in _sprites.keys():

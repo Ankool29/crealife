@@ -19,8 +19,10 @@ Tout le contenu est original : aucun fichier ni code du jeu Creatures n'est util
   d'apprentissage, entrée, puis le **jardin** (pommier, potager, mare) et un
   fond lointain en parallaxe. `tools/build_decor_pixel.py`.
 - **Objets** : gamelle (pleine ou vide), pelote, trampoline, boîte à
-  musique, pomme, graine ; prêts pour plus tard : carotte, pousse, plante,
-  papillon, oiseau, souris, panier, eau. `tools/build_objects_pixel.py`.
+  musique, graine, pousse, plante, papillon, oiseau, souris, eau ; dérivés :
+  lys (fleurs blanches), herbe à chat (feuillage gris-vert, épis mauves),
+  pâtée, croquettes ; prêts pour plus tard : pomme, carotte, panier.
+  `tools/build_objects_pixel.py`.
 
 ### Génétique du pelage (réelle, mendélienne)
 
@@ -79,22 +81,47 @@ Tout le contenu est original : aucun fichier ni code du jeu Creatures n'est util
   protéines (carnivore). Réflexe de survie : affamé, un chat mange ce qu'il
   voit ou part chercher. On dort mieux dans la chambre.
 
+### Écosystème du jardin
+
+- **Plantes** : une graine tombe de temps en temps au jardin (moins en
+  hiver), germe en quelques minutes, devient pousse puis plante (une
+  demi-heure à une heure en tout). L'hiver, elles fanent (brunies) ; elles
+  repoussent au printemps. Dix au plus. Trois sortes : plante ordinaire,
+  **herbe à chat**, **lys**. Les chats aiment les renifler (instinct).
+- **Herbe à chat** : un chat adulte sensible qui la renifle ou la mâche est
+  grisé une minute et demie (plus d'ennui, il joue avec ce qu'il trouve,
+  petite récompense), puis s'en lasse 25 min. Environ un chat sur trois y
+  est insensible : c'est héréditaire (deux allèles dans le gène « gout »,
+  sensibilité dominante, visibles dans l'onglet Gènes : S/S, S/i, i/i). Les
+  chatons n'y réagissent pas.
+- **Lys** (toxique) : le manger rend malade (toxines, douleur) sans tuer un
+  adulte. Le cerveau est puni pour « manger une plante » poussé par le
+  besoin du moment, et le chat garde un **dégoût** du lys (quelques heures) :
+  il ne cherche plus à en manger (il peut encore le renifler).
+- **Papillons** : le jour, aux beaux jours, surtout près des fleurs. Les
+  chats espiègles et chasseurs leur courent après : c'est un jeu, pas un
+  repas ; touché, le papillon s'envole.
+- **Souris** : elles font des petits lentement (huit au plus au jardin) ;
+  si les chats chassent beaucoup, elles se raréfient, et quand il n'en reste
+  presque plus, une arrive parfois d'ailleurs. Une proie attrapée et pas
+  mangée disparaît au bout de 10 min. Les oiseaux passent comme avant.
+- Nouveau mot : **plante** (aussi compris : herbe, fleur, lys, graine), montré
+  par l'écran de la salle d'apprentissage ; « papillon » désigne une proie.
+
 ## Feuille de route
 
 Prochaines étapes, dans l'ordre proposé :
 
-1. **Écosystème du jardin** : graines qui germent, plantes qui poussent,
-   papillons, oiseaux, souris ; herbe à chat, plante toxique à éviter.
-2. **Soins et santé** : litière, brossage des poils longs, maladies,
+1. **Soins et santé** : litière, brossage des poils longs, maladies,
    vétérinaire ; handicaps (membre en moins, aveugle, sourd) avec
    adaptation naturelle.
-3. **Outils d'éleveur** : stérilisation, test génétique, prédiction des
+2. **Outils d'éleveur** : stérilisation, test génétique, prédiction des
    portées, races reconnues, consanguinité.
-4. **Chatterie** : la réputation débloque des choses (étage avec escalier,
+3. **Chatterie** : la réputation débloque des choses (étage avec escalier,
    expositions, meilleures familles).
-5. **Animations plus fluides** : transitions (s'asseoir, se coucher, se
+4. **Animations plus fluides** : transitions (s'asseoir, se coucher, se
    relever, sauter) et planches avec plus d'images (8 au lieu de 2 à 4).
-6. Dessins à venir : formes de tête, queue courte (Manx).
+5. Dessins à venir : formes de tête, queue courte (Manx), chat qui se roule dans l'herbe à chat.
 
 ### Commandes
 
@@ -149,8 +176,11 @@ src/sim/brain/        Cerveau à lobes, langage
 src/sim/creature_sim.gd  Un chat : corps, chimie, cerveau, actions
 src/sim/creature/     Ses modules : famille (accouplement, mise bas,
                       allaitement, soins), alimentation (goûts, chasse,
-                      réflexe de survie), caractère (peur, amitiés)
+                      réflexe de survie), caractère (peur, amitiés),
+                      jardin (herbe à chat, lys, papillons)
 src/sim/world_sim.gd  Monde : maison, jardin, climat, objets
+src/sim/world/        Climat, catalogue d'objets, écosystème du jardin
+                      (plantes, papillons, souris)
 src/sim/adoption.gd   Demandes d'adoption, réputation
 src/save_store.gd     Sauvegarde sûre (fichier temporaire, copie de secours)
 src/view/, src/ui/    Affichage (shader du pelage) et interface tactile

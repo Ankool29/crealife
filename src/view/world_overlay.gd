@@ -5,7 +5,7 @@ extends Node2D
 ## pluie, la neige et le sol enneigé (zones extérieures seulement).
 
 const NOUN_SPRITES := {"pâtée": "patee", "croquettes": "croquettes", "proie": "souris", "jouet": "balle",
-	"machine": "distributeur_on", "eau": "eau"}
+	"machine": "distributeur_on", "eau": "eau", "plante": "plante"}
 const VERB_ANIM := {"approcher": "marche", "fuir": "marche", "explorer": "marche", "examiner": "examiner", "rien": "assis",
 	"prendre": "prendre", "lâcher": "prendre", "manger": "manger", "pousser": "pousser", "tirer": "pousser",
 	"frapper": "frapper", "parler": "parler", "dormir": "dormir", "accoupler": "parler"}

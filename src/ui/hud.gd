@@ -342,6 +342,11 @@ func update_from(c: CreatureSim, world: WorldSim, event_text: String, sim_speed:
 	var fav := c.favorite_food()
 	if fav != "":
 		info += " · préfère " + {"patee": "la pâtée", "croquettes": "les croquettes", "proie": "chasser"}[fav]
+	if c.catnip_left > 0.0:
+		info += " · grisée par l'herbe à chat"
+	for t in c.aversion:
+		if CatGarden.averse(c, t):
+			info += " · évite le " + ObjectCatalog.label_of(t)
 	info += " · %d vivantes" % world.alive_count()
 	_info_label.text = info
 	var values := [c.level("Faim"), c.level("Soif"), c.level("Fatigue"), c.level("Ennui"),

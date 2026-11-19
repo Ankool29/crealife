@@ -7,7 +7,7 @@
 		"machine",
 		"eau",
 		"créature",
-		"œuf"
+		"plante"
 	],
 	"types": {
 		"balle": {
@@ -327,6 +327,133 @@
 				"examiner": {
 					"chems": {
 						"Ennui": -0.03
+					}
+				}
+			}
+		},
+		"plante": {
+			"category": "plante",
+			"label": "plante",
+			"carry": false,
+			"plant": {
+				"flowers": false,
+				"bites": 4
+			},
+			"verbs": {
+				"examiner": {
+					"chems": {
+						"Ennui": -0.04
+					}
+				},
+				"manger": {
+					"chems": {
+						"Ennui": -0.03
+					},
+					"nibble": true
+				},
+				"frapper": {
+					"chems": {
+						"Ennui": -0.05
+					}
+				},
+				"pousser": {
+					"chems": {
+						"Ennui": -0.03
+					}
+				}
+			}
+		},
+		"herbe_chat": {
+			"category": "plante",
+			"label": "herbe à chat",
+			"carry": false,
+			"plant": {
+				"flowers": true,
+				"catnip": true,
+				"bites": 4
+			},
+			"verbs": {
+				"examiner": {
+					"chems": {
+						"Ennui": -0.04
+					}
+				},
+				"manger": {
+					"chems": {
+						"Ennui": -0.03
+					},
+					"nibble": true
+				},
+				"frapper": {
+					"chems": {
+						"Ennui": -0.05
+					}
+				},
+				"pousser": {
+					"chems": {
+						"Ennui": -0.03
+					}
+				}
+			}
+		},
+		"lys": {
+			"category": "plante",
+			"label": "lys",
+			"carry": false,
+			"plant": {
+				"flowers": true,
+				"toxic": 0.35,
+				"bites": 2
+			},
+			"verbs": {
+				"examiner": {
+					"chems": {
+						"Ennui": -0.04
+					}
+				},
+				"manger": {
+					"chems": {},
+					"nibble": true
+				},
+				"frapper": {
+					"chems": {
+						"Ennui": -0.05
+					}
+				},
+				"pousser": {
+					"chems": {
+						"Ennui": -0.03
+					}
+				}
+			}
+		},
+		"papillon": {
+			"category": "proie",
+			"label": "papillon",
+			"carry": false,
+			"prey": {
+				"speed": 60,
+				"flee": 140,
+				"catch": 0.4,
+				"flies": true,
+				"butterfly": true
+			},
+			"verbs": {
+				"frapper": {
+					"prey": true
+				},
+				"pousser": {
+					"prey": true
+				},
+				"prendre": {
+					"prey": true
+				},
+				"manger": {
+					"prey": true
+				},
+				"examiner": {
+					"chems": {
+						"Ennui": -0.06
 					}
 				}
 			}

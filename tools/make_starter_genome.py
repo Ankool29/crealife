@@ -194,8 +194,11 @@ gene("lobe", {"lobe": "temperament", "curiosity": 0.5, "playfulness": 0.5})
 LOCI = ["O", "B", "D", "A", "T", "Ti", "Sp", "C", "W", "S", "I", "L", "M"]
 gene("apparence", dict({"part": "pelage"}, **{l + k: 0.0 for l in LOCI for k in "12"}))
 gene("apparence", {"part": "morpho", "head": 0.5, "eye": 0.5, "rufous": 0.5, "white_grade": 0.5, "contrast": 0.5})
-# Goûts (plaisir de chaque aliment) et instinct de chasse
-gene("lobe", {"lobe": "gout", "patee": 0.7, "croquettes": 0.5, "proie": 0.6, "chasse": 0.5})
+# Goûts (plaisir de chaque aliment) et instinct de chasse ; herbe1 et herbe2 :
+# les deux allèles de la sensibilité à l'herbe à chat (1 = sensible, dominant ;
+# 0 = insensible). Environ un chat sur trois est insensible (deux allèles 0).
+gene("lobe", {"lobe": "gout", "patee": 0.7, "croquettes": 0.5, "proie": 0.6, "chasse": 0.5,
+              "herbe1": 1.0, "herbe2": 0.0})
 instinct("Faim", "proie", "manger", 1.0, 4)                                # une proie attrapée se mange
 instinct("Ennui", "proie", "frapper", 0.8, 3)                              # jouer à chasser
 # Carnivore : le foie fabrique du glucose à partir des protéines (néoglucogenèse)
@@ -204,6 +207,8 @@ reaction("Protéines", "Glucose", 0.03, "Foie", cond="Glucose", lo=0.0, hi=0.5)
 gene("lobe", {"lobe": "caractere", "sociable": 0.5, "audace": 0.5, "agressivite": 0.3, "energie": 0.5})
 instinct("Peur", "créature", "fuir", 1.0, 4)                               # fuir ce qui fait peur
 emitter("chem:Peur", "Adrénaline", 0.04, threshold=0.3)                    # la peur donne des ailes
+# --- Écosystème du jardin (à la fin, voir plus haut) ---
+instinct("Ennui", "plante", "examiner", 0.6, 3)                            # renifler les plantes
 
 catalog = [{"id": i + 1, "name": n, "family": f} for i, (n, f, _h, _v) in enumerate(CHEMICALS)]
 (ROOT / "data").mkdir(exist_ok=True)
