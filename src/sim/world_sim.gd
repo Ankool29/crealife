@@ -325,6 +325,15 @@ func litter_size_for(mother: CreatureSim) -> int:
 	return clampi(n, 1, maxi(1, room))
 
 
+func find_uid(uid: int) -> CreatureSim:
+	if uid < 0:
+		return null
+	for c in creatures:
+		if c.uid == uid:
+			return c
+	return null
+
+
 func find_creature(n: String) -> CreatureSim:
 	if n == "":
 		return null
@@ -439,9 +448,11 @@ func _spawners(dt: float) -> void:
 	# Distributeurs automatiques : quelques croquettes dès que la gamelle se vide
 	_feeder_timer -= dt
 	if _feeder_timer <= 0.0:
-		_feeder_timer = rng.randf_range(FEEDER_PERIOD * 0.8, FEEDER_PERIOD * 1.2)
+		# plus il y a de chats, plus il sert souvent et largement
+		var n := alive_count()
+		_feeder_timer = rng.randf_range(0.8, 1.2) * FEEDER_PERIOD / (1.0 + 0.2 * n)
 		for o in objects.duplicate():
-			if o.type_name == "distributeur" and _food_around(o.x, 300.0) < 3:
+			if o.type_name == "distributeur" and _food_around(o.x, 300.0) < 2 + n / 2:
 				add_object("croquettes", o.x + rng.randf_range(50.0, 90.0), 0.0)
 	# Pâtée du joueur : une portion revient toutes les 10 min
 	if patee_stock < PATEE_MAX:

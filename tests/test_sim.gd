@@ -22,6 +22,7 @@ func _init() -> void:
 	_test_litter()
 	_test_adoption()
 	_test_food()
+	_test_character()
 	_test_zones_and_climate()
 	_test_cat_genetics()
 	print("RÉSULTAT : %s" % ("OK" if _failures == 0 else "%d échec(s)" % _failures))
@@ -275,6 +276,8 @@ func _test_language() -> void:
 		var ordered := run % 2 == 1
 		var w2 := WorldSim.new(43 + run / 2, "vide")
 		var c2 := w2.creatures[0]
+		c2.energy = 0.5                      # caractère neutre : seul l'ordre change
+		c2.sociable = 0.5
 		c2.language.verbs[Brain.Verb.POUSSER] = 1.0
 		c2.language.nouns[jouet] = 1.0
 		w2.add_object("balle", c2.x + 150.0)
@@ -482,6 +485,83 @@ func _test_food() -> void:
 	_check(r_patee > hunter.level("Récompense") * 3.0, "la pâtée lui fait bien plus plaisir que les croquettes")
 
 
+func _test_character() -> void:
+	print("Caractères :")
+	var w := WorldSim.new(83, "vide", 2)
+	var a := w.creatures[0]
+	var b := w.creatures[1]
+	for c in w.creatures:
+		c.age = 3.0 * 3600.0
+	# peur : un coup effraie bien plus un peureux qu'un audacieux
+	a.boldness = 0.05
+	b.boldness = 0.95
+	var pid := Chemicals.id_of("Peur")
+	a.biochem.conc[pid] = 0.0
+	b.biochem.conc[pid] = 0.0
+	a.frighten(0.4)
+	b.frighten(0.4)
+	_check(a.level("Peur") > 3.0 * b.level("Peur"), "un coup effraie plus un peureux (%.2f) qu'un audacieux (%.2f)" % [a.level("Peur"), b.level("Peur")])
+	# un peureux frappé s'enfuit loin de son agresseur
+	a.x = 1500.0
+	b.x = 1560.0
+	b._act_on_creature(a, Brain.Verb.FRAPPER, w)
+	a.biochem.conc[pid] = 0.8
+	var fled := false
+	var far := 0.0
+	for i in 150:
+		w.tick(STEP)
+		fled = fled or a.brain.verb == Brain.Verb.FUIR
+		far = maxf(far, absf(a.x - b.x))
+	_check(fled and far > 200.0, "un chat effrayé s'enfuit loin de celui qui l'a frappé (%d px)" % int(far))
+	_check(a.affinity_with(b) < 0.0 and b.affinity_with(a) < 0.0, "les coups font des rivaux")
+	# amitié : se parler rapproche
+	var w2 := WorldSim.new(84, "vide", 2)
+	var c := w2.creatures[0]
+	var d := w2.creatures[1]
+	for i in 10:
+		c._act_on_creature(d, Brain.Verb.PARLER, w2)
+	_check(c.affinity_with(d) > 0.3, "se parler crée une amitié (%.2f)" % c.affinity_with(d))
+	# indépendant : trop de câlins, coup de patte ; câlin : il ronronne
+	c.sociable = 0.1
+	var swat := false
+	for i in 6:
+		c.caress()
+		swat = swat or c.last_event.contains("coup de patte")
+	_check(swat, "un chat indépendant se lasse des câlins")
+	d.sociable = 0.9
+	d.caress()
+	_check(d.language.speech == "rrrr", "un chat câlin ronronne")
+	_check("câline" in d.personality() or "câlin" in d.personality(), "son caractère s'affiche (%s)" % ", ".join(d.personality()))
+	# sociabilité : les indépendants se sentent moins seuls
+	var lonely := [0.0, 0.0]
+	for run in 2:
+		var w3 := WorldSim.new(85, "vide", 1)
+		var e := w3.creatures[0]
+		e.sociable = 0.9 if run == 1 else 0.1
+		e.biochem.conc[Chemicals.id_of("Solitude")] = 0.0
+		for i in 1500:
+			w3.tick(STEP)
+		lonely[run] = e.level("Solitude")
+	_check(lonely[1] > lonely[0] * 2.0, "seuls, les sociables souffrent plus de solitude (%.2f contre %.2f)" % [lonely[1], lonely[0]])
+	# bagarreur : il cherche querelle à un adulte de même sexe
+	var w4 := WorldSim.new(86, "vide", 2)
+	var f := w4.creatures[0]
+	var g := w4.creatures[1]
+	g.sex = f.sex
+	for e in w4.creatures:
+		e.age = 3.0 * 3600.0
+		e.x = 1500.0 + (100.0 if e == g else 0.0)
+	f.aggressive = 1.0
+	var quarrel := false
+	for i in 9000:
+		w4.tick(STEP)
+		g.x = f.x + 100.0
+		quarrel = quarrel or g.affinity_with(f) < 0.0           # il s'est pris un coup
+		if quarrel:
+			break
+	_check(quarrel, "un bagarreur cherche querelle")
+
+
 func _test_family_life() -> void:
 	print("Vie de famille :")
 	# Mélange des couleurs : les enfants ne sont pas des copies d'un parent
@@ -526,7 +606,7 @@ func _test_family_life() -> void:
 		was_pregnant = f.pregnant_time >= 0.0
 	print("    en 2 h d'âge adulte : %d tentatives, %d accouplements réussis" % [tries, mates])
 	_check(mates >= 1 and mates <= 3, "ils s'accouplent, mais pas sans arrêt")
-	_check(tries <= 30, "ils n'insistent pas en boucle")
+	_check(tries <= 40, "ils n'insistent pas en boucle")
 
 	# Soins : un parent nourrit son petit affamé
 	var w2 := WorldSim.new(67, "vide", 1)

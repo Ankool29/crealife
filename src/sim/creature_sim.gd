@@ -97,6 +97,16 @@ var _mate_rest := 0.0
 var _screen_time := 0.0
 ## Goûts (gène « gout ») : plaisir que donne chaque aliment, et instinct de chasse.
 var taste := {"patee": 0.7, "croquettes": 0.5, "proie": 0.6}
+## Caractère (gène « caractere ») : sociabilité (câlins, besoin de compagnie),
+## audace (peur), agressivité (bagarres), énergie (fatigue, vitesse).
+var sociable := 0.5
+var boldness := 0.5
+var aggressive := 0.3
+var energy := 0.5
+## Relations : uid d'un autre chat -> affinité (-1 rival ... +1 ami).
+var affinity := {}
+var _caress_recent := 0.0          # câlins rapprochés : les indépendants s'en lassent
+var _threat_uid := -1              # le chat qui lui fait peur
 var hunting := 0.5
 var catches := 0           # temps qu'elle compte encore passer devant l'écran
 var _refused := 0.0
@@ -128,7 +138,7 @@ func _init(p_name: String, p_genome: Genome, p_x: float, p_sex: int) -> void:
 	x = p_x
 	_goal_x = p_x
 	biochem = Biochemistry.new()
-	for n in ["Faim", "Soif", "Fatigue", "Ennui", "Douleur", "Eau", "Glucose", "Toxines", "Récompense", "Punition",
+	for n in ["Faim", "Peur", "Adrénaline", "Soif", "Fatigue", "Ennui", "Douleur", "Eau", "Glucose", "Toxines", "Récompense", "Punition",
 			"Solitude", "Désir", "Hormone sexuelle", "Froid", "Chaud"]:
 		_chem[n] = Chemicals.id_of(n)
 	var l := biochem.loci
@@ -185,6 +195,15 @@ static func ensure_cat_genes(g: Genome, rng: RandomNumberGenerator, random: bool
 	if random:
 		for k in ["patee", "croquettes", "proie", "chasse"]:
 			taste_gene.params[k] = clampf(float(taste_gene.params[k]) + r.randf_range(-0.35, 0.35), 0.0, 1.0)
+	var char_gene := g.find(Gene.Type.LOBE, "lobe", "caractere")
+	var char_new := char_gene == null
+	if char_new:
+		char_gene = starter.find(Gene.Type.LOBE, "lobe", "caractere").copy()
+		g.genes.append(char_gene)
+	if random or char_new:
+		for k in ["sociable", "audace", "energie"]:
+			char_gene.params[k] = clampf(r.randfn(0.5, 0.2), 0.0, 1.0)
+		char_gene.params.agressivite = clampf(r.randfn(0.3, 0.2), 0.0, 1.0)
 
 
 ## Exprime les gènes du stade actuel (naissance, puis à chaque changement de stade).
@@ -210,6 +229,11 @@ func _express(first_time: bool) -> void:
 			for k in taste:
 				taste[k] = float(g.params.get(k, taste[k]))
 			hunting = float(g.params.get("chasse", 0.5))
+		if g.type == Gene.Type.LOBE and g.params.get("lobe", "") == "caractere":
+			sociable = float(g.params.get("sociable", 0.5))
+			boldness = float(g.params.get("audace", 0.5))
+			aggressive = float(g.params.get("agressivite", 0.3))
+			energy = float(g.params.get("energie", 0.5))
 			playfulness = float(g.params.get("playfulness", 0.5))
 	var pel := genome.find(Gene.Type.APPEARANCE, "part", "pelage")
 	var mor := genome.find(Gene.Type.APPEARANCE, "part", "morpho")
@@ -326,10 +350,16 @@ func tick(dt: float, world: WorldSim, rng: RandomNumberGenerator) -> void:
 
 	var l := biochem.loci.values
 	l[_l_meta] = 1.0
-	l[_l_act] = ACTIVITY[brain.verb]
+	l[_l_act] = ACTIVITY[brain.verb] * lerpf(1.5, 0.6, energy)     # les énergiques se fatiguent moins
 	l[_l_dort] = 1.0 if brain.verb == Verb.DORMIR else 0.0
 	l[_l_ennui] = 0.0 if brain.verb == Verb.EXPLORER else lerpf(0.5, 1.8, playfulness)
-	l[_l_seul] = brain.situation[3]
+	l[_l_seul] = brain.situation[3] * lerpf(0.3, 1.8, sociable)    # les indépendants s'ennuient peu des autres
+	_caress_recent = maxf(0.0, _caress_recent - dt / 30.0)
+	if is_asleep():                    # dormir côte à côte rapproche
+		for c in world.creatures:
+			if c != self and c.alive and c.is_asleep() and absf(c.x - x) < 130.0:
+				bond(c, 0.004 * dt)
+	_fear_reflex(dt, world)
 	_feel_climate(dt, world)
 	biochem.step(dt, age)
 
@@ -455,17 +485,23 @@ func _decide(world: WorldSim, rng: RandomNumberGenerator) -> void:
 			_action_time = 400.0
 		Verb.FUIR:
 			_action_time = 6.0
-			_goal_x = clampf(x + signf(x - target.x + 0.01) * 300.0, 60.0, world.width - 60.0)
+			var from: float = target.x if target != null else x - facing
+			_goal_x = clampf(x + signf(x - from + 0.01) * 300.0, 60.0, world.width - 60.0)
 		_:
 			_action_time = 20.0
 
 
+## Le chat « en vue » : le plus proche, mais on va plus volontiers vers ses
+## amis et on évite ses rivaux.
 func _nearest_creature(world: WorldSim) -> CreatureSim:
 	var best: CreatureSim = null
 	var best_d := VISION_RANGE
 	for c in world.creatures:
-		if c != self and c.alive and absf(c.x - x) < best_d:
-			best_d = absf(c.x - x)
+		if c == self or not c.alive or absf(c.x - x) >= VISION_RANGE:
+			continue
+		var d := absf(c.x - x) - affinity_with(c) * 250.0
+		if d < best_d:
+			best_d = d
 			best = c
 	return best
 
@@ -543,12 +579,19 @@ func _act_on_creature(other: CreatureSim, v: int, world: WorldSim) -> void:
 			biochem.add(_chem["Solitude"], -0.3)
 			other.biochem.add(other._chem["Solitude"], -0.3)
 			biochem.add(_chem["Ennui"], -0.05)
+			bond(other, 0.06)
+			other.bond(self, 0.06)
 		Verb.EXAMINER:
 			biochem.add(_chem["Solitude"], -0.05)
 		Verb.FRAPPER:
 			other.biochem.add(other._chem["Douleur"], 0.3)
-			biochem.add(_chem["Ennui"], -0.1)
+			# seuls les bagarreurs y trouvent du plaisir ; les autres s'en veulent un peu
+			biochem.add(_chem["Ennui"], -0.1 * aggressive)
+			biochem.add(_chem["Punition"], 0.3 * (1.0 - aggressive))
 			other.last_event = "%s a été frappée par %s." % [other.creature_name, creature_name]
+			other.frighten(0.5, self)
+			bond(other, -0.25)
+			other.bond(self, -0.35)
 		Verb.POUSSER:
 			other.x = clampf(other.x + facing * 40.0, 60.0, world.width - 60.0)
 			biochem.add(_chem["Ennui"], -0.05)
@@ -568,6 +611,7 @@ func _try_mating(other: CreatureSim, world: WorldSim) -> void:
 	var male: CreatureSim = other if female == self else self
 	for c in [self, other]:
 		c.biochem.add(c._chem["Désir"], -0.8)
+		c.bond(other if c == self else self, 0.1)
 		c.biochem.conc[c._chem["Hormone sexuelle"]] = 0.0
 		c._mate_rest = MATING_REST
 	female.pregnant_time = 0.0
@@ -657,14 +701,103 @@ func _start_care(world: WorldSim, rng: RandomNumberGenerator) -> bool:
 	return true
 
 
+# ------------------------------------------------------------- caractère --
+
+## Quelque chose lui fait peur (un coup, un chat agressif...) : plus ou moins
+## selon son audace.
+func frighten(amount: float, source: CreatureSim = null) -> void:
+	biochem.add(_chem["Peur"], amount * lerpf(1.6, 0.3, boldness))
+	if source != null:
+		_threat_uid = source.uid
+
+
+## Affinité avec un autre chat : monte quand on se parle, se blottit, s'accouple ;
+## baisse quand on se bat.
+func bond(other: CreatureSim, amount: float) -> void:
+	if other == null or other == self:
+		return
+	affinity[other.uid] = clampf(float(affinity.get(other.uid, 0.0)) + amount, -1.0, 1.0)
+
+
+func affinity_with(other: CreatureSim) -> float:
+	return float(affinity.get(other.uid, 0.0))
+
+
+## Peur : un chat peureux s'enfuit loin de ce qui l'effraie (un rival
+## agressif qui approche, le chat qui vient de le frapper). Les bagarreurs,
+## eux, cherchent parfois querelle à un adulte de même sexe tout proche.
+func _fear_reflex(dt: float, world: WorldSim) -> void:
+	if not alive or is_asleep() or _care.size() > 0:
+		return
+	for c in world.creatures:
+		if c == self or not c.alive or absf(c.x - x) > 260.0:
+			continue
+		if c.aggressive > 0.7 and affinity_with(c) < -0.3 and c.stage >= Lifecycle.Stage.ADULT:
+			frighten(0.04 * dt, c)              # un rival menaçant tout près
+	if level("Peur") > 0.55 and brain.verb != Verb.FUIR:
+		var threat := world.find_uid(_threat_uid)
+		if threat != null and absf(threat.x - x) < 400.0:
+			brain.verb = Verb.FUIR
+			brain.clear_trace()
+			target = threat
+			_done = false
+			_action_time = 6.0
+			_goal_x = clampf(x + signf(x - threat.x + 0.01) * 350.0, 60.0, world.width - 60.0)
+			last_event = "%s a peur de %s et s'enfuit." % [creature_name, threat.creature_name]
+			language.speech = "!"
+			language.speech_left = Language.SAY_TIME
+	# querelle : rare, et seulement chez les bagarreurs
+	if aggressive > 0.6 and stage == Lifecycle.Stage.ADULT and brain.verb in [Verb.RIEN, Verb.EXPLORER] \
+			and world.rng.randf() < (aggressive - 0.6) * 0.02 * dt:
+		for c in world.creatures:
+			if c != self and c.alive and c.stage == Lifecycle.Stage.ADULT and c.sex == sex \
+					and absf(c.x - x) < 200.0 and affinity_with(c) < 0.3:
+				brain.verb = Verb.FRAPPER
+				brain.clear_trace()
+				target = c
+				_done = false
+				_action_time = 8.0
+				last_event = "%s cherche querelle à %s." % [creature_name, c.creature_name]
+				language.speech = "fff !"          # il crache
+				language.speech_left = Language.SAY_TIME
+				break
+
+
+## Quelques mots pour décrire son caractère (panneau, adoptions).
+func personality() -> Array[String]:
+	var f := sex == Gene.Sex.FEMALE
+	var w: Array[String] = []
+	if sociable > 0.65:
+		w.append("câline" if f else "câlin")
+	elif sociable < 0.35:
+		w.append("indépendante" if f else "indépendant")
+	if boldness < 0.35:
+		w.append("peureuse" if f else "peureux")
+	elif boldness > 0.7:
+		w.append("audacieuse" if f else "audacieux")
+	if aggressive > 0.6:
+		w.append("bagarreuse" if f else "bagarreur")
+	if energy > 0.7:
+		w.append("énergique")
+	elif energy < 0.3:
+		w.append("dormeuse" if f else "dormeur")
+	if playfulness > 0.7:
+		w.append("joueuse" if f else "joueur")
+	if curiosity > 0.7:
+		w.append("curieuse" if f else "curieux")
+	return w
+
+
 ## Réflexe de survie : affamée devant de la nourriture, ou assoiffée devant
 ## de l'eau, elle mange ou boit, quoi que son cerveau ait appris d'autre.
 func _survival_reflex(world: WorldSim) -> void:
 	var cats := ObjectCatalog.categories
 	var want := ""
-	if level("Faim") > 0.8:
+	if level("Soif") > 0.6 and level("Soif") >= level("Faim"):
+		want = "soif"
+	elif level("Faim") > 0.7:
 		want = "faim"
-	elif level("Soif") > 0.8:
+	elif level("Soif") > 0.6:
 		want = "soif"
 	if want == "":
 		return
@@ -975,8 +1108,18 @@ func drop_held() -> void:
 func caress() -> void:
 	if not alive:
 		return
-	biochem.add(_chem["Récompense"], 1.0)
+	# un indépendant qu'on câline trop souvent finit par donner un coup de patte
+	_caress_recent += 1.0
+	if sociable < 0.35 and _caress_recent > 1.5 + sociable * 4.0:
+		biochem.add(_chem["Punition"], 0.2)
+		last_event = "%s vous donne un coup de patte : trop de câlins pour ce chat indépendant." % creature_name
+		return
+	biochem.add(_chem["Récompense"], lerpf(0.5, 1.4, sociable))
 	biochem.add(_chem["Ennui"], -0.1)
+	biochem.add(_chem["Peur"], -0.3)
+	if sociable > 0.6:
+		language.speech = "rrrr"           # il ronronne
+		language.speech_left = Language.SAY_TIME
 	last_event = "%s a été caressée pendant qu'elle : %s." % [creature_name, action_text().to_lower()]
 
 
@@ -985,6 +1128,7 @@ func scold() -> void:
 	if not alive:
 		return
 	biochem.add(_chem["Punition"], 1.0)
+	biochem.add(_chem["Peur"], 0.3 * lerpf(1.5, 0.3, boldness))
 	last_event = "%s a été grondée pendant qu'elle : %s." % [creature_name, action_text().to_lower()]
 	_action_time = minf(_action_time, AFTER_ACTION)
 
@@ -1026,7 +1170,7 @@ func to_dict() -> Dictionary:
 		"uid": uid, "name": creature_name, "genome": genome.to_dict(), "sex": sex,
 		"generation": generation, "mother": mother, "father": father,
 		"x": x, "facing": facing, "age": age, "alive": alive, "death_cause": death_cause,
-		"meals": meals, "naps": naps, "eaten": eaten, "catches": catches,
+		"meals": meals, "naps": naps, "eaten": eaten, "catches": catches, "affinity": affinity,
 		"pregnant_time": pregnant_time, "litter_size": litter_size, "father_genome": _father_genome.to_dict() if _father_genome else null,
 		"father_name": _father_name, "mate_rest": _mate_rest,
 		"biochem": biochem.to_dict(), "brain": brain.to_dict(), "language": language.to_dict(),
@@ -1048,6 +1192,8 @@ static func from_dict(d: Dictionary) -> CreatureSim:
 	c.meals = int(d.meals)
 	c.naps = int(d.naps)
 	c.catches = int(d.get("catches", 0))
+	for k in d.get("affinity", {}):
+		c.affinity[int(k)] = float(d.affinity[k])
 	c.eaten = d.eaten
 	c.pregnant_time = float(d.pregnant_time)
 	c.litter_size = int(d.get("litter_size", 1))
@@ -1091,7 +1237,8 @@ func _move_towards(tx: float, dt: float) -> bool:
 	if absf(dx) < 4.0:
 		return true
 	facing = signf(dx)
-	var speed := _speed * (1.0 + 0.5 * minf(biochem.loci.values[_l_speed], 1.0)) * Lifecycle.STAGE_SIZE[stage]
+	var speed := _speed * (1.0 + 0.5 * minf(biochem.loci.values[_l_speed], 1.0)) * Lifecycle.STAGE_SIZE[stage] \
+		* lerpf(0.85, 1.15, energy)
 	x = move_toward(x, tx, speed * dt)
 	is_moving = true
 	return false

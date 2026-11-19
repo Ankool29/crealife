@@ -2160,6 +2160,58 @@
 				"lo": 0.0,
 				"hi": 0.5
 			}
+		},
+		{
+			"id": 126,
+			"type": "lobe",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"lobe": "caractere",
+				"sociable": 0.5,
+				"audace": 0.5,
+				"agressivite": 0.3,
+				"energie": 0.5
+			}
+		},
+		{
+			"id": 127,
+			"type": "instinct",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"drive": "Peur",
+				"category": "créature",
+				"verb": "fuir",
+				"reward": 1.0,
+				"repeat": 4
+			}
+		},
+		{
+			"id": 128,
+			"type": "emetteur",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"source": "chem:Peur",
+				"invert": false,
+				"threshold": 0.3,
+				"gain": 0.04,
+				"chem": "Adrénaline",
+				"organ": "Corps"
+			}
 		}
 	]
 }

@@ -47,6 +47,14 @@ Tout le contenu est original : aucun fichier ni code du jeu Creatures n'est util
   (bulles) et se transmettent leurs mots.
 - Tempéraments héréditaires : curiosité (va devant l'écran, apprend
   mieux), espièglerie (va jouer), instinct parental.
+- **Caractère** héréditaire : sociabilité (besoin de compagnie, câlins,
+  ronronne ; un indépendant donne un coup de patte si on le câline trop),
+  audace (un peureux s'enfuit devant ce qui l'effraie), agressivité (les
+  bagarreurs cherchent querelle aux adultes de même sexe), énergie
+  (fatigue, vitesse). **Amitiés et rivalités** : se parler, dormir côte à
+  côte, s'accoupler rapproche ; les coups font des rivaux ; on va plus
+  volontiers vers ses amis. Résumé dans le panneau, détail dans
+  Observer → Famille.
 - Climat : jour et nuit, saisons, météo, température ressentie ; la
   maison est tempérée.
 
@@ -75,23 +83,18 @@ Tout le contenu est original : aucun fichier ni code du jeu Creatures n'est util
 
 Prochaines étapes, dans l'ordre proposé :
 
-1. **Caractères plus variés** : nouveaux gènes de tempérament
-   (sociabilité et câlins, peur ou audace, agressivité et territoire,
-   gourmandise, activité nocturne), portés par de la chimie (stress,
-   attachement) ; quelques nouveaux comportements (fuir, se cacher, se
-   frotter, ronronner) ; amitiés et rivalités entre chats.
-2. **Écosystème du jardin** : graines qui germent, plantes qui poussent,
+1. **Écosystème du jardin** : graines qui germent, plantes qui poussent,
    papillons, oiseaux, souris ; herbe à chat, plante toxique à éviter.
-3. **Soins et santé** : litière, brossage des poils longs, maladies,
+2. **Soins et santé** : litière, brossage des poils longs, maladies,
    vétérinaire ; handicaps (membre en moins, aveugle, sourd) avec
    adaptation naturelle.
-4. **Outils d'éleveur** : stérilisation, test génétique, prédiction des
+3. **Outils d'éleveur** : stérilisation, test génétique, prédiction des
    portées, races reconnues, consanguinité.
-5. **Chatterie** : la réputation débloque des choses (étage avec escalier,
+4. **Chatterie** : la réputation débloque des choses (étage avec escalier,
    expositions, meilleures familles).
-6. **Animations plus fluides** : transitions (s'asseoir, se coucher, se
+5. **Animations plus fluides** : transitions (s'asseoir, se coucher, se
    relever, sauter) et planches avec plus d'images (8 au lieu de 2 à 4).
-7. Dessins à venir : formes de tête, queue courte (Manx).
+6. Dessins à venir : formes de tête, queue courte (Manx).
 
 ### Commandes
 

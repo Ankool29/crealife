@@ -200,6 +200,10 @@ instinct("Faim", "proie", "manger", 1.0, 4)                                # une
 instinct("Ennui", "proie", "frapper", 0.8, 3)                              # jouer à chasser
 # Carnivore : le foie fabrique du glucose à partir des protéines (néoglucogenèse)
 reaction("Protéines", "Glucose", 0.03, "Foie", cond="Glucose", lo=0.0, hi=0.5)
+# Caractère : sociabilité, audace, agressivité, énergie (voir creature_sim.gd)
+gene("lobe", {"lobe": "caractere", "sociable": 0.5, "audace": 0.5, "agressivite": 0.3, "energie": 0.5})
+instinct("Peur", "créature", "fuir", 1.0, 4)                               # fuir ce qui fait peur
+emitter("chem:Peur", "Adrénaline", 0.04, threshold=0.3)                    # la peur donne des ailes
 
 catalog = [{"id": i + 1, "name": n, "family": f} for i, (n, f, _h, _v) in enumerate(CHEMICALS)]
 (ROOT / "data").mkdir(exist_ok=True)

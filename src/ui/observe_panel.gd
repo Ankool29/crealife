@@ -170,6 +170,9 @@ func _gene_summary(g: Gene) -> String:
 		Gene.Type.LOBE:
 			if str(p.lobe) == "temperament":
 				return "tempérament : curiosité %.2f, espièglerie %.2f" % [float(p.get("curiosity", 0)), float(p.get("playfulness", 0))]
+			if str(p.lobe) == "caractere":
+				return "caractère : sociabilité %.2f, audace %.2f, agressivité %.2f, énergie %.2f" % [
+					float(p.get("sociable", 0)), float(p.get("audace", 0)), float(p.get("agressivite", 0)), float(p.get("energie", 0))]
 			if str(p.lobe) == "gout":
 				return "goûts : pâtée %.2f, croquettes %.2f, proies %.2f ; instinct de chasse %.2f" % [
 					float(p.get("patee", 0)), float(p.get("croquettes", 0)), float(p.get("proie", 0)), float(p.get("chasse", 0))]
@@ -215,7 +218,22 @@ func _gene_summary(g: Gene) -> String:
 func _family_text() -> String:
 	var rows := world.history.duplicate()
 	rows.sort_custom(func(a, b): return a.generation < b.generation or (a.generation == b.generation and a.born_at < b.born_at))
-	var t := "[b]Famille : %d créatures, %d vivantes[/b]\n\n" % [rows.size(), world.alive_count()]
+	var t := ""
+	if creature:
+		var p := creature.personality()
+		t += "[b]%s[/b] : %s\n" % [creature.creature_name, ", ".join(p) if not p.is_empty() else "caractère sans excès"]
+		var friends: Array[String] = []
+		var rivals: Array[String] = []
+		for c in world.creatures:
+			if c != creature and c.alive:
+				var a := creature.affinity_with(c)
+				if a > 0.3:
+					friends.append(c.creature_name)
+				elif a < -0.2:
+					rivals.append(c.creature_name)
+		t += "  Amis : %s\n  Rivaux : %s\n\n" % [", ".join(friends) if not friends.is_empty() else "personne",
+			", ".join(rivals) if not rivals.is_empty() else "personne"]
+	t += "[b]Famille : %d créatures, %d vivantes[/b]\n\n" % [rows.size(), world.alive_count()]
 	var gen := 0
 	for h in rows:
 		if int(h.generation) != gen:
@@ -235,7 +253,10 @@ func _family_text() -> String:
 				line += ", attend des petits"
 		else:
 			var m := int(float(h.age) / 60.0)
-			line += "  — morte %s à %d h %02d" % [h.cause, m / 60, m % 60]
+			if str(h.cause).begins_with("adopté"):
+				line += "  — %s à %d h %02d" % [h.cause, m / 60, m % 60]
+			else:
+				line += "  — morte %s à %d h %02d" % [h.cause, m / 60, m % 60]
 		if creature and int(h.uid) == creature.uid:
 			line = "[b]" + line + "[/b]"
 		t += line + "\n"

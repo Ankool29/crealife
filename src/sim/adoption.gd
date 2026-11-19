@@ -101,7 +101,9 @@ static func meets(k: Dictionary, c: CreatureSim) -> bool:
 				"joueur": return c.playfulness > 0.6
 				"calme": return c.playfulness < 0.4
 				"curieux": return c.curiosity > 0.6
-				"maternel": return c.care_instinct > 0.6
+				"maternel": return c.sociable > 0.65          # « affectueux » : câlin
+				"indépendant": return c.sociable < 0.35
+				"courageux": return c.boldness > 0.6
 		"mots":
 			return words_known(c) >= int(k.value)
 	return false
@@ -147,7 +149,8 @@ static func label(k: Dictionary, fem: bool = false) -> String:
 		"poil": return "à poil long" if k.value == "long" else "à poil court"
 		"caractère":
 			var m := {"joueur": ["joueur", "joueuse"], "calme": ["calme", "calme"], "curieux": ["curieux", "curieuse"],
-				"maternel": ["affectueux", "affectueuse"]}
+				"maternel": ["affectueux", "affectueuse"], "indépendant": ["indépendant", "indépendante"],
+				"courageux": ["courageux", "courageuse"]}
 			return m[k.value][1 if fem else 0] if m.has(k.value) else ""
 		"mots": return "qui connaît au moins %d mots" % int(k.value)
 	return ""
@@ -187,7 +190,7 @@ func _new_request(world: WorldSim) -> Dictionary:
 		options.append({"kind": "poil", "value": "long" if model.coat.get("long_fur", false) else "court"})
 		options.append({"kind": "sexe", "value": model.sex})
 		options.append({"kind": "age", "value": "jeune" if model.stage <= Lifecycle.Stage.ADO else "adulte"})
-		for v in ["joueur", "calme", "curieux", "maternel"]:
+		for v in ["joueur", "calme", "curieux", "maternel", "indépendant", "courageux"]:
 			if meets({"kind": "caractère", "value": v}, model):
 				options.append({"kind": "caractère", "value": v})
 		var w := words_known(model)
@@ -197,7 +200,7 @@ func _new_request(world: WorldSim) -> Dictionary:
 		options = [{"kind": "pelage", "value": coats[rng.randi_range(0, coats.size() - 1)]},
 			{"kind": "poil", "value": ["long", "court"][rng.randi_range(0, 1)]},
 			{"kind": "sexe", "value": [Gene.Sex.FEMALE, Gene.Sex.MALE][rng.randi_range(0, 1)]},
-			{"kind": "caractère", "value": ["joueur", "calme", "curieux", "maternel"][rng.randi_range(0, 3)]},
+			{"kind": "caractère", "value": ["joueur", "calme", "curieux", "maternel", "indépendant", "courageux"][rng.randi_range(0, 5)]},
 			{"kind": "mots", "value": rng.randi_range(2, 5)}]
 	options.shuffle()
 	var picked: Array = []

@@ -336,6 +336,9 @@ func update_from(c: CreatureSim, world: WorldSim, event_text: String, sim_speed:
 		info += " · enfant de %s et %s" % [c.mother, c.father]
 	if c.pregnant_time >= 0.0:
 		info += " · attend des petits"
+	var pers := c.personality()
+	if not pers.is_empty():
+		info += " · " + ", ".join(pers.slice(0, 3))
 	var fav := c.favorite_food()
 	if fav != "":
 		info += " · préfère " + {"patee": "la pâtée", "croquettes": "les croquettes", "proie": "chasser"}[fav]
