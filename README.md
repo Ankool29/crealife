@@ -9,8 +9,12 @@ Tout le contenu est original : aucun fichier ni code du jeu Creatures n'est util
 
 - **Chats** : un chat gris dessiné en 11 animations, poil court et poil
   long (`art/pixel/sources`). `tools/build_cat_pixel.py` les découpe et
-  calcule des masques (rayures, extrémités, blanc, plaques) ; un shader
-  colore chaque chat selon ses gènes. Affichés nets, à ×3.
+  calcule des masques (position sur le corps, extrémités, blanc, plaques) ;
+  un shader colore chaque chat selon ses gènes. **Rayures** calculées sur
+  le corps et déformées par du bruit : ondulées, irrégulières et uniques à
+  chaque chat (maquereau, marbré, moucheté, tiqueté ; bracelets aux pattes,
+  anneaux à la queue, « M » sur le front). Marche calée sur la vitesse,
+  clignement des yeux, demi-tour adouci. Affichés nets, à ×3.
 - **Maison en coupe** : chambre, cuisine, salle de jeux, salle
   d'apprentissage, entrée, puis le **jardin** (pommier, potager, mare) et un
   fond lointain en parallaxe. `tools/build_decor_pixel.py`.
@@ -71,29 +75,23 @@ Tout le contenu est original : aucun fichier ni code du jeu Creatures n'est util
 
 Prochaines étapes, dans l'ordre proposé :
 
-1. **Rayures plus naturelles** : motifs ondulés et irréguliers, uniques
-   à chaque chat (bruit déformé calculé dans le shader à partir de
-   coordonnées « le long du corps »), en s'inspirant de la formation réelle
-   des motifs (réaction-diffusion de Turing, gènes Taqpep et Dkk4).
-2. **Caractères plus variés** : nouveaux gènes de tempérament
+1. **Caractères plus variés** : nouveaux gènes de tempérament
    (sociabilité et câlins, peur ou audace, agressivité et territoire,
    gourmandise, activité nocturne), portés par de la chimie (stress,
    attachement) ; quelques nouveaux comportements (fuir, se cacher, se
    frotter, ronronner) ; amitiés et rivalités entre chats.
-3. **Écosystème du jardin** : graines qui germent, plantes qui poussent,
+2. **Écosystème du jardin** : graines qui germent, plantes qui poussent,
    papillons, oiseaux, souris ; herbe à chat, plante toxique à éviter.
-4. **Soins et santé** : litière, brossage des poils longs, maladies,
+3. **Soins et santé** : litière, brossage des poils longs, maladies,
    vétérinaire ; handicaps (membre en moins, aveugle, sourd) avec
    adaptation naturelle.
-5. **Outils d'éleveur** : stérilisation, test génétique, prédiction des
+4. **Outils d'éleveur** : stérilisation, test génétique, prédiction des
    portées, races reconnues, consanguinité.
-6. **Chatterie** : la réputation débloque des choses (étage avec escalier,
+5. **Chatterie** : la réputation débloque des choses (étage avec escalier,
    expositions, meilleures familles).
-7. **Animations plus fluides** : marche calée sur la vitesse (pattes qui
-   ne glissent plus), respiration, clignement des yeux, demi-tour et
-   transitions (s'asseoir, se coucher, se relever) ; puis des planches
-   avec plus d'images (8 au lieu de 2 à 4).
-8. Dessins à venir : formes de tête, queue courte (Manx).
+6. **Animations plus fluides** : transitions (s'asseoir, se coucher, se
+   relever, sauter) et planches avec plus d'images (8 au lieu de 2 à 4).
+7. Dessins à venir : formes de tête, queue courte (Manx).
 
 ### Commandes
 

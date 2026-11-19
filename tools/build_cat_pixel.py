@@ -195,17 +195,32 @@ def make_masks(img, pose):
     a = img[..., 3] > 0
     reg, X, Y = regions(a, pose)
     yy, xx = np.mgrid[0:H, 0:W].astype(float)
-    n1, n2 = smooth_noise(H, W, 6, 1), smooth_noise(H, W, 9, 2)
-    vert = np.sin((xx + 3 * n1) * 2 * np.pi / 6.0)
-    hori = np.sin((yy + 2 * n1) * 2 * np.pi / 4.5)
-    across = np.where(pose in ("debout", "tete_basse"), 1, 0)
-    mack = np.where((reg == 0) | (reg == 1), vert if across else hori, hori) > 0.35
-    mack &= ~((reg == 1) & (Y > 0.4) & (X > 0.8))          # museau sans rayures
+    n1 = smooth_noise(H, W, 6, 1)
     body = reg == 0
     cx, cy = (np.average(xx[body]), np.average(yy[body])) if body.any() else (W / 2, H / 2)
-    rr = np.hypot((xx - cx) * 0.8, yy - cy) + 3 * n2
-    classic = np.where(body, np.sin(rr * 2 * np.pi / 9.0) > 0.25, mack)
-    spotted = np.where(body, smooth_noise(H, W, 3, 5) > 0.68, mack)
+    # Coordonnées « sur le corps » pour les rayures, calculées dans le shader :
+    # u le long de la colonne vertébrale (queue -> tête), v du dos au ventre
+    # (pour les pattes : de l'épaule au pied). Les mêmes d'une image à l'autre,
+    # donc les rayures ne bougent pas pendant l'animation.
+    if pose == "assis":
+        u, v = 1.0 - Y, X                       # assis : le dos est vertical, à gauche
+    else:
+        u, v = X, Y
+        top = np.full(W, np.nan)
+        bot = np.full(W, np.nan)
+        trunk = (reg <= 1) & a
+        for i in range(W):                      # dos et ventre colonne par colonne
+            col = np.where(trunk[:, i])[0]
+            if len(col):
+                top[i], bot[i] = col.min(), col.max()
+        top = np.interp(np.arange(W), np.where(~np.isnan(top))[0], top[~np.isnan(top)])
+        bot = np.interp(np.arange(W), np.where(~np.isnan(bot))[0], bot[~np.isnan(bot)])
+        v = np.where(reg <= 1, (yy - top[None, :]) / np.maximum(4.0, bot - top)[None, :], Y)
+    legs = reg == 3
+    if legs.any():                               # pattes : de leur haut jusqu'au pied
+        ly = Y[legs].min()
+        v = np.where(legs, (Y - ly) / max(0.05, 1.0 - ly), v)
+    coords = np.dstack([np.clip(u, 0, 1), np.clip(v, 0, 1), (reg + 0.5) / 4.0])
     # Siamois : plus c'est loin du tronc (plus froid), plus c'est foncé.
     span = max(1.0, float(np.hypot(*np.ptp(np.argwhere(a), axis=0))))
     dist = np.hypot(xx - cx, (yy - cy) * 1.2) / span
@@ -219,7 +234,7 @@ def make_masks(img, pose):
     rank = np.clip(rank + 0.12 * (n1 - 0.5), 0, 1)
     tort = (smooth_noise(H, W, 5, 9) > 0.5).astype(float)
     alpha = a.astype(float)
-    m1 = np.dstack([mack, classic, spotted, alpha]).astype(float)
+    m1 = np.dstack([coords, alpha]).astype(float)
     m2 = np.dstack([points, rank, tort, alpha])
     return m1, m2
 

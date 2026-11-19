@@ -4,7 +4,7 @@ extends Node2D
 ## en cours, le pelage vient des gènes (CatCoat, shader cat.gdshader).
 
 const Verb = Brain.Verb
-const WALK_FPS := 10.0
+const STRIDE := 9.0          # pixels de monde par image de marche (à taille 1)
 const ACTION_ANIM := {
 	Verb.MANGER: "manger", Verb.POUSSER: "pousser", Verb.TIRER: "pousser",
 	Verb.FRAPPER: "frapper", Verb.PRENDRE: "prendre", Verb.LACHER: "prendre",
@@ -15,6 +15,10 @@ var creature: CreatureSim:
 	set(value):
 		creature = value
 		_t = 0.0
+		if value:
+			_phase = float(value.uid % 13) * 0.37
+			_last_x = value.x
+			_last_facing = value.facing
 
 ## Créature sélectionnée : un repère s'affiche au-dessus d'elle.
 var selected := false
@@ -22,6 +26,13 @@ var selected := false
 var _sprite := Sprite2D.new()
 var _mat := ShaderMaterial.new()
 var _t := 0.0
+var _phase := 0.0            # décalage propre à chaque chat : ils ne bougent pas en chœur
+var _walked := 0.0           # distance parcourue : le pas suit la vitesse
+var _last_x := 0.0
+var _last_facing := 1.0
+var _turn := 0.0             # demi-tour en cours (écrasement bref)
+var _blink := 0.0            # paupières fermées tant que > 0
+var _next_blink := 3.0
 var _bubble_style := StyleBoxFlat.new()
 ## Noms, bulles et icônes : au-dessus de la nuit pour rester lisibles.
 var _labels := Node2D.new()
@@ -51,15 +62,36 @@ func _process(delta: float) -> void:
 	position = position.round()
 	var anim := _animation()
 	var count := SpriteLibrary.cat_frame_count(anim)
-	var fps := WALK_FPS if anim == "marche" else (1.2 if anim == "assis" else 2.0)
-	var f := int(_t * fps) % count
+	# marche : une image tous les STRIDE pixels parcourus (les pattes ne glissent
+	# plus) ; repos : rythme lent, décalé d'un chat à l'autre
+	_walked += absf(c.x - _last_x)
+	_last_x = c.x
+	var f := 0
+	if anim == "marche":
+		f = int(_walked / (STRIDE * c.body_size())) % count
+	else:
+		var fps := 1.2 if anim == "assis" else 2.0
+		f = int(_t * fps + _phase * 3.0) % count
+	# clignement des yeux de temps en temps (éveillé)
+	_next_blink -= delta
+	if _next_blink <= 0.0:
+		_blink = 0.14
+		_next_blink = randf_range(2.5, 6.0)
+	_blink = maxf(0.0, _blink - delta)
+	_mat.set_shader_parameter("blink", _blink > 0.0 and anim != "dormir" and anim != "mort")
+	# demi-tour : il se ramasse une fraction de seconde au lieu de pivoter d'un coup
+	if c.facing != _last_facing:
+		_last_facing = c.facing
+		_turn = 0.12
+	_turn = maxf(0.0, _turn - delta)
 	var lf: bool = c.coat.get("long_fur", false)
 	_sprite.texture = SpriteLibrary.cat_texture(anim, f, "", lf)
 	_mat.set_shader_parameter("mask1", SpriteLibrary.cat_texture(anim, f, "_m1", lf))
 	_mat.set_shader_parameter("mask2", SpriteLibrary.cat_texture(anim, f, "_m2", lf))
 	var s := SpriteLibrary.cat_display_scale(c.body_size())
 	var wide: float = round(s * lerpf(0.94, 1.08, c.corpulence) * 2.0) / 2.0   # corpulence : svelte à trapu
-	_sprite.scale = Vector2(wide * c.facing, s)       # retourné quand il regarde à gauche
+	var squash := 0.7 if _turn > 0.0 else 1.0
+	_sprite.scale = Vector2(round(wide * squash * 2.0) / 2.0 * c.facing, s)       # retourné quand il regarde à gauche
 	_set_coat(_mat, c)
 	_labels.queue_redraw()
 
@@ -73,6 +105,7 @@ func _set_coat(m: ShaderMaterial, c: CreatureSim) -> void:
 	m.set_shader_parameter("orange", coat.orange)
 	m.set_shader_parameter("agouti", coat.agouti)
 	m.set_shader_parameter("pattern", coat.pattern)
+	m.set_shader_parameter("seed", float(c.uid % 997) * 0.731 + 3.0)
 	m.set_shader_parameter("silver", coat.silver)
 	m.set_shader_parameter("contrast", coat.contrast)
 	m.set_shader_parameter("points", coat.points)
