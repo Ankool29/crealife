@@ -114,6 +114,15 @@ static func _blend_appearance(child: Gene, a: Gene, b: Gene, rng: RandomNumberGe
 				child.params[key] = lerpf(va, vb, t)
 
 
+## Sensibilité à l'herbe à chat (gène « gout ») : un allèle de chaque parent,
+## comme pour le pelage (mendélien, sensibilité dominante).
+static func _cross_catnip(child: Gene, a: Gene, b: Gene, rng: RandomNumberGenerator) -> void:
+	var pa := "herbe1" if rng.randf() < 0.5 else "herbe2"
+	var pb := "herbe1" if rng.randf() < 0.5 else "herbe2"
+	child.params.herbe1 = float(a.params.get(pa, 1.0))
+	child.params.herbe2 = float(b.params.get(pb, 0.0))
+
+
 static func cross(a: Genome, b: Genome, rng: RandomNumberGenerator, mutation_rate: float = 0.02, crossover: float = 0.1) -> Genome:
 	var by_id_b := {}
 	for gene in b.genes:
@@ -138,6 +147,8 @@ static func cross(a: Genome, b: Genome, rng: RandomNumberGenerator, mutation_rat
 				CatCoat.cross(copy, gene, by_id_b[gene.id], rng)     # a = mère, b = père
 			else:
 				_blend_appearance(copy, gene, by_id_b[gene.id], rng)
+		elif gene.type == Gene.Type.LOBE and same and str(gene.params.get("lobe", "")) == "gout":
+			_cross_catnip(copy, gene, by_id_b[gene.id], rng)
 		child.genes.append(copy)
 	for gene in b.genes:                                     # gènes propres au parent b
 		if not by_id_a.has(gene.id) and rng.randf() < 0.5:

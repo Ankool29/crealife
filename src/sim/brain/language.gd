@@ -32,6 +32,8 @@ const ALIASES := {
 	"croquette": "croquettes", "souris": "proie", "oiseau": "proie", "proies": "proie", "boire": "manger",
 	"bois": "manger", "gamelle": "croquettes",
 	"amie": "créature", "ami": "créature", "copain": "créature", "copine": "créature",
+	"herbe": "plante", "fleur": "plante", "lys": "plante", "lis": "plante", "graine": "plante",
+	"papillon": "proie",
 }
 const BABBLE: Array[String] = ["bi", "ba", "bou", "ga", "li", "mo", "nu", "pa", "da", "ti", "bo", "gu"]
 const LETTERS := "aeioubdglmnpst"

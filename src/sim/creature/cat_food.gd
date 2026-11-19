@@ -60,6 +60,9 @@ static func food_near(me: CreatureSim, world: WorldSim, around: float) -> WorldO
 ## (un oiseau est plus dur qu'une souris). Attraper est un plaisir en soi.
 static func hunt(me: CreatureSim, o: WorldObject, v: int, world: WorldSim) -> void:
 	var info: Dictionary = ObjectCatalog.types[o.type_name].prey
+	if info.get("butterfly", false):         # un papillon : c'est un jeu, pas un repas
+		CatGarden.chase_butterfly(me, o, v, world)
+		return
 	var p := (0.15 + 0.6 * me.hunting) * float(info.get("catch", 1.0))
 	if v == Verb.MANGER:
 		p *= 0.5                     # se jeter dessus la gueule ouverte : moins efficace
@@ -68,6 +71,7 @@ static func hunt(me: CreatureSim, o: WorldObject, v: int, world: WorldSim) -> vo
 	if world.rng.randf() < p:
 		o.dead = true
 		o.vx = 0.0
+		o.timer = Garden.CORPSE_TIME
 		me.catches += 1
 		me.biochem.add(me._chem["Récompense"], 0.3 + 0.6 * me.hunting)
 		me.biochem.add(me._chem["Ennui"], -0.3)

@@ -174,8 +174,9 @@ func _gene_summary(g: Gene) -> String:
 				return "caractère : sociabilité %.2f, audace %.2f, agressivité %.2f, énergie %.2f" % [
 					float(p.get("sociable", 0)), float(p.get("audace", 0)), float(p.get("agressivite", 0)), float(p.get("energie", 0))]
 			if str(p.lobe) == "gout":
-				return "goûts : pâtée %.2f, croquettes %.2f, proies %.2f ; instinct de chasse %.2f" % [
-					float(p.get("patee", 0)), float(p.get("croquettes", 0)), float(p.get("proie", 0)), float(p.get("chasse", 0))]
+				return "goûts : pâtée %.2f, croquettes %.2f, proies %.2f ; instinct de chasse %.2f ; herbe à chat : %s (%s)" % [
+					float(p.get("patee", 0)), float(p.get("croquettes", 0)), float(p.get("proie", 0)), float(p.get("chasse", 0)),
+					"sensible" if CatGarden.sensitive(p) else "insensible", CatGarden.genotype_text(p)]
 			if str(p.lobe) == "parental":
 				return "instinct parental %.2f (nourrir et parler à ses petits)" % float(p.get("care", 0))
 			if str(p.lobe) == "langage":

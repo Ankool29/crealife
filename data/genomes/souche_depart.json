@@ -2103,7 +2103,9 @@
 				"patee": 0.7,
 				"croquettes": 0.5,
 				"proie": 0.6,
-				"chasse": 0.5
+				"chasse": 0.5,
+				"herbe1": 1.0,
+				"herbe2": 0.0
 			}
 		},
 		{
@@ -2211,6 +2213,23 @@
 				"gain": 0.04,
 				"chem": "Adrénaline",
 				"organ": "Corps"
+			}
+		},
+		{
+			"id": 129,
+			"type": "instinct",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"drive": "Ennui",
+				"category": "plante",
+				"verb": "examiner",
+				"reward": 0.6,
+				"repeat": 3
 			}
 		}
 	]

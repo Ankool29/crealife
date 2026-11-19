@@ -48,7 +48,10 @@ soif après un changement de comportement.
   - `creature_sim.gd` : un chat (corps, chimie, cerveau, actions) ;
     modules dans `src/sim/creature/` : `cat_family.gd` (accouplement, mise
     bas, allaitement, soins), `cat_food.gd` (goûts, chasse, réflexe de
-    survie), `cat_character.gd` (peur, querelles, amitiés).
+    survie), `cat_character.gd` (peur, querelles, amitiés), `cat_garden.gd`
+    (herbe à chat, lys, jeu avec les papillons).
+  - `world/` : climat, catalogue d'objets, `garden.gd` (écosystème du
+    jardin : plantes et leurs stades, papillons, population de souris).
   - `genetics/` (gènes typés, croisement, `cat_coat.gd` pour le pelage),
     `biology/` (substances, réactions, organes), `brain/` (cerveau à lobes,
     langage), `adoption.gd`.

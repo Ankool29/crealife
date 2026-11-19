@@ -244,6 +244,16 @@ func reinforce_drive(d: int, r: float) -> void:
 		attn_w[j] = clampf(attn_w[j] + _attn_lr * plasticity * r, -3.0, 3.0)
 
 
+## Renforcement ciblé de la dernière décision, réparti sur les pulsions qui
+## l'ont motivée (à proportion de leur force) : par exemple, être malade après
+## avoir mangé une plante punit « faim (ou ennui) + plante -> manger », et
+## seulement cela.
+func reinforce_drives(r: float) -> void:
+	for d in DRIVE_COUNT:
+		if _elig_drives[d] > 0.05:
+			reinforce_drive(d, r * _elig_drives[d])
+
+
 ## Les poids à court terme reviennent vers le long terme (oubli) et le long
 ## terme suit lentement le court terme (consolidation, plus rapide en dormant).
 func relax(dt: float, asleep: bool) -> void:

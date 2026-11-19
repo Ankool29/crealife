@@ -61,7 +61,8 @@ def main():
 
 def _derived(meta):
     """Sprites fabriqués à partir des autres : la pâtée (gamelle d'eau dont
-    l'eau devient de la pâtée) et un petit tas de croquettes dessiné ici."""
+    l'eau devient de la pâtée), un petit tas de croquettes dessiné ici, le
+    lys et l'herbe à chat (la plante, fleurie)."""
     eau = np.asarray(Image.open(os.path.join(OUT, "eau.png"))).copy()
     for j in range(eau.shape[0]):
         for i in range(eau.shape[1]):
@@ -89,8 +90,67 @@ def _derived(meta):
     out[edge & ~a] = (60, 35, 20, 255)
     Image.fromarray(out).save(os.path.join(OUT, "croquettes.png"))
     meta["croquettes"] = {"size": [W, H], "anchor": [W / 2, H], "scale": SCALE, "pixel": True}
+    _flowered(meta)
     for gone in ("fruit", "baie", "pierre", "oeuf"):
         meta.pop(gone, None)
+
+
+def _leaf_tips(px):
+    """Bouts des feuilles de la plante : haut, gauche et droite de chaque moitié."""
+    a = px[..., 3] > 0
+    green = a & (px[..., 1].astype(int) > px[..., 0].astype(int) + 20)
+    ys, xs = np.where(green)
+    h = px.shape[0]
+    tips = [(ys.min(), xs[ys == ys.min()].mean())]
+    for top in (True, False):
+        sel = (ys < h * 0.45) if top else (ys >= h * 0.45) & (ys < h * 0.75)
+        if sel.any():
+            for side in (xs[sel].min(), xs[sel].max()):
+                tips.append((ys[sel][xs[sel] == side].mean(), side))
+    out = []
+    for y, x in tips:
+        p = (int(round(y)), int(round(x)))
+        if all(abs(p[0] - q[0]) + abs(p[1] - q[1]) > 4 for q in out):
+            out.append(p)
+    return out
+
+
+def _flowered(meta):
+    """Lys (grandes fleurs blanches au cœur jaune) et herbe à chat (feuillage
+    gris-vert, petits épis mauves), dérivés de la plante."""
+    base = np.asarray(Image.open(os.path.join(OUT, "plante.png")).convert("RGBA")).copy()
+    h, w = base.shape[:2]
+    tips = _leaf_tips(base)
+    # lys : grande fleur étoilée (pétales blancs, cœur jaune, contour sombre)
+    flower = ["..d.d..", ".dwdwd.", "dwwywwd", ".dwywd.", "..dwd..", "...d..."]
+    cols = {"d": (40, 22, 30), "w": (250, 250, 240), "y": (240, 200, 60)}
+    lys = base.copy()
+    for y, x in tips:
+        y, x = min(max(y, 2), h - 5), min(max(x, 3), w - 4)
+        for j, row in enumerate(flower):
+            for i, ch in enumerate(row):
+                if ch in cols:
+                    lys[y - 2 + j, x - 3 + i] = (*cols[ch], 255)
+    Image.fromarray(lys).save(os.path.join(OUT, "lys.png"))
+    meta["lys"] = dict(meta["plante"])
+    # herbe à chat : feuillage plus gris, épis mauves au bout des tiges
+    herbe = base.copy()
+    for j in range(h):
+        for i in range(w):
+            r, g, b, a = (int(v) for v in herbe[j, i])
+            if a and g + 40 >= r and g > b + 30:     # feuillage (vert ou jaune-vert)
+                m = (r + g + b) / 3
+                herbe[j, i, :3] = (int(0.35 * r + 0.55 * m), int(0.6 * g + 0.4 * m), int(0.3 * b + 0.6 * m + 25))
+    spike = ["d.d", "lml", "mdm", "lml", ".d."]
+    cols = {"d": (60, 35, 70), "m": (160, 110, 195), "l": (210, 175, 235)}
+    for y, x in tips:
+        y, x = min(max(y, 1), h - 5), min(max(x, 1), w - 2)
+        for j, row in enumerate(spike):
+            for i, ch in enumerate(row):
+                if ch in cols:
+                    herbe[y - 1 + j, x - 1 + i] = (*cols[ch], 255)
+    Image.fromarray(herbe).save(os.path.join(OUT, "herbe_chat.png"))
+    meta["herbe_chat"] = dict(meta["plante"])
 
 
 def _empty_bowl(px):
