@@ -142,6 +142,32 @@ def place(frames):
 
 
 # ----------------------------------------------------------------- masques ----
+def coord_noise(u, v, su, sv, seed):
+    """Bruit lisse fonction des coordonnées sur le corps (et non des pixels) :
+    le même endroit du corps a la même valeur sur toutes les images."""
+    r = np.random.default_rng(seed)
+    g = r.random((int(sv) + 3, int(su) + 3))
+    x, y = np.clip(u, 0, 1) * su, np.clip(v, 0, 1) * sv
+    x0, y0 = x.astype(int), y.astype(int)
+    fx, fy = x - x0, y - y0
+    fx, fy = fx * fx * (3 - 2 * fx), fy * fy * (3 - 2 * fy)
+    return (g[y0, x0] * (1 - fx) * (1 - fy) + g[y0, x0 + 1] * fx * (1 - fy)
+            + g[y0 + 1, x0] * (1 - fx) * fy + g[y0 + 1, x0 + 1] * fx * fy)
+
+
+def local_coords(mask, xx, yy, facing_right=True):
+    """Coordonnées 0..1 dans la boîte d'une région (tête, queue) : x de
+    l'arrière vers l'avant, y du haut vers le bas."""
+    U = np.zeros_like(xx)
+    V = np.zeros_like(yy)
+    if mask.any():
+        x0, x1 = xx[mask].min(), xx[mask].max()
+        y0, y1 = yy[mask].min(), yy[mask].max()
+        U = (xx - x0) / max(1.0, x1 - x0)
+        V = (yy - y0) / max(1.0, y1 - y0)
+    return np.clip(U, 0, 1), np.clip(V, 0, 1)
+
+
 def smooth_noise(h, w, scale, seed):
     r = np.random.default_rng(seed)
     g = r.random((h // scale + 3, w // scale + 3))
@@ -173,7 +199,7 @@ def regions(a, pose):
     X, Y = np.meshgrid((np.arange(W) - x0) / max(1, x1 - x0), (np.arange(H) - y0) / max(1, y1 - y0))
     reg = np.zeros((H, W), int)
     if pose == "debout":
-        reg[(X > 0.66) & (Y < 0.6)] = 1
+        reg[(X > 0.68) & (Y < 0.47)] = 1          # la tête seule, sans le poitrail
         reg[(X < 0.24) & (Y < 0.62)] = 2
         reg[(Y > 0.74) & (reg == 0)] = 3
     elif pose == "tete_basse":
@@ -220,19 +246,34 @@ def make_masks(img, pose):
     if legs.any():                               # pattes : de leur haut jusqu'au pied
         ly = Y[legs].min()
         v = np.where(legs, (Y - ly) / max(0.05, 1.0 - ly), v)
-    coords = np.dstack([np.clip(u, 0, 1), np.clip(v, 0, 1), (reg + 0.5) / 4.0])
-    # Siamois : plus c'est loin du tronc (plus froid), plus c'est foncé.
-    span = max(1.0, float(np.hypot(*np.ptp(np.argwhere(a), axis=0))))
-    dist = np.hypot(xx - cx, (yy - cy) * 1.2) / span
-    far = np.clip((dist * np.select([reg == 1, reg == 2], [1.5, 1.3], 1.0) - 0.30) / 0.22, 0, 1)   # masque facial marqué
-    points = np.where(reg > 0, far, 0.0) * np.select([reg == 3], [np.clip((Y - 0.8) / 0.15, 0, 1)], 1.0)
-    points = blur(points, a, 2)
-    rank = 0.85 - 0.75 * Y
-    rank = np.where(reg == 3, 0.05 + 0.2 * (1 - Y), rank)
-    rank = np.where((reg == 1) & (Y > 0.55 * (Y.max() if pose == "debout" else 1)), 0.3, np.where(reg == 1, 0.92, rank))
-    rank = np.where(reg == 2, 0.95, rank)
-    rank = np.clip(rank + 0.12 * (n1 - 0.5), 0, 1)
-    tort = (smooth_noise(H, W, 5, 9) > 0.5).astype(float)
+    # tête et queue : coordonnées propres à la région, identiques d'une pose à
+    # l'autre (sinon les traits de la tête changent selon la position)
+    hu, hv = local_coords(reg == 1, xx, yy)
+    u = np.where(reg == 1, hu, u)
+    v = np.where(reg == 1, hv, v)
+    tu, tv = local_coords(reg == 2, xx, yy)
+    u = np.where(reg == 2, tu, u)
+    v = np.where(reg == 2, tv, v)
+    u, v = np.clip(u, 0, 1), np.clip(v, 0, 1)
+    coords = np.dstack([u, v, (reg + 0.5) / 4.0])
+    # Tout ce qui suit dépend des coordonnées sur le corps, pas des pixels :
+    # un chat garde les mêmes taches et le même masque sur toutes les images.
+    # Siamois : extrémités foncées (masque du visage, oreilles, queue, bas des pattes).
+    points = np.select([reg == 1, reg == 2, reg == 3],
+                       [0.55 + 0.45 * np.maximum(hu, 1 - hv),       # museau et oreilles plus foncés
+                        0.55 + 0.45 * (1 - tu),                     # vers le bout de la queue
+                        np.clip((v - 0.35) / 0.4, 0, 1)], 0.0)      # bas des pattes
+    points = blur(points, a, 1)
+    # Blanc (panachure) : rang d'apparition, du plus tôt (0) au plus tard (1) :
+    # pattes et poitrail, ventre, museau, puis flancs, dos, tête, queue.
+    nz = coord_noise(u, v + reg, 5, 8, 3) - 0.5
+    rank = np.select([reg == 0, reg == 1, reg == 2, reg == 3],
+                     [0.9 - 0.8 * v,
+                      np.where((hu > 0.55) & (hv > 0.45), 0.3, 0.9 - 0.2 * hv),
+                      0.95,
+                      0.3 - 0.25 * v], 0.5)
+    rank = np.clip(rank + 0.12 * nz, 0, 1)
+    tort = (coord_noise(np.where(reg == 0, u, u * 0.5 + 0.25), v, 3, 2, 9) > 0.5).astype(float)
     alpha = a.astype(float)
     m1 = np.dstack([coords, alpha]).astype(float)
     m2 = np.dstack([points, rank, tort, alpha])

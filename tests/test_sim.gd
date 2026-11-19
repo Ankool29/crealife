@@ -12,7 +12,7 @@ const QUICK := ["_test_genome_file", "_test_cross_and_mutation", "_test_stage_ex
 	"_test_cat_genetics", "_test_adoption", "_test_food", "_test_character"]
 ## Batterie longue (vies entières, générations : plusieurs minutes) : aux grosses étapes.
 const LONG := ["_test_starvation", "_test_learns_seeds", "_test_full_life", "_test_generations",
-	"_test_language", "_test_family_life", "_test_litter", "_test_zones_and_climate"]
+	"_test_language", "_test_family_life", "_test_litter", "_test_zones_and_climate", "_test_roaming"]
 
 
 ## godot --headless --script res://tests/test_sim.gd            : tout
@@ -596,6 +596,32 @@ func _test_character() -> void:
 	_check(quarrel, "un bagarreur cherche querelle")
 
 
+func _test_roaming() -> void:
+	print("Déplacements dans la maison :")
+	var w := WorldSim.new(5, "normal", 6)
+	for c in w.creatures:
+		c.age = 2.6 * 3600.0
+	var occ := {}
+	var sleep := {}
+	var t := 0.0
+	while t < 2.0 * 3600.0:
+		w.tick(STEP)
+		t += STEP
+		if int(t / STEP) % 25 == 0:
+			for c in w.creatures:
+				if c.alive and c.stage >= Lifecycle.Stage.CHILD:
+					var k: String = w.zone_at(c.x).key
+					occ[k] = occ.get(k, 0) + 1
+					if c.is_asleep():
+						sleep[k] = sleep.get(k, 0) + 1
+	print("    présence : %s\n    sommeil : %s" % [occ, sleep])
+	_check(occ.size() == w.zones.size(), "les chats passent dans toutes les pièces et au jardin")
+	var total_sleep := 0
+	for k in sleep:
+		total_sleep += sleep[k]
+	_check(sleep.get("chambre", 0) > total_sleep * 0.6, "ils dorment surtout dans la chambre")
+
+
 func _test_family_life() -> void:
 	print("Vie de famille :")
 	# Mélange des couleurs : les enfants ne sont pas des copies d'un parent
@@ -712,9 +738,10 @@ func _test_zones_and_climate() -> void:
 	print("    5 min devant l'écran : vocabulaire %.1f (peu curieuse) contre %.1f (curieuse)" % learnt)
 	_check(learnt[0] > 0.5 and learnt[1] > learnt[0] * 1.8, "l'écran apprend des mots, mieux aux curieuses")
 
-	# Loisirs : les espiègles jouent plus (même monde, tempérament différent)
+	# Loisirs : les espiègles vont jouer (même monde, tempérament différent)
 	var plays := [0, 0]
-	for run in 4:
+	var in_jeux := [0.0, 0.0]
+	for run in 8:
 		var playful := run % 2 == 1
 		var w3 := WorldSim.new(90 + run / 2, "normal", 1)
 		var c3 := w3.creatures[0]
@@ -728,10 +755,13 @@ func _test_zones_and_climate() -> void:
 		while t < 3600.0:
 			w3.tick(STEP)
 			t += STEP
+			if w3.zone_at(c3.x).key == "jeux":
+				in_jeux[1 if playful else 0] += STEP
 			if c3.acted and c3.target is WorldObject and c3.target.category == ObjectCatalog.categories.find("jouet"):
 				plays[1 if playful else 0] += 1
-	print("    1 h aux loisirs : %d jeux (peu espiègle) contre %d (espiègle)" % plays)
-	_check(plays[1] > plays[0], "les espiègles jouent plus")
+	print("    4 × 1 h : salle de jeux %d min et %d jeux (peu espiègle) contre %d min et %d jeux (espiègle)" % [
+		in_jeux[0] / 60.0, plays[0], in_jeux[1] / 60.0, plays[1]])
+	_check(in_jeux[1] > in_jeux[0] * 1.2, "les espiègles passent plus de temps dans la salle de jeux")
 
 	# Sauvegarde d'avant les zones : le jardin est décalé, les zones ajoutées
 	var old := w.to_dict()

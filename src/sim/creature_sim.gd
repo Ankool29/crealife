@@ -83,6 +83,9 @@ var _prev_drives := PackedFloat32Array()
 var _instinct_timer := 0.0
 var _mate_rest := 0.0
 var _screen_time := 0.0
+var _dest_x := -1.0                # pièce visée (voyage en cours), -1 si aucune
+var _dest_until := 0.0
+var _dest_sleep := false           # elle va se coucher dans la chambre
 ## Goûts (gène « gout ») : plaisir que donne chaque aliment, et instinct de chasse.
 var taste := {"patee": 0.7, "croquettes": 0.5, "proie": 0.6}
 ## Caractère (gène « caractere ») : sociabilité (câlins, besoin de compagnie),
@@ -424,6 +427,7 @@ func _decide(world: WorldSim, rng: RandomNumberGenerator) -> void:
 	if v in Brain.OBJECT_VERBS and target == null:
 		brain.verb = Verb.RIEN
 	_survival_reflex(world)
+	_go_to_bed(world, rng)
 	_done = false
 	_maybe_talk(rng)
 	match brain.verb:
@@ -939,16 +943,25 @@ func _explore_goal(world: WorldSim, rng: RandomNumberGenerator) -> float:
 	if scr and not needy and rng.randf() < curiosity * 0.15 and absf(scr.x - x) < 3000.0:
 		_screen_time = rng.randf_range(30.0, 60.0) * lerpf(0.5, 1.5, curiosity)
 		return clampf(scr.x + rng.randf_range(-150.0, 150.0), 60.0, world.width - 60.0)
-	# Les espiègles, elles, filent vers la salle de jeux
-	var jeux := world.zone("jeux")
-	if not jeux.is_empty() and not needy and rng.randf() < playfulness * 0.15:
-		var mid: float = (jeux.x0 + jeux.x1) * 0.5
-		if absf(mid - x) < 3000.0 and world.zone_at(x).key != "jeux":
-			return clampf(mid + rng.randf_range(-500.0, 500.0), 60.0, world.width - 60.0)
+	# Voyage en cours vers une autre pièce : on continue jusqu'à y arriver
+	if _dest_x >= 0.0:
+		if absf(_dest_x - x) < 200.0 or world.time > _dest_until:
+			_dest_x = -1.0
+			if world.time > _dest_until:
+				_dest_sleep = false
+		else:
+			return clampf(x + signf(_dest_x - x) * minf(absf(_dest_x - x), 900.0), 60.0, world.width - 60.0)
+	# Parfois, envie d'aller ailleurs : la pièce dépend de l'état et du caractère
+	if stage != Lifecycle.Stage.BABY and rng.randf() < 0.3:
+		var room := _wanted_room(world, rng)
+		if not room.is_empty():
+			_dest_x = rng.randf_range(float(room.x0) + 150.0, float(room.x1) - 150.0)
+			_dest_until = world.time + 300.0
+			return clampf(x + signf(_dest_x - x) * minf(absf(_dest_x - x), 900.0), 60.0, world.width - 60.0)
 	var social := level("Solitude")
 	if stage == Lifecycle.Stage.ADULT:
 		social = maxf(social, level("Désir"))
-	if rng.randf() < social:
+	if rng.randf() < social * 0.5:
 		var best: CreatureSim = null
 		for c in world.creatures:
 			if c != self and c.alive and (best == null or absf(c.x - x) < absf(best.x - x)):
@@ -956,6 +969,61 @@ func _explore_goal(world: WorldSim, rng: RandomNumberGenerator) -> float:
 		if best != null and absf(best.x - x) > 300.0:
 			return clampf(x + signf(best.x - x) * rng.randf_range(300.0, 600.0), 60.0, world.width - 60.0)
 	return _random_goal(world, rng, 500.0)
+
+
+## Sommeil : fatiguée (sans être épuisée), elle va se coucher dans la chambre
+## plutôt que de dormir n'importe où ; arrivée, elle s'endort.
+func _go_to_bed(world: WorldSim, rng: RandomNumberGenerator) -> void:
+	var bed := world.zone("chambre")
+	if bed.is_empty() or stage == Lifecycle.Stage.BABY:
+		return
+	var in_bed: bool = world.zone_at(x).get("key", "") == "chambre"
+	if _dest_sleep and in_bed and level("Fatigue") > MIN_FATIGUE_TO_SLEEP and brain.verb != Verb.DORMIR:
+		_dest_sleep = false
+		_dest_x = -1.0
+		brain.force(-1, Verb.DORMIR)
+		target = null
+		return
+	if brain.verb == Verb.DORMIR and not in_bed and level("Fatigue") < 0.85 \
+			and absf((bed.x0 + bed.x1) * 0.5 - x) < 6000.0:
+		_dest_sleep = true
+		_dest_x = rng.randf_range(float(bed.x0) + 200.0, float(bed.x1) - 200.0)
+		_dest_until = world.time + 300.0
+		brain.force(-1, Verb.EXPLORER)
+		target = null
+		_goal_x = clampf(x + signf(_dest_x - x) * minf(absf(_dest_x - x), 900.0), 60.0, world.width - 60.0)
+
+
+## La pièce où elle a envie d'aller : la chambre quand elle est fatiguée ou
+## la nuit, le jardin pour les chasseuses et les énergiques (de jour, par beau
+## temps), la salle de jeux pour les espiègles, la salle d'apprentissage pour
+## les curieuses, la cuisine quand elle a faim. Tirage pondéré ; si c'est la
+## pièce où elle est déjà, elle y reste.
+func _wanted_room(world: WorldSim, rng: RandomNumberGenerator) -> Dictionary:
+	var here: String = world.zone_at(x).get("key", "")
+	var g := world.zone("jardin")
+	var day := world.light_at(float(g.get("x0", 0.0)) + 100.0) > 0.5 if not g.is_empty() else true
+	var nice := day and not world.raining_at(float(g.get("x0", 0.0)) + 100.0)
+	var scores := {
+		"chambre": level("Fatigue") * 2.5 + (0.6 if not day else 0.0),
+		"jardin": 0.2 + hunting * 0.6 + energy * 0.4 + (0.4 if nice else -0.4),
+		"jeux": 0.2 + playfulness * 0.8 + level("Ennui") * 0.5,
+		"salle": 0.1 + curiosity * 0.6,
+		"cuisine": 0.1 + level("Faim") * 1.5,
+		"entree": 0.05,
+	}
+	var total := 0.0
+	for k in scores:
+		scores[k] = 0.0 if world.zone(k).is_empty() else pow(maxf(scores[k], 0.02), 2.0)
+		total += scores[k]
+	if total <= 0.0:
+		return {}
+	var r := rng.randf() * total
+	for k in scores:
+		r -= scores[k]
+		if r <= 0.0:
+			return {} if k == here else world.zone(k)     # la pièce où elle est déjà : elle y reste
+	return {}
 
 
 func _sees_food() -> bool:
