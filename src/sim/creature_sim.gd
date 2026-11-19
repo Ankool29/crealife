@@ -62,20 +62,8 @@ var eaten := {}
 var last_event := ""
 
 # Apparence (gène Apparence « corps »), valeurs dans [0, 1]
-var hue := 0.5
-var hue2 := 0.6
-var saturation := 0.7
-var brightness := 0.7
-var glow := 0.47
-var glow_power := 0.5
-## Silhouette : variantes de queue et d'antennes (0, 1, 2), corpulence [0, 1].
-var tail := 1
-var antennae := 1
+## Corpulence [0, 1] : svelte à trapu (affichage).
 var corpulence := 0.5
-## Motifs : intensité des taches, rayures, plaques ; teinte et clarté du motif.
-var motif := Vector3.ZERO
-var hue3 := 0.1
-var light3 := 0.5
 var _size_gene := 0.5
 var _speed := 100.0
 
@@ -212,14 +200,8 @@ func _express(first_time: bool) -> void:
 	biochem.configure(genome.expressed(stage, sex), first_time)
 	var look := genome.find(Gene.Type.APPEARANCE, "part", "corps")
 	if look:
-		hue = float(look.params.get("hue", 0.5))
-		hue2 = float(look.params.get("hue2", 0.6))
-		saturation = float(look.params.get("saturation", 0.7))
-		brightness = float(look.params.get("brightness", 0.7))
-		glow = float(look.params.get("glow", 0.47))
 		_size_gene = float(look.params.get("size", 0.5))
 		_speed = lerpf(60.0, 150.0, float(look.params.get("speed", 0.5)))
-		glow_power = float(look.params.get("glow_power", 0.5))
 	care_instinct = 0.0
 	for g in genome.expressed(stage, sex):
 		if g.type == Gene.Type.LOBE and str(g.params.get("lobe", "")) == "parental":
@@ -240,19 +222,9 @@ func _express(first_time: bool) -> void:
 	var mor := genome.find(Gene.Type.APPEARANCE, "part", "morpho")
 	if pel and mor:
 		coat = CatCoat.phenotype(pel.params, mor.params, sex)
-		var c: Color = coat.col_r if coat.orange == 1 else coat.col_e
-		hue = c.h
 	var shape := genome.find(Gene.Type.APPEARANCE, "part", "silhouette")
 	if shape:
-		tail = clampi(int(float(shape.params.get("tail", 0.5)) * 3.0), 0, 2)
-		antennae = clampi(int(float(shape.params.get("antennae", 0.5)) * 3.0), 0, 2)
 		corpulence = float(shape.params.get("corpulence", 0.5))
-	var pat := genome.find(Gene.Type.APPEARANCE, "part", "motif")
-	if pat:
-		var p := pat.params
-		motif = Vector3(float(p.get("spots", 0)), float(p.get("stripes", 0)), float(p.get("patches", 0)))
-		hue3 = float(p.get("hue3", 0.1))
-		light3 = float(p.get("light3", 0.5))
 
 
 func get_verb() -> int:
@@ -266,28 +238,6 @@ func is_acting() -> bool:
 
 func is_asleep() -> bool:
 	return alive and brain.verb == Verb.DORMIR
-
-
-## Palette de couleurs tirée des gènes : [sombre, principale, claire].
-func palette() -> Array[Color]:
-	var s := lerpf(0.55, 1.0, saturation)
-	var v := lerpf(0.75, 1.0, brightness)
-	return [
-		Color.from_hsv(fposmod(hue + 0.04, 1.0), minf(1.0, s + 0.1), v * 0.3),
-		Color.from_hsv(hue, s, v),
-		Color.from_hsv(hue2, s * 0.6, minf(1.0, v * 1.1 + 0.1)),
-	]
-
-
-## Couleur du motif (teinte propre, plus claire ou plus sombre que le corps).
-func motif_color() -> Color:
-	return Color.from_hsv(hue3, lerpf(0.5, 1.0, saturation), lerpf(0.25, 1.0, light3))
-
-
-## Intensité visible de chaque motif : sous 0,2 le motif reste invisible
-## (gène « dormant », qu'une mutation ou un croisement peut réveiller).
-func motif_strength() -> Vector3:
-	return Vector3(smoothstep(0.2, 0.55, motif.x), smoothstep(0.2, 0.55, motif.y), smoothstep(0.2, 0.55, motif.z))
 
 
 ## Taille affichée : gène de taille × stade de vie.
@@ -600,46 +550,12 @@ func _act_on_creature(other: CreatureSim, v: int, world: WorldSim) -> void:
 			_try_mating(other, world)
 
 
-## Accouplement : adultes de sexe opposé, partenaire consentant (désir
-## suffisant), femelle pas déjà en gestation, population pas au maximum.
 func _try_mating(other: CreatureSim, world: WorldSim) -> void:
-	var female: CreatureSim = self if sex == Gene.Sex.FEMALE else other
-	if other.sex == sex or other.stage != Lifecycle.Stage.ADULT or stage != Lifecycle.Stage.ADULT \
-			or other.level("Désir") < MATING_DESIRE or other._mate_rest > 0.0 \
-			or female.pregnant_time >= 0.0 or world.population_full():
-		_refused = REFUSED_PAUSE        # refus : elle n'insiste pas
-		return
-	var male: CreatureSim = other if female == self else self
-	for c in [self, other]:
-		c.biochem.add(c._chem["Désir"], -0.8)
-		c.bond(other if c == self else self, 0.1)
-		c.biochem.conc[c._chem["Hormone sexuelle"]] = 0.0
-		c._mate_rest = MATING_REST
-	female.pregnant_time = 0.0
-	female.litter_size = world.litter_size_for(female)
-	female._father_genome = male.genome
-	female._father_name = male.creature_name
-	female.last_event = "%s et %s se sont accouplés  : %s attend des petits." % [creature_name, other.creature_name, female.creature_name]
-	world.last_event = female.last_event
+	CatFamily.try_mating(self, other, world)
 
 
-## Le désir est freiné : repos après un accouplement, pendant la gestation,
-## quand elle a un bébé, et quand le monde est plein (surpopulation).
 func _regulate_desire(dt: float, world: WorldSim) -> void:
-	_mate_rest = maxf(0.0, _mate_rest - dt)
-	_screen_time = maxf(0.0, _screen_time - dt)
-	_refused = maxf(0.0, _refused - dt)
-	if stage < Lifecycle.Stage.ADULT:
-		return
-	var calm := _mate_rest > 0.0 or pregnant_time >= 0.0 or world.population_full()
-	if not calm:
-		for c in world.creatures:
-			if c.alive and c.stage == Lifecycle.Stage.BABY and is_parent_of(c):
-				calm = true
-				break
-	if calm:
-		var h: int = _chem["Hormone sexuelle"]
-		biochem.conc[h] = minf(biochem.conc[h], 0.2)     # sous le seuil qui produit le désir
+	CatFamily.regulate_desire(self, dt, world)
 
 
 func is_parent_of(c: CreatureSim) -> bool:
@@ -648,183 +564,34 @@ func is_parent_of(c: CreatureSim) -> bool:
 
 # ------------------------------------------------------- soins aux petits --
 
-## Un parent qui n'a pas lui-même de besoin pressant s'occupe parfois d'un
-## petit (bébé ou enfant) : il lui apporte à manger s'il a faim ou soif, ou
-## va lui parler s'il s'ennuie ou se sent seul (il lui apprend ses mots).
 func _start_care(world: WorldSim, rng: RandomNumberGenerator) -> bool:
-	if care_instinct <= 0.05 or stage < Lifecycle.Stage.ADULT or held != null and held.category != _food_cat():
-		return false
-	if level("Faim") > 0.6 or level("Soif") > 0.6 or level("Fatigue") > 0.7:
-		return false
-	var best: CreatureSim = null
-	var best_need := 0.0
-	var kind := ""
-	for c in world.creatures:
-		if not c.alive or c.stage > Lifecycle.Stage.CHILD or not is_parent_of(c) or c.is_asleep():
-			continue
-		if absf(c.x - x) > VISION_RANGE * 1.5:
-			continue
-		var hunger := maxf(c.level("Faim"), c.level("Soif"))
-		var social := maxf(c.level("Solitude"), c.level("Ennui"))
-		if hunger > 0.3 and c.stage == Lifecycle.Stage.BABY and c.mother == creature_name and hunger + 0.3 > best_need:
-			best_need = hunger + 0.3           # la mère va allaiter : prioritaire
-			best = c
-			kind = "allaiter"
-		elif hunger > 0.45 and hunger > best_need:
-			best_need = hunger
-			best = c
-			kind = "nourrir"
-		elif social > 0.5 and social * 0.8 > best_need:
-			best_need = social * 0.8
-			best = c
-			kind = "parler"
-	if best == null or rng.randf() > care_instinct * (0.4 + best_need) and kind != "allaiter":
-		return false
-	if kind == "allaiter":
-		_care = {"kind": kind, "child": best, "food": null, "time": 0.0}
-		brain.verb = Verb.APPROCHER
-		brain.clear_trace()
-		target = best
-		_done = false
-		_action_time = CARE_TIMEOUT
-		return true
-	var food: WorldObject = held if held != null else null
-	if kind == "nourrir" and food == null:
-		food = _food_near(world, best.x)
-		if food == null:
-			return false
-	_care = {"kind": kind, "child": best, "food": food, "time": 0.0}
-	brain.verb = Verb.PRENDRE if kind == "nourrir" and held == null else (Verb.APPROCHER if kind == "nourrir" else Verb.PARLER)
-	brain.clear_trace()        # ce n'est pas une décision apprise : rien à renforcer
-	target = food if held == null and food != null else best
-	_done = false
-	_action_time = CARE_TIMEOUT
-	return true
+	return CatFamily.start_care(self, world, rng)
 
 
 # ------------------------------------------------------------- caractère --
 
-## Quelque chose lui fait peur (un coup, un chat agressif...) : plus ou moins
-## selon son audace.
 func frighten(amount: float, source: CreatureSim = null) -> void:
-	biochem.add(_chem["Peur"], amount * lerpf(1.6, 0.3, boldness))
-	if source != null:
-		_threat_uid = source.uid
+	CatCharacter.frighten(self, amount, source)
 
 
-## Affinité avec un autre chat : monte quand on se parle, se blottit, s'accouple ;
-## baisse quand on se bat.
 func bond(other: CreatureSim, amount: float) -> void:
-	if other == null or other == self:
-		return
-	affinity[other.uid] = clampf(float(affinity.get(other.uid, 0.0)) + amount, -1.0, 1.0)
+	CatCharacter.bond(self, other, amount)
 
 
 func affinity_with(other: CreatureSim) -> float:
-	return float(affinity.get(other.uid, 0.0))
+	return CatCharacter.affinity_with(self, other)
 
 
-## Peur : un chat peureux s'enfuit loin de ce qui l'effraie (un rival
-## agressif qui approche, le chat qui vient de le frapper). Les bagarreurs,
-## eux, cherchent parfois querelle à un adulte de même sexe tout proche.
 func _fear_reflex(dt: float, world: WorldSim) -> void:
-	if not alive or is_asleep() or _care.size() > 0:
-		return
-	for c in world.creatures:
-		if c == self or not c.alive or absf(c.x - x) > 260.0:
-			continue
-		if c.aggressive > 0.7 and affinity_with(c) < -0.3 and c.stage >= Lifecycle.Stage.ADULT:
-			frighten(0.04 * dt, c)              # un rival menaçant tout près
-	if level("Peur") > 0.55 and brain.verb != Verb.FUIR:
-		var threat := world.find_uid(_threat_uid)
-		if threat != null and absf(threat.x - x) < 400.0:
-			brain.force(ObjectCatalog.categories.find("créature"), Verb.FUIR)
-			target = threat
-			_done = false
-			_action_time = 6.0
-			_goal_x = clampf(x + signf(x - threat.x + 0.01) * 350.0, 60.0, world.width - 60.0)
-			last_event = "%s a peur de %s et s'enfuit." % [creature_name, threat.creature_name]
-			language.speech = "!"
-			language.speech_left = Language.SAY_TIME
-	# querelle : rare, et seulement chez les bagarreurs
-	if aggressive > 0.6 and stage == Lifecycle.Stage.ADULT and brain.verb in [Verb.RIEN, Verb.EXPLORER] \
-			and world.rng.randf() < (aggressive - 0.6) * 0.02 * dt:
-		for c in world.creatures:
-			if c != self and c.alive and c.stage == Lifecycle.Stage.ADULT and c.sex == sex \
-					and absf(c.x - x) < 200.0 and affinity_with(c) < 0.3:
-				brain.force(ObjectCatalog.categories.find("créature"), Verb.FRAPPER)
-				target = c
-				_done = false
-				_action_time = 8.0
-				last_event = "%s cherche querelle à %s." % [creature_name, c.creature_name]
-				language.speech = "fff !"          # il crache
-				language.speech_left = Language.SAY_TIME
-				break
+	CatCharacter.fear_reflex(self, dt, world)
 
 
-## Quelques mots pour décrire son caractère (panneau, adoptions).
 func personality() -> Array[String]:
-	var f := sex == Gene.Sex.FEMALE
-	var w: Array[String] = []
-	if sociable > 0.65:
-		w.append("câline" if f else "câlin")
-	elif sociable < 0.35:
-		w.append("indépendante" if f else "indépendant")
-	if boldness < 0.35:
-		w.append("peureuse" if f else "peureux")
-	elif boldness > 0.7:
-		w.append("audacieuse" if f else "audacieux")
-	if aggressive > 0.6:
-		w.append("bagarreuse" if f else "bagarreur")
-	if energy > 0.7:
-		w.append("énergique")
-	elif energy < 0.3:
-		w.append("dormeuse" if f else "dormeur")
-	if playfulness > 0.7:
-		w.append("joueuse" if f else "joueur")
-	if curiosity > 0.7:
-		w.append("curieuse" if f else "curieux")
-	return w
+	return CatCharacter.personality(self)
 
 
-## Réflexe de survie : affamée devant de la nourriture, ou assoiffée devant
-## de l'eau, elle mange ou boit, quoi que son cerveau ait appris d'autre.
 func _survival_reflex(world: WorldSim) -> void:
-	var cats := ObjectCatalog.categories
-	# épuisée (et ni affamée ni assoiffée) : elle s'endort où elle est
-	if level("Fatigue") > 0.85 and level("Faim") < 0.6 and level("Soif") < 0.5 and brain.verb != Verb.DORMIR:
-		brain.force(-1, Verb.DORMIR)
-		target = null
-		return
-	var want := ""
-	if level("Soif") > 0.6 and level("Soif") >= level("Faim"):
-		want = "soif"
-	elif level("Faim") > 0.7:
-		want = "faim"
-	elif level("Soif") > 0.6:
-		want = "soif"
-	if want == "":
-		return
-	var best: WorldObject = null
-	for o in world.objects:
-		if o.holder != null or absf(o.x - x) > VISION_RANGE * 0.7:
-			continue
-		var ok := false
-		if want == "faim":
-			ok = o.type_name in ["croquettes", "patee"] or o.dead
-		else:
-			ok = o.category == cats.find("eau")
-		if ok and (best == null or absf(o.x - x) < absf(best.x - x)):
-			best = o
-	if best == null:
-		# rien en vue : elle part chercher (vers le distributeur ou l'eau qu'elle connaît)
-		if brain.verb != Verb.EXPLORER and brain.verb != Verb.DORMIR:
-			brain.force(-1, Verb.EXPLORER)
-			target = null
-			_goal_x = _explore_goal(world, world.rng)
-		return
-	brain.force(best.category, Verb.MANGER)     # le cerveau en tirera la leçon
-	target = best
+	CatFood.survival_reflex(self, world)
 
 
 func _food_cat() -> int:
@@ -832,108 +599,23 @@ func _food_cat() -> int:
 
 
 func _food_near(world: WorldSim, around: float) -> WorldObject:
-	var best: WorldObject = null
-	var best_d := VISION_RANGE * 2.0
-	for o in world.objects:
-		if o.holder == null and (o.type_name in ["croquettes", "patee"] or o.dead) and absf(o.x - around) < best_d:
-			best_d = absf(o.x - around)
-			best = o
-	return best
+	return CatFood.food_near(self, world, around)
 
 
 func _execute_care(dt: float, world: WorldSim) -> void:
-	var child: CreatureSim = _care.child
-	_care.time += dt
-	if _care.time > CARE_TIMEOUT or not child.alive or not child in world.creatures:
-		_end_care()
-		return
-	if _care.kind == "allaiter":
-		if not _approach(child.x, dt, NURSE_RANGE * 0.5):
-			return
-		brain.verb = Verb.RIEN           # elle se couche et le laisse téter
-		if maxf(child.level("Faim"), child.level("Soif")) < 0.05 or level("Faim") > 0.8:
-			last_event = "%s a allaité %s." % [creature_name, child.creature_name]
-			_end_care()
-		return
-	if _care.kind == "nourrir":
-		var food: WorldObject = _care.food
-		if held == null:
-			if food == null or not food in world.objects or food.holder != null:
-				_end_care()
-				return
-			if not _approach(food.x, dt):
-				return
-			held = food                      # il ramasse la nourriture
-			food.holder = self
-			food.vx = 0.0
-			acted = true
-			brain.verb = Verb.APPROCHER
-			target = child
-			return
-		if not _approach(child.x, dt, REACH * 1.5):
-			return
-		drop_held()                          # posée devant le petit
-		acted = true
-		brain.verb = Verb.LACHER
-		biochem.add(_chem["Récompense"], 0.3)
-		last_event = "%s apporte à manger à %s." % [creature_name, child.creature_name]
-		_end_care()
-	else:
-		if not _approach(child.x, dt, REACH * 1.5):
-			return
-		brain.verb = Verb.PARLER
-		_act_on_creature(child, Verb.PARLER, world)
-		child.biochem.add(child._chem["Ennui"], -0.2)
-		biochem.add(_chem["Récompense"], 0.2)
-		last_event = "%s parle à son petit %s." % [creature_name, child.creature_name]
-		_end_care()
+	CatFamily.execute_care(self, dt, world)
 
 
 func _end_care() -> void:
-	_care = {}
-	_finish()
+	CatFamily.end_care(self)
 
 
-## Gestation : au bout du temps voulu, la chatte met bas un chaton.
 func _gestation(dt: float, world: WorldSim) -> void:
-	if pregnant_time < 0.0:
-		return
-	pregnant_time += dt
-	if pregnant_time >= GESTATION:
-		pregnant_time = -1.0
-		var names: Array[String] = []
-		var n := maxi(1, litter_size)
-		for i in n:                      # chaque chaton a son propre mélange
-			var child := Genome.cross(genome, _father_genome, world.rng, 0.03)
-			var at := clampf(x + (i - (n - 1) * 0.5) * 45.0, 60.0, world.width - 60.0)
-			names.append(world.give_birth(at, child, creature_name, _father_name, maxi(generation, 1) + 1).creature_name)
-		var gen := maxi(generation, 1) + 1
-		if n == 1:
-			world.last_event = "%s a mis bas : naissance de %s (génération %d)." % [creature_name, names[0], gen]
-		else:
-			world.last_event = "%s a mis bas %d chatons : %s (génération %d)." % [creature_name, n, ", ".join(names), gen]
-		last_event = world.last_event
-		litter_size = 0
-		_father_genome = null
+	CatFamily.gestation(self, dt, world)
 
 
-## Les bébés collés à leur mère tètent, éveillés ou endormis.
 func _nurse(dt: float, world: WorldSim) -> void:
-	var fed := 0
-	for c in world.creatures:
-		if not c.alive or c.stage != Lifecycle.Stage.BABY or c.mother != creature_name:
-			continue
-		if absf(c.x - x) > NURSE_RANGE or maxf(c.level("Faim"), c.level("Soif")) < 0.1:
-			continue
-		c.biochem.add(c._chem["Faim"], -NURSE_RATE * dt)
-		c.biochem.add(c._chem["Soif"], -NURSE_RATE * dt)
-		c.biochem.add(c._chem["Solitude"], -0.01 * dt)
-		c.nursing = 0.5
-		fed += 1
-	if fed > 0:
-		nursing = 0.5
-		biochem.add(_chem["Faim"], NURSE_COST * fed * dt)
-		biochem.add(_chem["Solitude"], -0.005 * dt)
+	CatFamily.nurse(self, dt, world)
 
 
 ## Elle dit parfois ce qu'elle ressent, ou ce qu'elle va faire.
@@ -1048,54 +730,16 @@ func _act_on(o: WorldObject, v: int, world: WorldSim) -> void:
 		_taste(str(ObjectCatalog.types[o.type_name].get("food", "")), hunger_before)
 
 
-## Tente d'attraper une proie vivante : réussite selon l'instinct de chasse
-## (un oiseau est plus dur qu'une souris). Attraper est un plaisir en soi.
 func _hunt(o: WorldObject, v: int, world: WorldSim) -> void:
-	var info: Dictionary = ObjectCatalog.types[o.type_name].prey
-	var p := (0.15 + 0.6 * hunting) * float(info.get("catch", 1.0))
-	if v == Verb.MANGER:
-		p *= 0.5                     # se jeter dessus la gueule ouverte : moins efficace
-	if v == Verb.FRAPPER:
-		p *= 1.3                     # le coup de patte
-	if world.rng.randf() < p:
-		o.dead = true
-		o.vx = 0.0
-		catches += 1
-		biochem.add(_chem["Récompense"], 0.3 + 0.6 * hunting)
-		biochem.add(_chem["Ennui"], -0.3)
-		last_event = "%s a attrapé %s !" % [creature_name, "une souris" if o.type_name == "souris" else "un oiseau"]
-		world.last_event = last_event
-	else:
-		o.flee = 3.0
-		biochem.add(_chem["Ennui"], -0.05 * hunting)
+	CatFood.hunt(self, o, v, world)
 
 
-## Le goût : plus un aliment est aimé, plus il fait plaisir (récompense en
-## plus de la faim calmée). Le cerveau apprend ainsi ses préférences ; un
-## aliment peu aimé reste mangé quand on a faim (pas de punition : sinon un
-## chat pourrait se laisser mourir devant sa gamelle).
 func _taste(food: String, hunger: float = 1.0) -> void:
-	# le plaisir dépend de l'appétit : manger sans faim n'apporte presque rien
-	# (sinon le cerveau apprend à manger sans arrêt, par gourmandise)
-	# Le plaisir renforce « faim -> manger cet aliment » (et lui seul : pas de
-	# grignotage par ennui). Moins de plaisir sans appétit.
-	if taste.has(food):
-		var r := float(taste[food]) * 0.5 * clampf(hunger * 1.5, 0.25, 1.0)
-		brain.reinforce_drive(Brain.DRIVE_NAMES.find("Faim"), r)
-		_last_pleasure = r
+	CatFood.taste(self, food, hunger)
 
 
-## L'aliment préféré parmi ceux qu'elle a déjà goûtés ("" si aucun).
 func favorite_food() -> String:
-	var best := ""
-	var types := {"patee": ["patee"], "croquettes": ["croquettes"], "proie": ["souris", "oiseau"]}
-	for f in taste:
-		var tried := 0
-		for t in types[f]:
-			tried += eaten.get(t, 0)
-		if tried > 0 and (best == "" or taste[f] > taste[best]):
-			best = f
-	return best
+	return CatFood.favorite_food(self)
 
 
 func _finish() -> void:
@@ -1315,10 +959,7 @@ func _explore_goal(world: WorldSim, rng: RandomNumberGenerator) -> float:
 
 
 func _sees_food() -> bool:
-	for n in ["pâtée", "croquettes"]:
-		if brain.vision[ObjectCatalog.categories.find(n)] > 0.0:
-			return true
-	return false
+	return CatFood.sees_food(self)
 
 
 func _random_goal(world: WorldSim, rng: RandomNumberGenerator, radius: float) -> float:

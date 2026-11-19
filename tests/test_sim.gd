@@ -6,26 +6,23 @@ const STEP := 0.2
 var _failures := 0
 
 
+## Batterie rapide (quelques secondes à une minute) : à chaque modification.
+const QUICK := ["_test_genome_file", "_test_cross_and_mutation", "_test_stage_expression",
+	"_test_instincts_and_reinforcement", "_test_save_load", "_test_save_safety", "_test_appearance_genes",
+	"_test_cat_genetics", "_test_adoption", "_test_food", "_test_character"]
+## Batterie longue (vies entières, générations : plusieurs minutes) : aux grosses étapes.
+const LONG := ["_test_starvation", "_test_learns_seeds", "_test_full_life", "_test_generations",
+	"_test_language", "_test_family_life", "_test_litter", "_test_zones_and_climate"]
+
+
+## godot --headless --script res://tests/test_sim.gd            : tout
+## godot --headless --script res://tests/test_sim.gd -- rapide  : batterie rapide
 func _init() -> void:
-	_test_genome_file()
-	_test_cross_and_mutation()
-	_test_stage_expression()
-	_test_instincts_and_reinforcement()
-	_test_starvation()
-	_test_learns_seeds()
-	_test_full_life()
-	_test_save_load()
-	_test_save_safety()
-	_test_generations()
-	_test_language()
-	_test_appearance_genes()
-	_test_family_life()
-	_test_litter()
-	_test_adoption()
-	_test_food()
-	_test_character()
-	_test_zones_and_climate()
-	_test_cat_genetics()
+	var quick := "rapide" in OS.get_cmdline_user_args()
+	for t in (QUICK if quick else QUICK + LONG):
+		var start := Time.get_ticks_msec()
+		call(t)
+		print("    (%s : %.1f s)" % [t.trim_prefix("_test_"), (Time.get_ticks_msec() - start) / 1000.0])
 	print("RÉSULTAT : %s" % ("OK" if _failures == 0 else "%d échec(s)" % _failures))
 	quit(_failures)
 
@@ -240,7 +237,7 @@ func _test_save_load() -> void:
 	var b := w2.creatures[0]
 	_check(w2.creatures.size() == w.creatures.size() and w2.objects.size() == w.objects.size(),
 		"créatures et objets rechargés")
-	_check(a.creature_name == b.creature_name and absf(a.age - b.age) < 0.01 and absf(a.hue - b.hue) < 0.0001,
+	_check(a.creature_name == b.creature_name and absf(a.age - b.age) < 0.01 and a.coat.get("name") == b.coat.get("name"),
 		"identité, âge et couleurs conservés")
 	var fruit := ObjectCatalog.categories.find("croquettes")
 	_check(absf(a.brain.weight("Faim", fruit, Brain.Verb.MANGER) - b.brain.weight("Faim", fruit, Brain.Verb.MANGER)) < 0.001,
@@ -390,13 +387,11 @@ func _test_language() -> void:
 func _test_appearance_genes() -> void:
 	print("Silhouette génétique :")
 	var w := WorldSim.new(5, "normal", 10)
-	var tails := {}
-	var ants := {}
+	var builds := {}
 	for c in w.creatures:
-		tails[c.tail] = true
-		ants[c.antennae] = true
-	print("    variantes de queue : %s, d'antennes : %s" % [tails.keys(), ants.keys()])
-	_check(tails.size() >= 2 and ants.size() >= 2, "les fondateurs ont des silhouettes variées")
+		builds[snappedf(c.corpulence, 0.1)] = true
+	print("    corpulences : %s" % [builds.keys()])
+	_check(builds.size() >= 3, "les fondateurs ont des corpulences variées")
 
 
 func _test_litter() -> void:

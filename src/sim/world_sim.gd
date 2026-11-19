@@ -254,7 +254,7 @@ func _add_creature(g: Genome, at_x: float, sex: int, generation: int, mother: St
 	creatures.append(c)
 	history.append({"uid": c.uid, "name": c.creature_name, "sex": sex, "generation": generation,
 		"mother": mother, "father": father, "born_at": time, "alive": true, "cause": "", "age": 0.0,
-		"hue": c.hue, "coat": c.coat.get("name", "")})
+		"hue": _coat_hue(c), "coat": c.coat.get("name", "")})
 	return c
 
 
@@ -314,6 +314,12 @@ func litter_size_for(mother: CreatureSim) -> int:
 		if c.alive and c.pregnant_time >= 0.0 and c != mother:
 			room -= maxi(1, c.litter_size)
 	return clampi(n, 1, maxi(1, room))
+
+
+## Teinte du pelage (couleur du nom dans l'arbre généalogique).
+static func _coat_hue(c: CreatureSim) -> float:
+	var col: Color = c.coat.get("col_r", Color.ORANGE) if int(c.coat.get("orange", 0)) == 1 else c.coat.get("col_e", Color.DIM_GRAY)
+	return col.h
 
 
 func find_uid(uid: int) -> CreatureSim:

@@ -146,11 +146,15 @@ src/sim/genetics/     Gènes typés, génome, croisement, mutations
 src/sim/biology/      Substances, réactions, émetteurs, récepteurs,
                       organes, cycle de vie
 src/sim/brain/        Cerveau à lobes, langage
-src/sim/creature_sim.gd  Assemble corps, chimie et cerveau
+src/sim/creature_sim.gd  Un chat : corps, chimie, cerveau, actions
+src/sim/creature/     Ses modules : famille (accouplement, mise bas,
+                      allaitement, soins), alimentation (goûts, chasse,
+                      réflexe de survie), caractère (peur, amitiés)
 src/sim/world_sim.gd  Monde : maison, jardin, climat, objets
 src/sim/adoption.gd   Demandes d'adoption, réputation
+src/save_store.gd     Sauvegarde sûre (fichier temporaire, copie de secours)
 src/view/, src/ui/    Affichage (shader du pelage) et interface tactile
-art/                  Planches pixel art d'origine (ChatGPT), Blender (ancien)
+art/                  Planches pixel art d'origine (ChatGPT), ignorées par Godot
 tools/                Souche de départ, découpe des chats, décors et objets (Python)
 tests/                Tests de la simulation
 ```
@@ -158,5 +162,6 @@ tests/                Tests de la simulation
 Tests (sur PC ou Termux avec Godot en ligne de commande) :
 
 ```sh
-godot --headless --script res://tests/test_sim.gd
+godot --headless --script res://tests/test_sim.gd -- rapide   # ~20 s, à chaque modification
+godot --headless --script res://tests/test_sim.gd             # tout, ~10 min (vies entières, générations)
 ```
