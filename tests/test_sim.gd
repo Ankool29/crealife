@@ -270,7 +270,7 @@ func _one_lineage(seed_v: int, last: bool) -> bool:
 	while t < 10.0 * 3600.0:
 		w.tick(STEP)
 		t += STEP
-		max_pop = maxi(max_pop, w.alive_count() + w._eggs.size())
+		max_pop = maxi(max_pop, w.alive_count())
 		if t > 1.0 * 3600.0 and int(t / STEP) % 50 == 0:
 			for c in w.creatures:
 				if c.generation >= 3 and c.alive and c.age > 1800.0:

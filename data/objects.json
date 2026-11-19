@@ -79,18 +79,6 @@
 				}
 			}
 		},
-		"oeuf": {
-			"category": "œuf",
-			"label": "œuf",
-			"carry": true,
-			"verbs": {
-				"examiner": {
-					"chems": {
-						"Ennui": -0.05
-					}
-				}
-			}
-		},
 		"ecran": {
 			"category": "machine",
 			"label": "écran d'apprentissage",

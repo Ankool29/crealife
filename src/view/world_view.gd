@@ -6,10 +6,7 @@ extends Node2D
 ## et la musique.
 
 const DECOR_DIR := "res://assets/decor/"
-const DECOR_TOP := -560.0          # haut des images de décor, en pixels de jeu
 const FAR_PARALLAX := 0.4          # la couche lointaine se déplace à 40 % de la caméra
-const ZONE_DECOR := {"salle": "decor_salle.png", "jardin": "decor_proche.png", "jeux": "decor_loisirs.png",
-	"chambre": "decor_salle.png"}
 ## Décors pixel art (tools/build_decor_pixel.py) : prioritaires quand ils existent.
 const PX_DECOR := {"cuisine": "px_cuisine.png", "chambre": "px_chambre.png", "jeux": "px_jeux.png",
 	"salle": "px_salle.png", "entree": "px_entree.png", "jardin": "px_jardin.png"}
@@ -64,7 +61,7 @@ func _build_zones() -> void:
 		var s := Sprite2D.new()
 		s.centered = false
 		var px: String = PX_DECOR.get(z.key, "")
-		if px_meta.has(z.key) and ResourceLoader.exists(DECOR_DIR + px):
+		if px_meta.has(z.key) and ResourceLoader.exists(DECOR_DIR + px):     # (les scénarios de test n'en ont pas)
 			s.texture = load(DECOR_DIR + px)
 			s.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 			var room_w: float = z.x1 - z.x0
@@ -78,12 +75,9 @@ func _build_zones() -> void:
 			under.position = Vector2(z.x0, s.position.y + s.texture.get_height() * s.scale.y)
 			under.size = Vector2(room_w, 600.0)
 			_near_layer.add_child(under)
+			_near_layer.add_child(s)
 		else:
-			s.texture = load(DECOR_DIR + ZONE_DECOR.get(z.key, "decor_proche.png"))
-			s.position = Vector2(z.x0, DECOR_TOP)
-			if z.key == "chambre":          # en attendant son décor : la salle, de nuit
-				s.modulate = Color(0.55, 0.6, 0.85)
-		_near_layer.add_child(s)
+			s.free()
 
 
 func _process(_delta: float) -> void:

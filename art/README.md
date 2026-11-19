@@ -1,58 +1,40 @@
 # Graphismes de CreaLife
 
-Comme dans *Creatures 3*, la créature, les objets et le décor sont modélisés
-en 3D puis rendus en images. Les scripts utilisent le module Python de
-Blender (`pip install bpy`, Python 3.11) ; les images produites sont copiées
-dans `assets/`.
+Tout est en pixel art, dans le style de Stardew Valley. Les planches
+d'origine sont générées avec ChatGPT, puis des outils Python les découpent et
+les mettent à l'échelle du jeu. Ce dossier contient un fichier `.gdignore` :
+Godot ne l'importe pas, seuls les résultats dans `assets/` sont utilisés.
 
 ```sh
-python art/blender/cat.py <dossier> sprites        # chat : poses, couches, masques -> assets/chat/
-python art/blender/creature.py <dossier> sprites   # ancienne créature (plus utilisée)
-python art/blender/objects.py <dossier>            # objets -> assets/objects/
-python art/blender/background.py <dossier> far     # ciel et collines (parallaxe)
-python art/blender/background.py <dossier> near    # sol, arbres, buissons
-python art/blender/zones.py <dossier> salle        # salle d'apprentissage (intérieur)
-python art/blender/zones.py <dossier> loisirs      # aire de loisirs
-python art/blender/objects.py <dossier> ecran,trampoline   # seulement certains objets
+python3 tools/build_cat_pixel.py      # pixel/sources/*.png (+ long/) -> assets/chat_px/
+python3 tools/build_decor_pixel.py    # pixel/decor/*.png             -> assets/decor/px_*.png
+python3 tools/build_objects_pixel.py  # pixel/sources/objets.png      -> assets/objects/
 ```
 
-- Échelle commune : 1 unité Blender = 120 pixels de jeu, sol à z = 0.
-- La créature est rendue avec une seule teinte ; chaque individu reçoit la
-  sienne en jeu par un shader (`src/view/shaders/creature.gdshader`) selon
-  son gène d'apparence.
-- La queue et les antennes existent en trois variantes chacune, rendues
-  dans des couches séparées (`*_queueN.png`, `*_antennesN.png`), le corps
-  servant de masque ; le jeu superpose les couches choisies par les gènes.
-- Chaque image a aussi un masque de motifs (`*_motifs.png` : rouge =
-  taches, vert = rayures, bleu = plaques), calculé dans l'espace de chaque
-  partie du corps pour suivre ses mouvements ; le shader le colore selon
-  les gènes. `creature.py <dossier> masks` ne refait que les masques.
-- Les positions des arbres et buissons dans `background.py` doivent
-  correspondre à `src/sim/world_sim.gd`.
+## Chats (`pixel/sources`, `pixel/sources/long`)
 
-## Le chat
+Un chat gris uni sur fond magenta (#FF00FF), yeux verts, nez et oreilles
+roses, une planche par animation : repos, assis, marche, mange, pousse,
+frappe, prend, renifle, miaule, dort, mort ; même chose en poil long.
 
-`cat.py` construit un chat articulé (corps, quatre pattes en deux pièces,
-trois têtes, deux queues) et le rend en gris, couche par couche (corps,
-tête, queue), en poil court et en poil long (une enveloppe ébouriffée,
-bien plus rapide à rendre que des poils). Pour chaque image et chaque
-couche, deux masques guident le shader du pelage
-(`src/view/shaders/cat.gdshader`) :
+L'outil calcule pour chaque image deux masques :
+- `_m1` : position sur le corps (le long du dos, du dos au ventre) et région
+  (tronc, tête, queue, pattes). Le shader y dessine les rayures, différentes
+  pour chaque chat.
+- `_m2` : extrémités (siamois), rang du blanc (panachure), plaques
+  (écaille de tortue).
 
-- `_m1` : rouge = tigré maquereau, vert = tigré classique, bleu = moucheté ;
-- `_m2` : rouge = extrémités (siamois), vert = ordre d'apparition du blanc
-  (le dessous blanchit d'abord, la tête et la queue en dernier),
-  bleu = plaques d'écaille de tortue.
+Le shader `src/view/shaders/cat.gdshader` colore ensuite chaque chat selon
+ses gènes.
 
-Les images sont réduites à 240 px, les masques à 120 px.
+## Décors (`pixel/decor`)
 
-## Chats en pixel art (version actuelle)
+Une image par pièce, vue de côté en coupe : chambre, cuisine, salle de jeux,
+salle d'apprentissage, entrée (retournée en miroir), jardin, et la couche
+lointaine (ciel, collines). L'outil rééchantillonne l'image sur sa grille de
+gros pixels et note la hauteur du plancher (`assets/decor/px_decors.json`).
 
-Les planches `art/pixel/sources/*.png` ont été dessinées avec un générateur
-d'images : cases à cadre noir, fond magenta #FF00FF, chat gris uni regardant
-à droite, yeux vert pur #00FF00, nez et oreilles roses. Une planche par
-animation (repos, assis, marche, mange, pousse, frappe, prend, renifle,
-miaule, dort, mort). `python tools/build_cat_pixel.py` les découpe (une case
-= 64 pixels), retire le fond, pose les pattes sur la même ligne, et calcule
-les masques de pelage d'après la silhouette et la pose. Le modèle 3D
-(`blender/cat.py`) n'est plus utilisé pour les chats.
+## Objets (`pixel/sources/objets.png`)
+
+Une planche d'objets sur fond magenta, repérés automatiquement de gauche à
+droite. La pâtée et le tas de croquettes sont fabriqués par l'outil.

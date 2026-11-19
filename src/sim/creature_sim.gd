@@ -47,7 +47,7 @@ var is_moving := false
 var held: WorldObject = null
 ## Ce que la créature vise : un WorldObject ou une autre CreatureSim.
 var target: Object = null
-## Gestation (femelle) : temps écoulé, -1 si elle n'attend pas d'œuf.
+## Gestation (femelle) : temps écoulé, -1 si elle n'attend pas de petits.
 var pregnant_time := -1.0
 var litter_size := 0             # chatons attendus
 var nursing := 0.0               # > 0 : en train d'allaiter, ou de téter (affichage)

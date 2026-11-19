@@ -14,10 +14,10 @@ OUT = "assets/objects"
 CELL = 2172 / 313               # taille d'un « gros pixel » de la planche
 SCALE = 3.0                     # comme les chats
 # quelques objets dessinés trop gros pour des chats : un peu réduits
-SCALE_OF = {"balle": 2.0, "graine": 2.0, "fruit": 2.4, "souris": 1.8, "oiseau": 1.8}
+SCALE_OF = {"balle": 2.0, "graine": 2.0, "pomme": 2.4, "souris": 1.8, "oiseau": 1.8}
 # noms dans l'ordre de la planche ; ceux du jeu remplacent les anciens rendus 3D
 NAMES = ["distributeur_on", "eau", "panier", "balle", "trampoline", "boite_musique",
-         "fruit", "carotte", "graine", "pousse", "plante", "papillon", "oiseau", "souris"]
+         "pomme", "carotte", "graine", "pousse", "plante", "papillon", "oiseau", "souris"]
 
 
 def main():
@@ -89,7 +89,7 @@ def _derived(meta):
     out[edge & ~a] = (60, 35, 20, 255)
     Image.fromarray(out).save(os.path.join(OUT, "croquettes.png"))
     meta["croquettes"] = {"size": [W, H], "anchor": [W / 2, H], "scale": SCALE, "pixel": True}
-    for gone in ("fruit", "graine", "baie", "pierre"):
+    for gone in ("fruit", "baie", "pierre", "oeuf"):
         meta.pop(gone, None)
 
 

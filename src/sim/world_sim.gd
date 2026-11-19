@@ -1,7 +1,7 @@
 class_name WorldSim
 extends RefCounted
-## Le monde : un sol en vue de côté, des arbres à fruits, des buissons à baies,
-## un distributeur de graines, des jouets, les créatures et leurs œufs.
+## Le monde : la maison en coupe et son jardin, les gamelles et le
+## distributeur de croquettes, les jouets, les proies et les chats.
 ## Aucune dépendance à l'affichage.
 ##
 ## La maison en coupe, de gauche à droite : chambre | cuisine | salle de jeux |
@@ -10,7 +10,6 @@ extends RefCounted
 
 const GRAVITY := 900.0
 const MAX_POPULATION := 14       # chats vivants + chatons attendus
-const HATCH_TIME := 600.0        # 10 min de jeu avant l'éclosion
 const CORPSE_TIME := 180.0       # le corps reste 3 min puis disparaît
 const SYLLABLES: Array[String] = ["ka", "lo", "mi", "ny", "ta", "vi", "ru", "se", "pa", "lu", "ze", "no",
 	"bi", "ra", "ke", "yo", "ma", "ti", "sha", "el", "or", "un", "ix", "an"]
@@ -35,7 +34,6 @@ const GARDEN_W := 2000.0
 const FEEDER_PERIOD := 45.0       # le distributeur remet des croquettes (jusqu'à 3) toutes les ~45 s
 const PATEE_MAX := 3
 const PATEE_REFILL := 600.0       # largeur du décor pixel art à la densité des pièces
-const BASKET_X := 340.0          # corbeille de fruits, depuis le bord gauche de la cuisine
 ## Pièces de la maison : clé, nom affiché, largeur (celle de leur décor).
 const HOUSE: Array = [
 	["chambre", "Chambre", 1400.0],
@@ -49,8 +47,6 @@ const V2_ZONES := {"salle": [0.0, 1800.0], "jardin": [1800.0, 4800.0], "loisirs"
 var rng := RandomNumberGenerator.new()
 var creatures: Array[CreatureSim] = []
 var objects: Array[WorldObject] = []
-var trees := PackedFloat32Array([450.0, 1350.0, 2350.0])
-var bushes := PackedFloat32Array([900.0, 2000.0])
 var machine_x := 1750.0
 var time := 0.0
 ## Toutes les créatures ayant existé : arbre généalogique.
@@ -60,7 +56,6 @@ var last_event := ""
 
 var _next_id := 1
 var _next_uid := 1
-var _eggs := {}                  # id d'œuf -> {genome, mother, father, generation, hatch_at}
 var _seed_timer := 5.0
 var _feeder_timer := 3.0
 var _prey_timer := 60.0
@@ -77,8 +72,6 @@ func _init(seed_value: int = 0, p_scenario: String = "normal", founders: int = 1
 	else:
 		rng.seed = seed_value
 	if scenario != "normal":
-		trees = PackedFloat32Array()
-		bushes = PackedFloat32Array()
 		zones = [{"key": "jardin", "label": "Jardin", "x0": 0.0, "x1": width, "indoor": false}]
 		if scenario == "graines":
 			add_object("eau", 600.0)
@@ -100,8 +93,6 @@ func _setup_zones() -> void:
 		x += float(r[2])
 	zones.append({"key": "jardin", "label": "Jardin", "x0": x, "x1": x + GARDEN_W, "indoor": false})
 	width = x + GARDEN_W
-	trees = PackedFloat32Array([x + 980.0])                # le pommier du décor
-	bushes = PackedFloat32Array()         # plus de baies dans le jeu (les tests en ajoutent)
 	machine_x = zone("cuisine").x0 + 1000.0     # le distributeur de croquettes
 
 
@@ -303,13 +294,13 @@ func alive_count() -> int:
 	return n
 
 
-## Vivantes + œufs + gestations en cours : on ne conçoit plus au-delà du maximum.
+## Vivantes + chatons attendus : on ne conçoit plus au-delà du maximum.
 func population_full() -> bool:
 	var pregnant := 0
 	for c in creatures:
 		if c.alive and c.pregnant_time >= 0.0:
 			pregnant += maxi(1, c.litter_size)
-	return alive_count() + _eggs.size() + pregnant >= MAX_POPULATION
+	return alive_count() + pregnant >= MAX_POPULATION
 
 
 ## Taille de la portée : souvent 3 ou 4, parfois 1-2 ou 5 ; les jeunes et
@@ -318,7 +309,7 @@ func litter_size_for(mother: CreatureSim) -> int:
 	var n: int = [1, 2, 2, 3, 3, 3, 4, 4, 4, 5][rng.randi_range(0, 9)]
 	if mother.age > 7.0 * 3600.0:
 		n = maxi(1, n - 1)
-	var room := MAX_POPULATION - alive_count() - _eggs.size()
+	var room := MAX_POPULATION - alive_count()
 	for c in creatures:
 		if c.alive and c.pregnant_time >= 0.0 and c != mother:
 			room -= maxi(1, c.litter_size)
@@ -351,17 +342,6 @@ func give_birth(at_x: float, g: Genome, mother: String, father: String, generati
 	return baby
 
 
-## Anciennes sauvegardes seulement : les chats ne pondent plus.
-func lay_egg(at_x: float, g: Genome, mother: String, father: String, generation: int) -> void:
-	var egg := add_object("oeuf", at_x, 20.0)
-	_eggs[egg.id] = {"genome": g, "mother": mother, "father": father, "generation": generation,
-		"hatch_at": time + HATCH_TIME}
-
-
-func egg_info(o: WorldObject) -> Dictionary:
-	return _eggs.get(o.id, {})
-
-
 func tick(dt: float) -> void:
 	time += dt
 	climate.tick(dt, rng, time)
@@ -378,24 +358,7 @@ func tick(dt: float) -> void:
 		if was_alive and not c.alive:
 			_record_death(c)
 			last_event = c.last_event
-	_hatch_eggs()
 	_remove_corpses()
-
-
-func _hatch_eggs() -> void:
-	for o in objects.duplicate():
-		if o.type_name != "oeuf" or not _eggs.has(o.id):
-			continue
-		var e: Dictionary = _eggs[o.id]
-		if time < e.hatch_at:
-			continue
-		if o.holder != null:
-			o.holder.drop_held()
-		var sex := _baby_sex()
-		var baby := _add_creature(e.genome, o.x, sex, e.generation, e.mother, e.father)
-		_eggs.erase(o.id)
-		remove_object(o)
-		last_event = "Naissance de %s (génération %d), enfant de %s et %s." % [baby.creature_name, baby.generation, e.mother, e.father]
 
 
 ## Sexe d'un nouveau-né : une chance sur deux, corrigée vers le sexe
@@ -433,9 +396,9 @@ func _remove_corpses() -> void:
 					other.target = null
 
 
-## Plus aucune créature vivante ni œuf : le joueur peut relancer une lignée.
+## Plus aucune créature vivante : le joueur peut relancer une lignée.
 func is_extinct() -> bool:
-	return alive_count() == 0 and _eggs.is_empty()
+	return alive_count() == 0
 
 
 func restart_lineage() -> void:
@@ -597,10 +560,6 @@ func to_dict() -> Dictionary:
 		# Un objet tenu est sauvegardé posé au sol, aux pieds de la créature.
 		var od := {"id": o.id, "type": o.type_name, "x": o.x, "h": 0.0 if o.holder else o.h, "cooldown": o.cooldown,
 			"dead": o.dead}
-		if _eggs.has(o.id):
-			var e: Dictionary = _eggs[o.id]
-			od["egg"] = {"genome": e.genome.to_dict(), "mother": e.mother, "father": e.father,
-				"generation": e.generation, "hatch_in": e.hatch_at - time}
 		objs.append(od)
 	var cs := []
 	for c in creatures:
@@ -627,6 +586,7 @@ static func from_dict(d: Dictionary) -> WorldSim:
 		if version == 2:
 			return w._from_v2(x)
 		return x
+	var eggs := []
 	var fixed := ["distributeur", "ecran", "trampoline", "boite_musique", "eau", "mare"]
 	w._next_id = int(d.next_id)
 	w._next_uid = int(d.next_uid)
@@ -638,16 +598,15 @@ static func from_dict(d: Dictionary) -> WorldSim:
 	for od in d.objects:
 		if old_objects and str(od.type) in fixed:
 			continue
+		if od.has("egg"):                # très ancienne sauvegarde : l'œuf éclôt au chargement
+			eggs.append([od.egg, place.call(float(od.x))])
+			continue
 		if not ObjectCatalog.types.has(str(od.type)):      # retirés du jeu (fruits, graines...)
 			continue
 		var o := WorldObject.new(int(od.id), str(od.type), place.call(float(od.x)), float(od.h))
 		o.cooldown = float(od.cooldown)
 		o.dead = bool(od.get("dead", false))
 		w.objects.append(o)
-		if od.has("egg"):
-			var e: Dictionary = od.egg
-			w._eggs[o.id] = {"genome": Genome.from_dict(e.genome), "mother": e.mother, "father": e.father,
-				"generation": int(e.generation), "hatch_at": w.time + float(e.hatch_in)}
 	for cd in d.creatures:
 		var c := CreatureSim.from_dict(cd)
 		c.x = place.call(c.x)
@@ -656,4 +615,6 @@ static func from_dict(d: Dictionary) -> WorldSim:
 		w.creatures.append(c)
 	for h in d.history:
 		w.history.append(h)
+	for e in eggs:
+		w.give_birth(float(e[1]), Genome.from_dict(e[0].genome), str(e[0].mother), str(e[0].father), int(e[0].generation))
 	return w

@@ -11,14 +11,6 @@
   "scale": 2.0,
   "pixel": true
  },
- "oeuf": {
-  "size": 128,
-  "anchor": [
-   64,
-   115.2
-  ],
-  "scale": 0.5
- },
  "distributeur_on": {
   "size": [
    31,
@@ -193,6 +185,30 @@
    5
   ],
   "scale": 3.0,
+  "pixel": true
+ },
+ "pomme": {
+  "size": [
+   23,
+   26
+  ],
+  "anchor": [
+   11.5,
+   26
+  ],
+  "scale": 2.4,
+  "pixel": true
+ },
+ "graine": {
+  "size": [
+   18,
+   17
+  ],
+  "anchor": [
+   9.0,
+   17
+  ],
+  "scale": 2.0,
   "pixel": true
  }
 }
