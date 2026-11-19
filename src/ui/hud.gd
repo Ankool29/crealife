@@ -39,12 +39,13 @@ var _speech_panel: PanelContainer
 var _speech_line: LineEdit
 var _menu_button: Button
 var _adopt_button: Button
+var _patee_button: Button
 var adoption_panel: AdoptionPanel
 var _state_panel: PanelContainer
 
 ## Mots proposés sous forme de boutons (on peut aussi taper la phrase).
 const CHIPS := [
-	["fruit", "graine", "balle", "machine", "créature"],
+	["pâtée", "croquettes", "eau", "souris", "balle", "machine", "créature"],
 	["viens", "mange", "pousse", "prends", "lâche", "examine", "tire", "frappe", "parle", "dors", "explore", "repose"],
 	["faim", "soif", "fatigue", "ennui", "solitude", "douleur", "peur", "désir"],
 ]
@@ -135,7 +136,7 @@ func _ready() -> void:
 	_new_button.visible = false
 	_add_button(buttons, "Caresser", caress_pressed)
 	_add_button(buttons, "Gronder", scold_pressed)
-	_add_button(buttons, "Fruit", fruit_pressed)
+	_patee_button = _add_button(buttons, "Pâtée", fruit_pressed)
 	var talk := Button.new()
 	talk.text = "Parler"
 	talk.custom_minimum_size = Vector2(130, 90)
@@ -315,6 +316,8 @@ func update_from(c: CreatureSim, world: WorldSim, event_text: String, sim_speed:
 	# le Menu se cache derrière les panneaux ouverts (bouton de fermeture, bandeau)
 	_menu_button.visible = not observe.visible and not _speech_panel.visible
 	adoption_panel.world = world
+	_patee_button.text = "Pâtée (%d)" % world.patee_stock
+	_patee_button.modulate = Color.WHITE if world.patee_stock > 0 else Color(1, 1, 1, 0.45)
 	_adopt_button.visible = _menu_button.visible and world.scenario == "normal"
 	var n := world.adoption.requests.size()
 	_adopt_button.text = "Adoptions (%d)" % n if n > 0 else "Adoptions"
@@ -333,6 +336,9 @@ func update_from(c: CreatureSim, world: WorldSim, event_text: String, sim_speed:
 		info += " · enfant de %s et %s" % [c.mother, c.father]
 	if c.pregnant_time >= 0.0:
 		info += " · attend des petits"
+	var fav := c.favorite_food()
+	if fav != "":
+		info += " · préfère " + {"patee": "la pâtée", "croquettes": "les croquettes", "proie": "chasser"}[fav]
 	info += " · %d vivantes" % world.alive_count()
 	_info_label.text = info
 	var values := [c.level("Faim"), c.level("Soif"), c.level("Fatigue"), c.level("Ennui"),

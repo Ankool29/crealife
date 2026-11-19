@@ -29,9 +29,12 @@ const SCREEN_PERIOD := 6.0
 const SCREEN_MODES: Array[String] = ["noms", "verbes", "besoins"]
 const SCREEN_RANGE := 600.0
 const SCREEN_PASSIVE := 0.4     # part retenue sans regarder l'écran
-const SCREEN_NOUNS: Array[String] = ["fruit", "graine", "jouet", "machine", "créature"]
+const SCREEN_NOUNS: Array[String] = ["pâtée", "croquettes", "proie", "eau", "jouet", "machine", "créature"]
 const MUSIC_RANGE := 450.0
-const GARDEN_W := 2000.0       # largeur du décor pixel art à la densité des pièces
+const GARDEN_W := 2000.0
+const FEEDER_PERIOD := 45.0       # le distributeur remet des croquettes (jusqu'à 3) toutes les ~45 s
+const PATEE_MAX := 3
+const PATEE_REFILL := 600.0       # largeur du décor pixel art à la densité des pièces
 const BASKET_X := 340.0          # corbeille de fruits, depuis le bord gauche de la cuisine
 ## Pièces de la maison : clé, nom affiché, largeur (celle de leur décor).
 const HOUSE: Array = [
@@ -58,10 +61,12 @@ var last_event := ""
 var _next_id := 1
 var _next_uid := 1
 var _eggs := {}                  # id d'œuf -> {genome, mother, father, generation, hatch_at}
-var _fruit_timer := 3.0
-var _kitchen_timer := 5.0
-var _berry_timer := 10.0
 var _seed_timer := 5.0
+var _feeder_timer := 3.0
+var _prey_timer := 60.0
+var _patee_timer := 0.0
+## Pâtée que le joueur peut donner (se reconstitue avec le temps).
+var patee_stock := 3
 var _used_names := {}
 
 
@@ -75,15 +80,15 @@ func _init(seed_value: int = 0, p_scenario: String = "normal", founders: int = 1
 		trees = PackedFloat32Array()
 		bushes = PackedFloat32Array()
 		zones = [{"key": "jardin", "label": "Jardin", "x0": 0.0, "x1": width, "indoor": false}]
+		if scenario == "graines":
+			add_object("eau", 600.0)
 	else:
 		_setup_zones()
 		var g := garden_x()
-		add_object("distributeur", machine_x)
 		add_object("balle", g + 1300.0)
 		_add_zone_objects()
-		for i in 3:
-			_spawn_fruit()
-		_spawn_berry()
+		for i in 2:
+			add_object("croquettes", machine_x + 60.0 + i * 25.0, 0.0)
 	add_founders(founders)
 
 
@@ -97,7 +102,7 @@ func _setup_zones() -> void:
 	width = x + GARDEN_W
 	trees = PackedFloat32Array([x + 980.0])                # le pommier du décor
 	bushes = PackedFloat32Array()         # plus de baies dans le jeu (les tests en ajoutent)
-	machine_x = x + 1450.0
+	machine_x = zone("cuisine").x0 + 1000.0     # le distributeur de croquettes
 
 
 func zone(key: String) -> Dictionary:
@@ -108,7 +113,10 @@ func zone(key: String) -> Dictionary:
 
 
 func _add_zone_objects() -> void:
-	add_object("distributeur", zone("cuisine").x0 + 1000.0)      # la gamelle de la cuisine
+	var k := zone("cuisine")
+	add_object("distributeur", machine_x)
+	add_object("eau", k.x0 + 1250.0)
+	add_object("mare", zone("jardin").x0 + 1720.0)
 	var s := zone("salle")
 	add_object("ecran", (s.x0 + s.x1) * 0.5)
 	var j: float = zone("jeux").x0
@@ -239,7 +247,9 @@ func add_founders(count: int) -> void:
 			motif.params.hue3 = rng.randf()
 			motif.params.light3 = rng.randf()
 		var sex := first_sex if i % 2 == 0 else (Gene.Sex.FEMALE if first_sex == Gene.Sex.MALE else Gene.Sex.MALE)
-		var mid: float = garden_x() + (float(zone_at(garden_x()).x1) - garden_x()) * 0.5
+		# les nouveaux arrivent dans la cuisine, près des gamelles (dans les tests : au milieu)
+		var k := zone("cuisine")
+		var mid: float = (k.x0 + k.x1) * 0.5 if not k.is_empty() else width * 0.5
 		_add_creature(g, mid + (i - (count - 1) * 0.5) * 200.0, sex, 1, "", "")
 
 
@@ -426,25 +436,108 @@ func restart_lineage() -> void:
 
 
 func _spawners(dt: float) -> void:
-	_fruit_timer -= dt
-	if _fruit_timer <= 0.0:
-		var season_factor := Climate.SEASON_FRUIT[climate.season(time)] if scenario == "normal" else 1.0
-		_fruit_timer = rng.randf_range(6.0, 12.0) / maxf(1.0, alive_count() * 0.6) / season_factor
-		_spawn_fruit()
-	_kitchen_timer -= dt
-	if _kitchen_timer <= 0.0:
-		_kitchen_timer = rng.randf_range(15.0, 25.0)
-		_fill_basket()
-	_berry_timer -= dt
-	if _berry_timer <= 0.0 and not (scenario == "normal" and climate.season(time) == 3):   # pas de baies l'hiver
-		_berry_timer = rng.randf_range(15.0, 25.0)
-		_spawn_berry()
-	if scenario == "graines":
+	# Distributeurs automatiques : quelques croquettes dès que la gamelle se vide
+	_feeder_timer -= dt
+	if _feeder_timer <= 0.0:
+		_feeder_timer = rng.randf_range(FEEDER_PERIOD * 0.8, FEEDER_PERIOD * 1.2)
+		for o in objects.duplicate():
+			if o.type_name == "distributeur" and _food_around(o.x, 300.0) < 3:
+				add_object("croquettes", o.x + rng.randf_range(50.0, 90.0), 0.0)
+	# Pâtée du joueur : une portion revient toutes les 10 min
+	if patee_stock < PATEE_MAX:
+		_patee_timer -= dt
+		if _patee_timer <= 0.0:
+			_patee_timer = PATEE_REFILL
+			patee_stock += 1
+	if scenario == "normal":
+		_tick_prey_spawn(dt)
+	if scenario == "graines":       # test : de la pâtée tombe, sans instinct pour elle
 		_seed_timer -= dt
 		if _seed_timer <= 0.0:
 			_seed_timer = rng.randf_range(6.0, 12.0)
-			if count_of("graine") < 10:
-				add_object("graine", rng.randf_range(100.0, width - 100.0), 300.0)
+			if count_of("patee") < 10:
+				add_object("patee", rng.randf_range(100.0, width - 100.0), 300.0)
+	if scenario == "vide":
+		return
+	for o in objects:
+		if o.prey_alive():
+			_move_prey(o, dt)
+
+
+func _food_around(at_x: float, r: float) -> int:
+	var n := 0
+	for o in objects:
+		if o.holder == null and o.type_name in ["croquettes", "patee"] and absf(o.x - at_x) < r:
+			n += 1
+	return n
+
+
+# ------------------------------------------------------------- proies --
+
+## Des souris et des oiseaux viennent au jardin (moins l'hiver).
+func _tick_prey_spawn(dt: float) -> void:
+	_prey_timer -= dt
+	if _prey_timer > 0.0:
+		return
+	var winter := climate.season(time) == 3
+	_prey_timer = rng.randf_range(90.0, 180.0) * (2.0 if winter else 1.0)
+	var g := zone("jardin")
+	if g.is_empty():
+		return
+	var x := rng.randf_range(float(g.x0) + 150.0, float(g.x1) - 100.0)
+	if _live_prey("souris") < 3 and rng.randf() < 0.6:
+		add_object("souris", x, 0.0)
+	elif _live_prey("oiseau") < 2 and not winter:
+		add_object("oiseau", x, 260.0)          # il se pose
+
+
+func _live_prey(type_name: String) -> int:
+	var n := 0
+	for o in objects:
+		if o.type_name == type_name and o.prey_alive():
+			n += 1
+	return n
+
+
+## Une souris trottine et file quand un chat approche ; un oiseau sautille et
+## s'envole parfois quand on s'approche trop. Elles restent au jardin.
+func _move_prey(o: WorldObject, dt: float) -> void:
+	if o.h > 0.0:
+		return
+	var info: Dictionary = ObjectCatalog.types[o.type_name].get("prey", {})
+	var g := zone("jardin")
+	var x0: float = g.get("x0", 0.0) + 60.0
+	var x1: float = g.get("x1", width) - 60.0
+	var near: CreatureSim = null
+	for c in creatures:
+		if c.alive and (near == null or absf(c.x - o.x) < absf(near.x - o.x)):
+			near = c
+	var d := absf(near.x - o.x) if near else 1e9
+	o.flee = maxf(0.0, o.flee - dt)
+	if info.get("flies", false):
+		if d < 170.0 and rng.randf() < dt * (3.0 if o.flee > 0.0 else 0.8):
+			remove_object(o)                       # envolé
+			return
+	var flee_r: float = info.get("flee", 0.0)
+	if near and (d < flee_r or o.flee > 0.0) and not info.get("flies", false):
+		o.x += signf(o.x - near.x) * 170.0 * dt
+	else:
+		if rng.randf() < dt * 0.4:
+			o.vx = rng.randf_range(-1.0, 1.0) * float(info.get("speed", 40.0))
+		o.x += o.vx * dt
+	if o.x < x0 or o.x > x1:
+		o.x = clampf(o.x, x0, x1)
+		o.vx = -o.vx
+
+
+## Le joueur donne de la pâtée (stock limité, qui se reconstitue).
+func drop_patee(at_x: float) -> bool:
+	if patee_stock <= 0:
+		last_event = "Plus de pâtée pour le moment (une portion revient toutes les 10 min)."
+		return false
+	patee_stock -= 1
+	add_object("patee", at_x, 120.0)
+	return true
 
 
 func _physics(o: WorldObject, dt: float) -> void:
@@ -485,45 +578,14 @@ func count_of(type_name: String) -> int:
 	return n
 
 
-## Le joueur fait tomber un fruit du ciel.
-func drop_food(at_x: float) -> void:
-	add_object("fruit", at_x, 420.0)
-
-
-func _spawn_fruit() -> void:
-	if trees.is_empty() or count_of("fruit") >= 6 + 2 * alive_count():
-		return
-	var tree_x := trees[rng.randi_range(0, trees.size() - 1)]
-	add_object("fruit", tree_x + rng.randf_range(-160.0, 160.0), rng.randf_range(330.0, 450.0))
-
-
-## La corbeille de la cuisine se remplit toute l'année (quelques fruits).
-func _fill_basket() -> void:
-	var k := zone("cuisine")
-	if k.is_empty():
-		return
-	var n := 0
-	for o in objects:
-		if o.type_name == "fruit" and o.holder == null and o.x >= k.x0 and o.x < k.x1:
-			n += 1
-	if n < 3:
-		add_object("fruit", k.x0 + BASKET_X + rng.randf_range(-60.0, 60.0), 0.0)
-
-
-func _spawn_berry() -> void:
-	if bushes.is_empty() or count_of("baie") >= 6:
-		return
-	var bx := bushes[rng.randi_range(0, bushes.size() - 1)]
-	add_object("baie", bx + rng.randf_range(-60.0, 60.0), 40.0)
-
-
 # ------------------------------------------------------------- sauvegarde --
 
 func to_dict() -> Dictionary:
 	var objs := []
 	for o in objects:
 		# Un objet tenu est sauvegardé posé au sol, aux pieds de la créature.
-		var od := {"id": o.id, "type": o.type_name, "x": o.x, "h": 0.0 if o.holder else o.h, "cooldown": o.cooldown}
+		var od := {"id": o.id, "type": o.type_name, "x": o.x, "h": 0.0 if o.holder else o.h, "cooldown": o.cooldown,
+			"dead": o.dead}
 		if _eggs.has(o.id):
 			var e: Dictionary = _eggs[o.id]
 			od["egg"] = {"genome": e.genome.to_dict(), "mother": e.mother, "father": e.father,
@@ -532,12 +594,13 @@ func to_dict() -> Dictionary:
 	var cs := []
 	for c in creatures:
 		cs.append(c.to_dict())
-	return {"version": 3, "time": time, "climate": climate.to_dict(), "screen": screen, "next_id": _next_id, "next_uid": _next_uid,
+	return {"version": 4, "time": time, "climate": climate.to_dict(), "screen": screen, "next_id": _next_id, "next_uid": _next_uid,
 		"names": _used_names.keys(), "objects": objs, "creatures": cs, "history": history,
 		"adoption": adoption.to_dict()}
 
 
 static func from_dict(d: Dictionary) -> WorldSim:
+	ObjectCatalog.ensure()
 	var w := WorldSim.new(0, "normal", 0)
 	w.objects.clear()
 	w.time = float(d.time)
@@ -553,22 +616,22 @@ static func from_dict(d: Dictionary) -> WorldSim:
 		if version == 2:
 			return w._from_v2(x)
 		return x
-	var fixed := ["distributeur", "ecran", "trampoline", "boite_musique"]
+	var fixed := ["distributeur", "ecran", "trampoline", "boite_musique", "eau", "mare"]
 	w._next_id = int(d.next_id)
 	w._next_uid = int(d.next_uid)
 	for n in d.names:
 		w._used_names[n] = true
-	var old_objects := version < 3
+	var old_objects := version < 4
 	if old_objects:          # les meubles changent de place : on les recrée
-		w.add_object("distributeur", w.machine_x)
 		w._add_zone_objects()
 	for od in d.objects:
 		if old_objects and str(od.type) in fixed:
 			continue
-		if str(od.type) in ["baie", "pierre"]:      # retirés du jeu
+		if not ObjectCatalog.types.has(str(od.type)):      # retirés du jeu (fruits, graines...)
 			continue
 		var o := WorldObject.new(int(od.id), str(od.type), place.call(float(od.x)), float(od.h))
 		o.cooldown = float(od.cooldown)
+		o.dead = bool(od.get("dead", false))
 		w.objects.append(o)
 		if od.has("egg"):
 			var e: Dictionary = od.egg

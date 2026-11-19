@@ -158,10 +158,19 @@ func _choose_attention(rng: RandomNumberGenerator) -> void:
 			if lang.shown_left > 0.0 and lang.shown_category == c:
 				s += 3.0       # on lui montre cet objet : elle le regarde
 		for d in DRIVE_COUNT:
-			s += attn_w[d * _cats + c] * drives[d]
+			var k := attn_w[d * _cats + c] * drives[d]
+			# Faim ou soif pressante : la survie passe avant l'ennui ou la solitude
+			if (d == _hunger or d == _thirst) and drives[d] > URGENT and k > 0.0:
+				k *= 3.0
+			s += k
 		if s > best:
 			best = s
 			attention = c
+
+
+const URGENT := 0.75
+var _hunger := DRIVE_NAMES.find("Faim")
+var _thirst := DRIVE_NAMES.find("Soif")
 
 
 func _compute_concepts() -> void:
@@ -249,6 +258,9 @@ func train_instinct(p: Dictionary, strength: float) -> void:
 	if d < 0 or v < 0:
 		return
 	var cat_name := str(p.get("category", ""))
+	# anciennes souches (fruits, graines...) : la catégorie équivalente d'aujourd'hui
+	if cat_name in ["fruit", "graine", "baie", "pierre"]:
+		cat_name = "eau" if str(p.get("drive", "")) == "Soif" else "croquettes"
 	var cat := ObjectCatalog.categories.find(cat_name) if cat_name != "" else -1
 	var reward := float(p.get("reward", 1.0)) * strength
 	var slot := cat if cat >= 0 else _cats

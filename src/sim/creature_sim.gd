@@ -94,7 +94,11 @@ var _goal_x := 0.0
 var _prev_drives := PackedFloat32Array()
 var _instinct_timer := 0.0
 var _mate_rest := 0.0
-var _screen_time := 0.0           # temps qu'elle compte encore passer devant l'écran
+var _screen_time := 0.0
+## Goûts (gène « gout ») : plaisir que donne chaque aliment, et instinct de chasse.
+var taste := {"patee": 0.7, "croquettes": 0.5, "proie": 0.6}
+var hunting := 0.5
+var catches := 0           # temps qu'elle compte encore passer devant l'écran
 var _refused := 0.0
 ## Soins aux petits : instinct parental (gène) et tâche en cours
 ## {kind : "nourrir" ou "parler", child, food, time}.
@@ -173,6 +177,14 @@ static func ensure_cat_genes(g: Genome, rng: RandomNumberGenerator, random: bool
 			random = true if rng == null else random
 		if random:
 			gene.params = CatCoat.random_alleles(r) if part == "pelage" else CatCoat.random_morpho(r)
+	var taste_gene := g.find(Gene.Type.LOBE, "lobe", "gout")
+	if taste_gene == null:
+		taste_gene = starter.find(Gene.Type.LOBE, "lobe", "gout").copy()
+		g.genes.append(taste_gene)
+		random = true
+	if random:
+		for k in ["patee", "croquettes", "proie", "chasse"]:
+			taste_gene.params[k] = clampf(float(taste_gene.params[k]) + r.randf_range(-0.35, 0.35), 0.0, 1.0)
 
 
 ## Exprime les gènes du stade actuel (naissance, puis à chaque changement de stade).
@@ -194,6 +206,10 @@ func _express(first_time: bool) -> void:
 			care_instinct = float(g.params.get("care", 0.6))
 		if g.type == Gene.Type.LOBE and str(g.params.get("lobe", "")) == "temperament":
 			curiosity = float(g.params.get("curiosity", 0.5))
+		if g.type == Gene.Type.LOBE and g.params.get("lobe", "") == "gout":
+			for k in taste:
+				taste[k] = float(g.params.get(k, taste[k]))
+			hunting = float(g.params.get("chasse", 0.5))
 			playfulness = float(g.params.get("playfulness", 0.5))
 	var pel := genome.find(Gene.Type.APPEARANCE, "part", "pelage")
 	var mor := genome.find(Gene.Type.APPEARANCE, "part", "morpho")
@@ -426,6 +442,7 @@ func _decide(world: WorldSim, rng: RandomNumberGenerator) -> void:
 		target = _nearest(world, brain.attention) if brain.attention >= 0 else null
 	if v in Brain.OBJECT_VERBS and target == null:
 		brain.verb = Verb.RIEN
+	_survival_reflex(world)
 	_done = false
 	_maybe_talk(rng)
 	match brain.verb:
@@ -640,15 +657,51 @@ func _start_care(world: WorldSim, rng: RandomNumberGenerator) -> bool:
 	return true
 
 
+## Réflexe de survie : affamée devant de la nourriture, ou assoiffée devant
+## de l'eau, elle mange ou boit, quoi que son cerveau ait appris d'autre.
+func _survival_reflex(world: WorldSim) -> void:
+	var cats := ObjectCatalog.categories
+	var want := ""
+	if level("Faim") > 0.8:
+		want = "faim"
+	elif level("Soif") > 0.8:
+		want = "soif"
+	if want == "":
+		return
+	var best: WorldObject = null
+	for o in world.objects:
+		if o.holder != null or absf(o.x - x) > VISION_RANGE * 0.7:
+			continue
+		var ok := false
+		if want == "faim":
+			ok = o.type_name in ["croquettes", "patee"] or o.dead
+		else:
+			ok = o.category == cats.find("eau")
+		if ok and (best == null or absf(o.x - x) < absf(best.x - x)):
+			best = o
+	if best == null:
+		# rien en vue : elle part chercher (vers le distributeur ou l'eau qu'elle connaît)
+		if brain.verb != Verb.EXPLORER and brain.verb != Verb.DORMIR:
+			brain.verb = Verb.EXPLORER
+			brain.clear_trace()
+			target = null
+			_goal_x = _explore_goal(world, world.rng)
+		return
+	brain.attention = best.category
+	brain.verb = Verb.MANGER
+	brain.clear_trace()          # réflexe : rien à apprendre de travers
+	target = best
+
+
 func _food_cat() -> int:
-	return ObjectCatalog.categories.find("fruit")
+	return ObjectCatalog.categories.find("croquettes")
 
 
 func _food_near(world: WorldSim, around: float) -> WorldObject:
 	var best: WorldObject = null
 	var best_d := VISION_RANGE * 2.0
 	for o in world.objects:
-		if o.holder == null and o.type_name in ["fruit", "graine"] and absf(o.x - around) < best_d:
+		if o.holder == null and (o.type_name in ["croquettes", "patee"] or o.dead) and absf(o.x - around) < best_d:
 			best_d = absf(o.x - around)
 			best = o
 	return best
@@ -820,6 +873,9 @@ func _act_on(o: WorldObject, v: int, world: WorldSim) -> void:
 			o.vx = 0.0
 		return
 	var r := ObjectCatalog.response(o.type_name, Brain.VERB_KEYS[v])
+	if r.get("prey", false) and not o.dead:
+		_hunt(o, v, world)
+		return
 	for chem_name in r.get("chems", {}):
 		var amount := float(r.chems[chem_name])
 		if chem_name == "Ennui" and amount < 0.0:
@@ -854,6 +910,51 @@ func _act_on(o: WorldObject, v: int, world: WorldSim) -> void:
 		target = null
 		meals += 1
 		eaten[o.type_name] = eaten.get(o.type_name, 0) + 1
+		_taste(str(ObjectCatalog.types[o.type_name].get("food", "")))
+
+
+## Tente d'attraper une proie vivante : réussite selon l'instinct de chasse
+## (un oiseau est plus dur qu'une souris). Attraper est un plaisir en soi.
+func _hunt(o: WorldObject, v: int, world: WorldSim) -> void:
+	var info: Dictionary = ObjectCatalog.types[o.type_name].prey
+	var p := (0.15 + 0.6 * hunting) * float(info.get("catch", 1.0))
+	if v == Verb.MANGER:
+		p *= 0.5                     # se jeter dessus la gueule ouverte : moins efficace
+	if v == Verb.FRAPPER:
+		p *= 1.3                     # le coup de patte
+	if world.rng.randf() < p:
+		o.dead = true
+		o.vx = 0.0
+		catches += 1
+		biochem.add(_chem["Récompense"], 0.3 + 0.6 * hunting)
+		biochem.add(_chem["Ennui"], -0.3)
+		last_event = "%s a attrapé %s !" % [creature_name, "une souris" if o.type_name == "souris" else "un oiseau"]
+		world.last_event = last_event
+	else:
+		o.flee = 3.0
+		biochem.add(_chem["Ennui"], -0.05 * hunting)
+
+
+## Le goût : plus un aliment est aimé, plus il fait plaisir (récompense en
+## plus de la faim calmée). Le cerveau apprend ainsi ses préférences ; un
+## aliment peu aimé reste mangé quand on a faim (pas de punition : sinon un
+## chat pourrait se laisser mourir devant sa gamelle).
+func _taste(food: String) -> void:
+	if taste.has(food):
+		biochem.add(_chem["Récompense"], float(taste[food]) * 0.5)
+
+
+## L'aliment préféré parmi ceux qu'elle a déjà goûtés ("" si aucun).
+func favorite_food() -> String:
+	var best := ""
+	var types := {"patee": ["patee"], "croquettes": ["croquettes"], "proie": ["souris", "oiseau"]}
+	for f in taste:
+		var tried := 0
+		for t in types[f]:
+			tried += eaten.get(t, 0)
+		if tried > 0 and (best == "" or taste[f] > taste[best]):
+			best = f
+	return best
 
 
 func _finish() -> void:
@@ -925,7 +1026,7 @@ func to_dict() -> Dictionary:
 		"uid": uid, "name": creature_name, "genome": genome.to_dict(), "sex": sex,
 		"generation": generation, "mother": mother, "father": father,
 		"x": x, "facing": facing, "age": age, "alive": alive, "death_cause": death_cause,
-		"meals": meals, "naps": naps, "eaten": eaten,
+		"meals": meals, "naps": naps, "eaten": eaten, "catches": catches,
 		"pregnant_time": pregnant_time, "litter_size": litter_size, "father_genome": _father_genome.to_dict() if _father_genome else null,
 		"father_name": _father_name, "mate_rest": _mate_rest,
 		"biochem": biochem.to_dict(), "brain": brain.to_dict(), "language": language.to_dict(),
@@ -946,6 +1047,7 @@ static func from_dict(d: Dictionary) -> CreatureSim:
 	c.death_cause = str(d.death_cause)
 	c.meals = int(d.meals)
 	c.naps = int(d.naps)
+	c.catches = int(d.get("catches", 0))
 	c.eaten = d.eaten
 	c.pregnant_time = float(d.pregnant_time)
 	c.litter_size = int(d.get("litter_size", 1))
@@ -1014,15 +1116,18 @@ func _explore_goal(world: WorldSim, rng: RandomNumberGenerator) -> float:
 				nb += 1
 		if nb > 0:
 			return clampf(sum / nb + rng.randf_range(-150.0, 150.0), 60.0, world.width - 60.0)
-	# Affamée sans rien en vue : elle se souvient d'où vient la nourriture
-	# (la corbeille de la cuisine, le pommier) et s'y dirige.
+	# Affamée (ou assoiffée) sans rien en vue : elle se souvient où sont le
+	# distributeur de croquettes et l'eau, et s'y dirige.
+	var spots: Array[float] = []
 	if level("Faim") > 0.35 and not _sees_food():
-		var spots: Array[float] = []
-		var k := world.zone("cuisine")
-		if not k.is_empty():
-			spots.append(float(k.x0) + WorldSim.BASKET_X)
-		for tx in world.trees:
-			spots.append(tx)
+		for o in world.objects:
+			if o.type_name == "distributeur":
+				spots.append(o.x)
+	elif level("Soif") > 0.35 and brain.vision[ObjectCatalog.categories.find("eau")] <= 0.0:
+		for o in world.objects:
+			if o.category == ObjectCatalog.categories.find("eau"):
+				spots.append(o.x)
+	if true:
 		if not spots.is_empty():
 			spots.sort_custom(func(a, b): return absf(a - x) < absf(b - x))
 			if absf(spots[0] - x) > 250.0:
@@ -1055,7 +1160,7 @@ func _explore_goal(world: WorldSim, rng: RandomNumberGenerator) -> float:
 
 
 func _sees_food() -> bool:
-	for n in ["fruit", "graine"]:
+	for n in ["pâtée", "croquettes"]:
 		if brain.vision[ObjectCatalog.categories.find(n)] > 0.0:
 			return true
 	return false

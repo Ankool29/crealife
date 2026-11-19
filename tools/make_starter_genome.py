@@ -150,9 +150,9 @@ def instinct(drive, category, verb, reward=1.0, repeat=6):
 
 
 # Instincts : réflexes appris avant la naissance (catégorie "" = aucun objet).
-# Rien sur les graines, les baies ou la machine : elle doit les découvrir.
-instinct("Faim", "fruit", "manger")
-instinct("Soif", "fruit", "manger", repeat=4)
+# Croquettes et eau : innés. Pâtée, proies, distributeur : à découvrir.
+instinct("Faim", "croquettes", "manger")
+instinct("Soif", "eau", "manger", repeat=4)
 instinct("Faim", "", "explorer", 0.6, 3)
 instinct("Fatigue", "", "dormir")
 instinct("Sommeil", "", "dormir")
@@ -194,6 +194,12 @@ gene("lobe", {"lobe": "temperament", "curiosity": 0.5, "playfulness": 0.5})
 LOCI = ["O", "B", "D", "A", "T", "Ti", "Sp", "C", "W", "S", "I", "L", "M"]
 gene("apparence", dict({"part": "pelage"}, **{l + k: 0.0 for l in LOCI for k in "12"}))
 gene("apparence", {"part": "morpho", "head": 0.5, "eye": 0.5, "rufous": 0.5, "white_grade": 0.5, "contrast": 0.5})
+# Goûts (plaisir de chaque aliment) et instinct de chasse
+gene("lobe", {"lobe": "gout", "patee": 0.7, "croquettes": 0.5, "proie": 0.6, "chasse": 0.5})
+instinct("Faim", "proie", "manger", 1.0, 4)                                # une proie attrapée se mange
+instinct("Ennui", "proie", "frapper", 0.8, 3)                              # jouer à chasser
+# Carnivore : le foie fabrique du glucose à partir des protéines (néoglucogenèse)
+reaction("Protéines", "Glucose", 0.03, "Foie", cond="Glucose", lo=0.0, hi=0.5)
 
 catalog = [{"id": i + 1, "name": n, "family": f} for i, (n, f, _h, _v) in enumerate(CHEMICALS)]
 (ROOT / "data").mkdir(exist_ok=True)

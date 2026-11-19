@@ -170,6 +170,9 @@ func _gene_summary(g: Gene) -> String:
 		Gene.Type.LOBE:
 			if str(p.lobe) == "temperament":
 				return "tempérament : curiosité %.2f, espièglerie %.2f" % [float(p.get("curiosity", 0)), float(p.get("playfulness", 0))]
+			if str(p.lobe) == "gout":
+				return "goûts : pâtée %.2f, croquettes %.2f, proies %.2f ; instinct de chasse %.2f" % [
+					float(p.get("patee", 0)), float(p.get("croquettes", 0)), float(p.get("proie", 0)), float(p.get("chasse", 0))]
 			if str(p.lobe) == "parental":
 				return "instinct parental %.2f (nourrir et parler à ses petits)" % float(p.get("care", 0))
 			if str(p.lobe) == "langage":

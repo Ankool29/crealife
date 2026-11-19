@@ -109,8 +109,15 @@ func _process(_delta: float) -> void:
 		var sprite_name := o.type_name
 		if o.type_name == "distributeur":
 			sprite_name = "distributeur_on" if o.cooldown <= 0.0 else "distributeur_off"
+		if ObjectCatalog.types[o.type_name].get("invisible", false):     # la mare est dans le décor
+			s.visible = false
+			continue
 		SpriteLibrary.setup_object_sprite(s, sprite_name)
 		s.visible = not (o.type_name == "ecran" and screen_rect.has_area())
+		if o.type_name in ["souris", "oiseau"]:       # tournée vers où elle va ; attrapée : sur le dos
+			if absf(o.vx) > 1.0:
+				s.flip_h = o.vx > 0.0
+			s.flip_v = o.dead
 		s.position = Vector2(o.x, -o.h)
 		s.z_index = 5 if o.holder != null else 0
 	for id in _sprites.keys():

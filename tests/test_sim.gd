@@ -21,6 +21,7 @@ func _init() -> void:
 	_test_family_life()
 	_test_litter()
 	_test_adoption()
+	_test_food()
 	_test_zones_and_climate()
 	_test_cat_genetics()
 	print("RÉSULTAT : %s" % ("OK" if _failures == 0 else "%d échec(s)" % _failures))
@@ -114,16 +115,16 @@ func _test_instincts_and_reinforcement() -> void:
 	print("Cerveau :")
 	var c := CreatureSim.new("Test", Genome.starter(), 100.0, Gene.Sex.FEMALE)
 	var b := c.brain
-	var fruit := ObjectCatalog.categories.find("fruit")
-	var graine := ObjectCatalog.categories.find("graine")
-	_check(b.weight("Faim", fruit, Brain.Verb.MANGER) > 0.5, "instinct : manger un fruit quand on a faim")
-	_check(absf(b.weight("Faim", graine, Brain.Verb.MANGER)) < 0.01, "aucun savoir inné sur les graines")
+	var croq := ObjectCatalog.categories.find("croquettes")
+	var patee := ObjectCatalog.categories.find("pâtée")
+	_check(b.weight("Faim", croq, Brain.Verb.MANGER) > 0.5, "instinct : manger des croquettes quand on a faim")
+	_check(absf(b.weight("Faim", patee, Brain.Verb.MANGER)) < 0.01, "aucun savoir inné sur la pâtée")
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 2
 	b.drives.fill(0.0)
 	b.drives[Brain.DRIVE_NAMES.find("Ennui")] = 0.8
 	b.vision.fill(0.0)
-	b.vision[ObjectCatalog.categories.find("pierre")] = 1.0
+	b.vision[ObjectCatalog.categories.find("eau")] = 1.0
 	var allowed: Array[bool] = []
 	allowed.resize(Brain.VERB_COUNT)
 	allowed.fill(true)
@@ -149,16 +150,16 @@ func _test_starvation() -> void:
 
 
 func _test_learns_seeds() -> void:
-	print("Critère phase 2 : découvrir seule une nourriture inconnue (graines) :")
+	print("Critère phase 2 : découvrir seule une nourriture inconnue (pâtée) :")
 	var w := WorldSim.new(21, "graines")
 	var c := w.creatures[0]
 	_run(w, 3.0)
-	var graine := ObjectCatalog.categories.find("graine")
-	var wgt := c.brain.weight("Faim", graine, Brain.Verb.MANGER)
-	print("    graines mangées : %d, poids faim×graine→manger : %.2f, vivante : %s" % [c.eaten.get("graine", 0), wgt, c.alive])
-	_check(c.alive, "elle survit 3 h avec uniquement des graines")
-	_check(c.eaten.get("graine", 0) >= 30, "elle mange régulièrement des graines")
-	_check(wgt > 0.5, "elle a appris : faim + graine -> manger")
+	var patee := ObjectCatalog.categories.find("pâtée")
+	var wgt := c.brain.weight("Faim", patee, Brain.Verb.MANGER)
+	print("    pâtées mangées : %d, poids faim×pâtée→manger : %.2f, vivante : %s" % [c.eaten.get("patee", 0), wgt, c.alive])
+	_check(c.alive, "elle survit 3 h avec uniquement de la pâtée")
+	_check(c.eaten.get("patee", 0) >= 30, "elle mange régulièrement de la pâtée")
+	_check(wgt > 0.5, "elle a appris : faim + pâtée -> manger")
 
 
 func _test_full_life() -> void:
@@ -199,7 +200,7 @@ func _test_save_load() -> void:
 		"créatures et objets rechargés")
 	_check(a.creature_name == b.creature_name and absf(a.age - b.age) < 0.01 and absf(a.hue - b.hue) < 0.0001,
 		"identité, âge et couleurs conservés")
-	var fruit := ObjectCatalog.categories.find("fruit")
+	var fruit := ObjectCatalog.categories.find("croquettes")
 	_check(absf(a.brain.weight("Faim", fruit, Brain.Verb.MANGER) - b.brain.weight("Faim", fruit, Brain.Verb.MANGER)) < 0.001,
 		"ce que le cerveau a appris est conservé")
 	_check(absf(a.level("Glucose") - b.level("Glucose")) < 0.001, "la chimie est conservée")
@@ -266,7 +267,7 @@ func _test_language() -> void:
 	print("    connaissance de « jouet » après 10 min de leçons : %.2f, dit « %s »" % [c.language.nouns[jouet], c.language.pronounce("nom", jouet)])
 	_check(c.language.nouns[jouet] > 0.8, "elle apprend un nom en voyant l'objet")
 	_check(c.language.pronounce("nom", jouet) == "jouet", "elle prononce correctement un mot bien appris")
-	_check(c.language.nouns[ObjectCatalog.categories.find("fruit")] < 0.05, "elle n'apprend pas les mots qu'on ne lui dit pas")
+	_check(c.language.nouns[ObjectCatalog.categories.find("pâtée")] < 0.05, "elle n'apprend pas les mots qu'on ne lui dit pas")
 
 	# 2. Obéir à un ordre (même monde, avec et sans ordres)
 	var pushes := [0, 0]
@@ -277,7 +278,7 @@ func _test_language() -> void:
 		c2.language.verbs[Brain.Verb.POUSSER] = 1.0
 		c2.language.nouns[jouet] = 1.0
 		w2.add_object("balle", c2.x + 150.0)
-		w2.add_object("pierre", c2.x - 150.0)
+		w2.add_object("eau", c2.x - 150.0)
 		var n := 0
 		t = 0.0
 		while t < 1200.0:
@@ -426,6 +427,61 @@ func _test_adoption() -> void:
 	_check(Adoption.meets(white, cw), "un chat blanc correspond au critère « tout blanc »")
 
 
+func _test_food() -> void:
+	print("Nourriture de chat :")
+	var w := WorldSim.new(77, "normal", 3)
+	for c in w.creatures:
+		c.age = 3.0 * 3600.0
+	_run(w, 1.0)
+	var croq := 0
+	for c in w.creatures:
+		croq += c.eaten.get("croquettes", 0)
+	_check(croq >= 10, "le distributeur nourrit la maison (%d croquettes en 1 h)" % croq)
+	_check(w.creatures.all(func(c): return c.alive), "tout le monde est en vie")
+	# pâtée : stock limité qui revient
+	var stock := w.patee_stock
+	w.drop_patee(w.creatures[0].x)
+	_check(w.patee_stock == stock - 1 and w.count_of("patee") >= 1, "le joueur donne de la pâtée (stock %d)" % w.patee_stock)
+	w.patee_stock = 0
+	_check(not w.drop_patee(100.0), "plus de pâtée quand le stock est vide")
+	# chasse : une bonne chasseuse attrape une souris et la mange
+	var hunter := w.creatures[0]
+	hunter.hunting = 1.0
+	var caught := 0
+	for i in 40:
+		var m := w.add_object("souris", hunter.x + 60.0)
+		hunter._act_on(m, Brain.Verb.FRAPPER, w)
+		if m.dead:
+			caught += 1
+		w.remove_object(m)
+	_check(caught >= 25, "une bonne chasseuse attrape souvent (%d/40)" % caught)
+	var lazy := w.creatures[1]
+	lazy.hunting = 0.0
+	var caught2 := 0
+	for i in 40:
+		var m := w.add_object("souris", lazy.x + 60.0)
+		lazy._act_on(m, Brain.Verb.FRAPPER, w)
+		if m.dead:
+			caught2 += 1
+		w.remove_object(m)
+	_check(caught2 < caught, "une piètre chasseuse rate plus souvent (%d/40)" % caught2)
+	var prey := w.add_object("souris", hunter.x + 60.0)
+	prey.dead = true
+	hunter._act_on(prey, Brain.Verb.MANGER, w)
+	_check(not prey in w.objects and hunter.eaten.get("souris", 0) == 1, "une souris attrapée se mange")
+	# goûts : la préférence vient du plaisir pris
+	hunter.taste = {"patee": 0.95, "croquettes": 0.1, "proie": 0.2}
+	hunter.eaten["patee"] = 1
+	_check(hunter.favorite_food() == "patee", "elle préfère ce qu'elle aime le plus parmi ce qu'elle a goûté")
+	var rid := Chemicals.id_of("Récompense")
+	hunter.biochem.conc[rid] = 0.0
+	hunter._taste("patee")
+	var r_patee := hunter.level("Récompense")
+	hunter.biochem.conc[rid] = 0.0
+	hunter._taste("croquettes")
+	_check(r_patee > hunter.level("Récompense") * 3.0, "la pâtée lui fait bien plus plaisir que les croquettes")
+
+
 func _test_family_life() -> void:
 	print("Vie de famille :")
 	# Mélange des couleurs : les enfants ne sont pas des copies d'un parent
@@ -477,7 +533,8 @@ func _test_family_life() -> void:
 	var mum := w2.creatures[0]
 	mum.age = 3.0 * 3600.0
 	w2.tick(STEP)
-	w2.give_birth(mum.x + 300.0, Genome.starter(), mum.creature_name, "Papa", 2)
+	var kid := w2.give_birth(mum.x + 300.0, Genome.starter(), mum.creature_name, "Papa", 2)
+	kid.age = 0.6 * 3600.0              # sevré : on lui apporte à manger (un bébé, on l'allaite)
 	var fed := false
 	t = 0.0
 	while t < 2400.0 and not fed:
@@ -486,8 +543,8 @@ func _test_family_life() -> void:
 		for c in w2.creatures:
 			if c != mum and c.alive:
 				c.biochem.conc[Chemicals.id_of("Faim")] = maxf(c.level("Faim"), 0.7)
-		if w2.count_of("fruit") == 0:
-			w2.add_object("fruit", mum.x - 200.0)
+		if w2.count_of("croquettes") == 0:
+			w2.add_object("croquettes", mum.x - 200.0)
 		fed = mum.last_event.contains("apporte à manger")
 	print("    %s : %s" % [mum.creature_name, mum.last_event])
 	_check(fed, "un parent apporte à manger à son petit")
@@ -497,7 +554,9 @@ func _test_zones_and_climate() -> void:
 	print("Critère phase 5 : zones et climat :")
 	var w := WorldSim.new(71, "normal", 2)
 	_check(w.zones.size() == 6 and w.zones[2].key == "jeux" and w.zones[-1].key == "jardin", "la maison (5 pièces) puis le jardin")
-	_check(w.zone_at(w.creatures[0].x).key == "jardin", "les fondateurs naissent au jardin")
+	_check(w.zone_at(w.creatures[0].x).key == "cuisine", "les fondateurs arrivent dans la cuisine")
+	for c in w.creatures:               # pour le froid : dehors
+		c.x = w.garden_x() + 600.0
 	# Hiver : froid dehors, doux dedans, peu de fruits
 	w.time = 3.0 * Climate.SEASON + 0.2 * Climate.DAY
 	var outside := w.temperature_at(w.garden_x() + 500.0)
@@ -510,6 +569,9 @@ func _test_zones_and_climate() -> void:
 		w.tick(STEP)
 		t += STEP
 		froid = maxf(froid, w.creatures[0].level("Froid"))
+		if t < 600.0:
+			for c in w.creatures:       # on les garde dehors un moment
+				c.x = maxf(c.x, w.garden_x() + 300.0)
 	print("    froid ressenti au plus fort : %.2f, toutes vivantes : %s" % [froid, w.alive_count() == 2])
 	_check(froid > 0.2, "elles ont froid en hiver")
 	_check(w.alive_count() == 2, "elles survivent à une demi-heure d'hiver")
@@ -559,7 +621,7 @@ func _test_zones_and_climate() -> void:
 	old.version = 1
 	for od in old.objects:
 		od.x = float(od.x) - w.garden_x()
-	old.objects = old.objects.filter(func(od): return od.type in ["fruit", "baie", "distributeur", "pierre", "balle"] and float(od.x) >= 0.0)
+	old.objects = old.objects.filter(func(od): return od.type in ["distributeur", "balle"] and float(od.x) >= 0.0)
 	for cd in old.creatures:
 		cd.x = float(cd.x) - w.garden_x()
 	var w4 := WorldSim.from_dict(JSON.parse_string(JSON.stringify(old)))
@@ -629,7 +691,7 @@ func _test_cat_genetics() -> void:
 	var w := WorldSim.new(3, "vide", 0)
 	var deaf := CreatureSim.new("Neige", white, 500.0, Gene.Sex.FEMALE)
 	w.creatures.append(deaf)
-	_check(deaf.coat.deaf and deaf.hear("fruit", 1.0).is_empty(), "un chat blanc aux yeux bleus est sourd (%s)" % deaf.coat.name)
+	_check(deaf.coat.deaf and deaf.hear("pâtée", 1.0).is_empty(), "un chat blanc aux yeux bleus est sourd (%s)" % deaf.coat.name)
 	# Variété des fondateurs
 	var w2 := WorldSim.new(9, "normal", 10)
 	var names := {}

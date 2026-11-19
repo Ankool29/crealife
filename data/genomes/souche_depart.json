@@ -1611,7 +1611,7 @@
 			"silent": false,
 			"p": {
 				"drive": "Faim",
-				"category": "fruit",
+				"category": "croquettes",
 				"verb": "manger",
 				"reward": 1.0,
 				"repeat": 6
@@ -1628,7 +1628,7 @@
 			"silent": false,
 			"p": {
 				"drive": "Soif",
-				"category": "fruit",
+				"category": "eau",
 				"verb": "manger",
 				"reward": 1.0,
 				"repeat": 4
@@ -2087,6 +2087,78 @@
 				"rufous": 0.5,
 				"white_grade": 0.5,
 				"contrast": 0.5
+			}
+		},
+		{
+			"id": 122,
+			"type": "lobe",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"lobe": "gout",
+				"patee": 0.7,
+				"croquettes": 0.5,
+				"proie": 0.6,
+				"chasse": 0.5
+			}
+		},
+		{
+			"id": 123,
+			"type": "instinct",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"drive": "Faim",
+				"category": "proie",
+				"verb": "manger",
+				"reward": 1.0,
+				"repeat": 4
+			}
+		},
+		{
+			"id": 124,
+			"type": "instinct",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"drive": "Ennui",
+				"category": "proie",
+				"verb": "frapper",
+				"reward": 0.8,
+				"repeat": 3
+			}
+		},
+		{
+			"id": 125,
+			"type": "reaction",
+			"stage": "bebe",
+			"sex": "tous",
+			"mut": 1.0,
+			"dup": true,
+			"del": true,
+			"silent": false,
+			"p": {
+				"a": "Protéines",
+				"b": "",
+				"c": "Glucose",
+				"d": "",
+				"rate": 0.03,
+				"organ": "Foie",
+				"cond": "Glucose",
+				"lo": 0.0,
+				"hi": 0.5
 			}
 		}
 	]

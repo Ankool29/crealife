@@ -1,36 +1,4 @@
 {
- "fruit": {
-  "size": [
-   23,
-   26
-  ],
-  "anchor": [
-   11.5,
-   26
-  ],
-  "scale": 2.4,
-  "pixel": true
- },
- "graine": {
-  "size": [
-   18,
-   17
-  ],
-  "anchor": [
-   9.0,
-   17
-  ],
-  "scale": 2.0,
-  "pixel": true
- },
- "baie": {
-  "size": 96,
-  "anchor": [
-   48,
-   86.4
-  ],
-  "scale": 0.5
- },
  "balle": {
   "size": [
    32,
@@ -42,14 +10,6 @@
   ],
   "scale": 2.0,
   "pixel": true
- },
- "pierre": {
-  "size": 128,
-  "anchor": [
-   64,
-   115.2
-  ],
-  "scale": 0.5
  },
  "oeuf": {
   "size": 128,
@@ -196,7 +156,7 @@
    15.5,
    24
   ],
-  "scale": 3.0,
+  "scale": 1.8,
   "pixel": true
  },
  "souris": {
@@ -207,6 +167,30 @@
   "anchor": [
    21.5,
    21
+  ],
+  "scale": 1.8,
+  "pixel": true
+ },
+ "patee": {
+  "size": [
+   32,
+   21
+  ],
+  "anchor": [
+   16.0,
+   21
+  ],
+  "scale": 3.0,
+  "pixel": true
+ },
+ "croquettes": {
+  "size": [
+   10,
+   5
+  ],
+  "anchor": [
+   5.0,
+   5
   ],
   "scale": 3.0,
   "pixel": true

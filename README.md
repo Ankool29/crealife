@@ -57,43 +57,43 @@ Tout le contenu est original : aucun fichier ni code du jeu Creatures n'est util
   pelage, le sexe, l'âge, le caractère ou les mots connus ; on choisit qui
   leur confier, la chatterie gagne de la réputation.
 - Population maximale de 14 chats ; les naissances équilibrent les sexes.
-- Nourriture : corbeille de fruits en cuisine, pommier, gamelle ; un chat
-  affamé sait où aller. On dort mieux dans la chambre.
+- **Nourriture de chat** : distributeur de croquettes en cuisine (il se
+  remplit seul, le pousser en donne plus), gamelle d'eau et mare, **pâtée**
+  donnée par le joueur (3 portions, une revient toutes les 10 min),
+  **proies** au jardin (souris qui fuient, oiseaux qui s'envolent) avec un
+  **instinct de chasse** héréditaire. **Goûts** héréditaires : chaque
+  aliment fait plus ou moins plaisir, le cerveau apprend ce qu'il préfère
+  (affiché dans le panneau). Le foie fabrique du glucose à partir des
+  protéines (carnivore). Réflexe de survie : affamé, un chat mange ce qu'il
+  voit ou part chercher. On dort mieux dans la chambre.
 
 ## Feuille de route
 
 Prochaines étapes, dans l'ordre proposé :
 
-1. **Nourriture cohérente pour des chats** : distributeur de croquettes en
-   cuisine (toujours disponible, peu appétissant), pâtée donnée par le
-   joueur (très appréciée, limitée), proies au jardin (souris, oiseaux) à
-   chasser avec un instinct héréditaire, gamelle d'eau. **Préférences** :
-   le goût de chaque aliment varie selon les gènes, et chaque chat apprend
-   ce qu'il préfère par la récompense. La pomme et les fruits deviennent
-   du décor.
-2. **Rayures plus naturelles** : motifs ondulés et irréguliers, uniques
+1. **Rayures plus naturelles** : motifs ondulés et irréguliers, uniques
    à chaque chat (bruit déformé calculé dans le shader à partir de
    coordonnées « le long du corps »), en s'inspirant de la formation réelle
    des motifs (réaction-diffusion de Turing, gènes Taqpep et Dkk4).
-3. **Caractères plus variés** : nouveaux gènes de tempérament
+2. **Caractères plus variés** : nouveaux gènes de tempérament
    (sociabilité et câlins, peur ou audace, agressivité et territoire,
    gourmandise, activité nocturne), portés par de la chimie (stress,
    attachement) ; quelques nouveaux comportements (fuir, se cacher, se
    frotter, ronronner) ; amitiés et rivalités entre chats.
-4. **Écosystème du jardin** : graines qui germent, plantes qui poussent,
+3. **Écosystème du jardin** : graines qui germent, plantes qui poussent,
    papillons, oiseaux, souris ; herbe à chat, plante toxique à éviter.
-5. **Soins et santé** : litière, brossage des poils longs, maladies,
+4. **Soins et santé** : litière, brossage des poils longs, maladies,
    vétérinaire ; handicaps (membre en moins, aveugle, sourd) avec
    adaptation naturelle.
-6. **Outils d'éleveur** : stérilisation, test génétique, prédiction des
+5. **Outils d'éleveur** : stérilisation, test génétique, prédiction des
    portées, races reconnues, consanguinité.
-7. **Chatterie** : la réputation débloque des choses (étage avec escalier,
+6. **Chatterie** : la réputation débloque des choses (étage avec escalier,
    expositions, meilleures familles).
-8. **Animations plus fluides** : marche calée sur la vitesse (pattes qui
+7. **Animations plus fluides** : marche calée sur la vitesse (pattes qui
    ne glissent plus), respiration, clignement des yeux, demi-tour et
    transitions (s'asseoir, se coucher, se relever) ; puis des planches
    avec plus d'images (8 au lieu de 2 à 4).
-9. Dessins à venir : formes de tête, queue courte (Manx).
+8. Dessins à venir : formes de tête, queue courte (Manx).
 
 ### Commandes
 
@@ -107,7 +107,7 @@ Prochaines étapes, dans l'ordre proposé :
 | Toucher l'écran de la salle d'apprentissage | Change ce qu'il montre (noms, verbes, besoins) |
 | **Observer** | Chimie, cerveau, mots connus, gènes, famille de la créature sélectionnée |
 | Bouton **Gronder** | Punit ce qu'elle fait (elle le fera moins dans cette situation) |
-| Toucher le décor / bouton **Fruit** | Fait tomber un fruit |
+| Toucher le décor / bouton **Pâtée** | Donne de la pâtée (stock limité, qui revient) |
 | Glisser | Déplace la caméra (**Suivre** pour la recentrer) |
 | **x1 / x2 / x4 / x16** | Vitesse du temps |
 | **Adoptions** | Les demandes des familles ; toucher un chat pour le leur confier |

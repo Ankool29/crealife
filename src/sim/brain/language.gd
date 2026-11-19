@@ -28,7 +28,9 @@ const ALIASES := {
 	"regarde": "examiner", "prends": "prendre", "lache": "lâcher", "pose": "lâcher", "mange": "manger",
 	"pousse": "pousser", "tire": "tirer", "frappe": "frapper", "tape": "frapper", "parle": "parler",
 	"dors": "dormir", "explore": "explorer", "repose": "rien", "stop": "rien",
-	"balle": "jouet", "ballon": "jouet", "distributeur": "machine", "caillou": "pierre", "fruits": "fruit",
+	"balle": "jouet", "ballon": "jouet", "distributeur": "machine", "patee": "pâtée", "pate": "pâtée",
+	"croquette": "croquettes", "souris": "proie", "oiseau": "proie", "proies": "proie", "boire": "manger",
+	"bois": "manger", "gamelle": "croquettes",
 	"amie": "créature", "ami": "créature", "copain": "créature", "copine": "créature",
 }
 const BABBLE: Array[String] = ["bi", "ba", "bou", "ga", "li", "mo", "nu", "pa", "da", "ti", "bo", "gu"]

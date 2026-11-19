@@ -12,6 +12,8 @@ var vx := 0.0
 var vy := 0.0
 var holder: Object = null   # créature qui le porte
 var cooldown := 0.0
+var dead := false           # proie attrapée (elle ne bouge plus, on peut la manger)
+var flee := 0.0             # proie effrayée : elle fuit encore quelques secondes
 
 
 func _init(p_id: int, p_type: String, p_x: float, p_h: float = 0.0) -> void:
@@ -24,3 +26,8 @@ func _init(p_id: int, p_type: String, p_x: float, p_h: float = 0.0) -> void:
 
 func on_ground() -> bool:
 	return h <= 0.0 and holder == null
+
+
+## Proie encore vivante (souris, oiseau) et libre.
+func prey_alive() -> bool:
+	return not dead and holder == null and ObjectCatalog.types[type_name].has("prey")

@@ -1,7 +1,7 @@
 extends Node2D
 ## Point d'entrée : assemble simulation, affichage, caméra, interface et sauvegarde.
 ## Toucher une créature = la sélectionner (si elle l'est déjà : la caresser).
-## Toucher ailleurs = faire tomber un fruit. Glisser = déplacer la caméra.
+## Toucher ailleurs = donner de la pâtée. Glisser = déplacer la caméra.
 
 ## Pas fixe de simulation (5 par seconde de jeu), découplé de l'affichage.
 const STEP := 0.2
@@ -57,7 +57,7 @@ func _ready() -> void:
 	hud.scold_pressed.connect(func() -> void: if _selected(): _selected().scold())
 	hud.fruit_pressed.connect(func() -> void:
 		var c := _selected()
-		world.drop_food(c.x + c.facing * 160.0 if c else camera.position.x))
+		world.drop_patee(c.x + c.facing * 160.0 if c else camera.position.x))
 	hud.speed_pressed.connect(func() -> void: _speed_index = (_speed_index + 1) % SPEEDS.size())
 	hud.follow_pressed.connect(func() -> void: _follow = true)
 	hud.next_creature_pressed.connect(_select_next)
@@ -198,7 +198,7 @@ func _on_tap(screen_pos: Vector2) -> void:
 		_event_timer = EVENT_DURATION
 		return
 	if best == null:
-		world.drop_food(world_pos.x)
+		world.drop_patee(world_pos.x)
 	elif best.creature.uid == _selected_uid:
 		best.creature.caress()
 	else:

@@ -14,7 +14,7 @@ OUT = "assets/objects"
 CELL = 2172 / 313               # taille d'un « gros pixel » de la planche
 SCALE = 3.0                     # comme les chats
 # quelques objets dessinés trop gros pour des chats : un peu réduits
-SCALE_OF = {"balle": 2.0, "graine": 2.0, "fruit": 2.4}
+SCALE_OF = {"balle": 2.0, "graine": 2.0, "fruit": 2.4, "souris": 1.8, "oiseau": 1.8}
 # noms dans l'ordre de la planche ; ceux du jeu remplacent les anciens rendus 3D
 NAMES = ["distributeur_on", "eau", "panier", "balle", "trampoline", "boite_musique",
          "fruit", "carotte", "graine", "pousse", "plante", "papillon", "oiseau", "souris"]
@@ -55,7 +55,42 @@ def main():
             meta["distributeur_off"] = {"size": [gw, gh], "anchor": [gw / 2, gh], "scale": SCALE, "pixel": True}
         meta[name] = {"size": [gw, gh], "anchor": [gw / 2, gh], "scale": SCALE_OF.get(name, SCALE), "pixel": True}
         print(name, gw, "x", gh)
+    _derived(meta)
     json.dump(meta, open(os.path.join(OUT, "objects.json"), "w"), indent=1)
+
+
+def _derived(meta):
+    """Sprites fabriqués à partir des autres : la pâtée (gamelle d'eau dont
+    l'eau devient de la pâtée) et un petit tas de croquettes dessiné ici."""
+    eau = np.asarray(Image.open(os.path.join(OUT, "eau.png"))).copy()
+    for j in range(eau.shape[0]):
+        for i in range(eau.shape[1]):
+            r, g, b, a = (int(v) for v in eau[j, i])
+            if a and b > r + 40 and b > 120:          # l'eau bleue -> pâtée
+                k = (r + g + b) / 3 / 255 + ((i * 7 + j * 13) % 5 - 2) * 0.12   # morceaux
+                eau[j, i, :3] = (int(np.clip(130 + 90 * k, 0, 255)), int(np.clip(70 + 55 * k, 0, 255)),
+                                 int(np.clip(50 + 40 * k, 0, 255)))
+    Image.fromarray(eau).save(os.path.join(OUT, "patee.png"))
+    h, w = eau.shape[:2]
+    meta["patee"] = {"size": [w, h], "anchor": [w / 2, h], "scale": SCALE, "pixel": True}
+    # croquettes : petit tas de grains bruns cernés de sombre
+    pile = ["..oo.o..", ".oOooOo.", "oOoOOoOo"]
+    W, H = len(pile[0]) + 2, len(pile) + 2
+    out = np.zeros((H, W, 4), np.uint8)
+    col = {"o": (150, 92, 45), "O": (190, 125, 60)}
+    for j, row in enumerate(pile):
+        for i, ch in enumerate(row):
+            if ch in col:
+                out[j + 1, i + 1] = (*col[ch], 255)
+    a = out[..., 3] > 0                                   # contour
+    edge = np.zeros_like(a)
+    for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+        edge |= np.roll(np.roll(a, dy, 0), dx, 1)
+    out[edge & ~a] = (60, 35, 20, 255)
+    Image.fromarray(out).save(os.path.join(OUT, "croquettes.png"))
+    meta["croquettes"] = {"size": [W, H], "anchor": [W / 2, H], "scale": SCALE, "pixel": True}
+    for gone in ("fruit", "graine", "baie", "pierre"):
+        meta.pop(gone, None)
 
 
 def _empty_bowl(px):

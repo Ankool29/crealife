@@ -4,8 +4,8 @@ extends Node2D
 ## l'écran d'apprentissage, les notes de la boîte à musique, la nuit, la
 ## pluie, la neige et le sol enneigé (zones extérieures seulement).
 
-const NOUN_SPRITES := {"fruit": "fruit", "graine": "graine", "baie": "baie", "jouet": "balle",
-	"machine": "distributeur_on", "pierre": "pierre", "œuf": "oeuf"}
+const NOUN_SPRITES := {"pâtée": "patee", "croquettes": "croquettes", "proie": "souris", "jouet": "balle",
+	"machine": "distributeur_on", "eau": "eau", "œuf": "oeuf"}
 const VERB_ANIM := {"approcher": "marche", "fuir": "marche", "explorer": "marche", "examiner": "examiner", "rien": "assis",
 	"prendre": "prendre", "lâcher": "prendre", "manger": "manger", "pousser": "pousser", "tirer": "pousser",
 	"frapper": "frapper", "parler": "parler", "dormir": "dormir", "accoupler": "parler"}

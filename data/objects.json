@@ -1,82 +1,15 @@
 {
 	"categories": [
-		"fruit",
-		"graine",
-		"baie",
+		"pâtée",
+		"croquettes",
+		"proie",
 		"jouet",
 		"machine",
-		"pierre",
+		"eau",
 		"créature",
 		"œuf"
 	],
 	"types": {
-		"fruit": {
-			"category": "fruit",
-			"label": "fruit",
-			"carry": true,
-			"verbs": {
-				"manger": {
-					"chems": {
-						"Glucides (estomac)": 0.3,
-						"Protéines (estomac)": 0.05,
-						"Eau": 0.25,
-						"Faim": -0.3,
-						"Soif": -0.3
-					},
-					"consume": true
-				},
-				"examiner": {
-					"chems": {
-						"Ennui": -0.03
-					}
-				}
-			}
-		},
-		"graine": {
-			"category": "graine",
-			"label": "graine",
-			"carry": true,
-			"verbs": {
-				"manger": {
-					"chems": {
-						"Glucides (estomac)": 0.2,
-						"Protéines (estomac)": 0.15,
-						"Graisses (estomac)": 0.1,
-						"Eau": 0.1,
-						"Faim": -0.35,
-						"Soif": -0.1
-					},
-					"consume": true
-				},
-				"examiner": {
-					"chems": {
-						"Ennui": -0.03
-					}
-				}
-			}
-		},
-		"baie": {
-			"category": "baie",
-			"label": "baie violette",
-			"carry": true,
-			"verbs": {
-				"manger": {
-					"chems": {
-						"Glucides (estomac)": 0.05,
-						"Eau": 0.05,
-						"Toxines": 0.45,
-						"Faim": -0.05,
-						"Douleur": 0.4
-					},
-					"consume": true
-				},
-				"examiner": {
-					"chems": {
-						"Ennui": -0.03
-					}
-				}
-			}
-		},
 		"balle": {
 			"category": "jouet",
 			"label": "balle",
@@ -114,14 +47,14 @@
 		},
 		"distributeur": {
 			"category": "machine",
-			"label": "distributeur de graines",
+			"label": "distributeur de croquettes",
 			"carry": false,
 			"verbs": {
 				"pousser": {
 					"chems": {
 						"Ennui": -0.1
 					},
-					"spawn": "graine",
+					"spawn": "croquettes",
 					"cooldown": 15
 				},
 				"tirer": {
@@ -142,31 +75,6 @@
 				"manger": {
 					"chems": {
 						"Douleur": 0.25
-					}
-				}
-			}
-		},
-		"pierre": {
-			"category": "pierre",
-			"label": "pierre",
-			"carry": true,
-			"verbs": {
-				"manger": {
-					"chems": {
-						"Douleur": 0.3
-					}
-				},
-				"frapper": {
-					"chems": {
-						"Douleur": 0.1
-					}
-				},
-				"pousser": {
-					"kick": 60
-				},
-				"examiner": {
-					"chems": {
-						"Ennui": -0.03
 					}
 				}
 			}
@@ -252,6 +160,181 @@
 					},
 					"music": 25.0,
 					"play": true
+				},
+				"examiner": {
+					"chems": {
+						"Ennui": -0.03
+					}
+				}
+			}
+		},
+		"patee": {
+			"category": "pâtée",
+			"label": "pâtée",
+			"carry": true,
+			"food": "patee",
+			"verbs": {
+				"manger": {
+					"chems": {
+						"Protéines (estomac)": 0.35,
+						"Graisses (estomac)": 0.15,
+						"Eau": 0.15,
+						"Faim": -0.45,
+						"Soif": -0.1,
+						"Glucides (estomac)": 0.1
+					},
+					"consume": true
+				},
+				"examiner": {
+					"chems": {
+						"Ennui": -0.03
+					}
+				}
+			}
+		},
+		"croquettes": {
+			"category": "croquettes",
+			"label": "croquettes",
+			"carry": true,
+			"food": "croquettes",
+			"verbs": {
+				"manger": {
+					"chems": {
+						"Protéines (estomac)": 0.2,
+						"Glucides (estomac)": 0.15,
+						"Graisses (estomac)": 0.1,
+						"Faim": -0.35,
+						"Soif": 0.05
+					},
+					"consume": true
+				},
+				"examiner": {
+					"chems": {
+						"Ennui": -0.03
+					}
+				}
+			}
+		},
+		"souris": {
+			"category": "proie",
+			"label": "souris",
+			"carry": true,
+			"food": "proie",
+			"prey": {
+				"speed": 70,
+				"flee": 190,
+				"catch": 1.0
+			},
+			"verbs": {
+				"manger": {
+					"chems": {
+						"Protéines (estomac)": 0.35,
+						"Graisses (estomac)": 0.1,
+						"Eau": 0.15,
+						"Faim": -0.4,
+						"Glucides (estomac)": 0.05
+					},
+					"consume": true,
+					"prey": true
+				},
+				"frapper": {
+					"chems": {
+						"Ennui": -0.15
+					},
+					"prey": true
+				},
+				"prendre": {
+					"prey": true
+				},
+				"pousser": {
+					"chems": {
+						"Ennui": -0.1
+					},
+					"prey": true
+				},
+				"examiner": {
+					"chems": {
+						"Ennui": -0.08
+					}
+				}
+			}
+		},
+		"oiseau": {
+			"category": "proie",
+			"label": "oiseau",
+			"carry": true,
+			"food": "proie",
+			"prey": {
+				"speed": 40,
+				"flee": 0,
+				"catch": 0.5,
+				"flies": true
+			},
+			"verbs": {
+				"manger": {
+					"chems": {
+						"Protéines (estomac)": 0.35,
+						"Graisses (estomac)": 0.1,
+						"Eau": 0.15,
+						"Faim": -0.4,
+						"Glucides (estomac)": 0.05
+					},
+					"consume": true,
+					"prey": true
+				},
+				"frapper": {
+					"chems": {
+						"Ennui": -0.15
+					},
+					"prey": true
+				},
+				"prendre": {
+					"prey": true
+				},
+				"pousser": {
+					"chems": {
+						"Ennui": -0.1
+					},
+					"prey": true
+				},
+				"examiner": {
+					"chems": {
+						"Ennui": -0.08
+					}
+				}
+			}
+		},
+		"eau": {
+			"category": "eau",
+			"label": "gamelle d'eau",
+			"carry": false,
+			"verbs": {
+				"manger": {
+					"chems": {
+						"Eau": 0.3,
+						"Soif": -0.35
+					},
+					"drink": true
+				},
+				"examiner": {
+					"chems": {
+						"Ennui": -0.03
+					}
+				}
+			}
+		},
+		"mare": {
+			"category": "eau",
+			"label": "mare",
+			"carry": false,
+			"invisible": true,
+			"verbs": {
+				"manger": {
+					"chems": {
+						"Eau": 0.3,
+						"Soif": -0.35
+					},
+					"drink": true
 				},
 				"examiner": {
 					"chems": {
