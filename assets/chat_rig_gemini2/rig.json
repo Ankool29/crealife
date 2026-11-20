@@ -1,0 +1,139 @@
+{
+ "parts": {
+  "tete": {
+   "size": [
+    19,
+    16
+   ],
+   "pivot": [
+    4.8,
+    12.8
+   ]
+  },
+  "tete_miaule": {
+   "size": [
+    21,
+    16
+   ],
+   "pivot": [
+    5.2,
+    12.8
+   ]
+  },
+  "oreille_proche": {
+   "size": [
+    7,
+    9
+   ],
+   "pivot": [
+    3.5,
+    8.5
+   ]
+  },
+  "oreille_loin": {
+   "size": [
+    6,
+    8
+   ],
+   "pivot": [
+    3.0,
+    7.6
+   ]
+  },
+  "oeil": {
+   "size": [
+    4,
+    3
+   ],
+   "pivot": [
+    2.0,
+    1.5
+   ]
+  },
+  "oeil_ferme": {
+   "size": [
+    6,
+    2
+   ],
+   "pivot": [
+    3.0,
+    1.0
+   ]
+  },
+  "tronc": {
+   "size": [
+    35,
+    19
+   ],
+   "pivot": [
+    17.5,
+    9.5
+   ]
+  },
+  "avant_haut": {
+   "size": [
+    10,
+    12
+   ],
+   "pivot": [
+    5.5,
+    1.4
+   ]
+  },
+  "avant_bas": {
+   "size": [
+    7,
+    12
+   ],
+   "pivot": [
+    3.1,
+    1.2
+   ]
+  },
+  "arriere_haut": {
+   "size": [
+    12,
+    15
+   ],
+   "pivot": [
+    6.0,
+    1.8
+   ]
+  },
+  "arriere_bas": {
+   "size": [
+    9,
+    9
+   ],
+   "pivot": [
+    4.5,
+    0.9
+   ]
+  }
+ },
+ "anchors": {
+  "oeil": [
+   0.67,
+   0.37
+  ],
+  "oreille_proche": [
+   0.52,
+   0.1
+  ],
+  "oreille_loin": [
+   0.68,
+   0.1
+  ],
+  "tete_pivot": [
+   0.25,
+   0.8
+  ],
+  "cou": [
+   0.47,
+   -0.32
+  ],
+  "genou": 0.9,
+  "epaule_y": 0.28,
+  "pieds": 0.05
+ }
+}

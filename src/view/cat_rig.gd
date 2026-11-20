@@ -27,13 +27,16 @@ var _vp: SubViewport
 var _root: Node2D
 var _parts := {}
 var _tail: Line2D
+var _anchors: Dictionary = {}
 var _meta := {}
 var _materials: Array[ShaderMaterial] = []
 var _coat := {}
 
 
 func _ready() -> void:
-	_meta = JSON.parse_string(FileAccess.get_file_as_string(dir + "rig.json")).parts
+	var rig: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(dir + "rig.json"))
+	_meta = rig.parts
+	_anchors = rig.get("anchors", {})
 	_vp = SubViewport.new()
 	_vp.size = VIEW
 	_vp.transparent_bg = true
@@ -91,7 +94,7 @@ func _build() -> void:
 		for leg in ["avant", "arriere"]:
 			var top := _part(leg + "_haut", _root, z, side)
 			var low := _part(leg + "_bas", top, z, side)
-			low.position = Vector2(0, _meta[leg + "_haut"].size[1] * 0.78 - _meta[leg + "_haut"].pivot[1])
+			low.position = Vector2(0, _meta[leg + "_haut"].size[1] * _knee() - _meta[leg + "_haut"].pivot[1])
 	var tronc := _part("tronc", _root, 0)
 	_tail = Line2D.new()
 	_tail.texture = load(dir + "queue.png")
@@ -112,12 +115,15 @@ func _build() -> void:
 	var hh: float = _meta.tete.size[1]
 	var hp := Vector2(_meta.tete.pivot[0], _meta.tete.pivot[1])
 	var far_ear := _part("oreille_loin", head, 1, 0.75)
-	far_ear.position = Vector2(hw * 0.72, hh * 0.12) - hp
+	var a_far: Array = _anchors.get("oreille_loin", [0.72, 0.12])
+	var a_near: Array = _anchors.get("oreille_proche", [0.5, 0.14])
+	var a_eye: Array = _anchors.get("oeil", [0.74, 0.42])
+	far_ear.position = Vector2(hw * a_far[0], hh * a_far[1]) - hp
 	var near_ear := _part("oreille_proche", head, 4)
-	near_ear.position = Vector2(hw * 0.5, hh * 0.14) - hp
+	near_ear.position = Vector2(hw * a_near[0], hh * a_near[1]) - hp
 	for e in ["oeil", "oeil_ferme"]:
 		var eye := _part(e, head, 5)
-		eye.position = Vector2(hw * 0.74, hh * 0.42) - hp
+		eye.position = Vector2(hw * a_eye[0], hh * a_eye[1]) - hp
 	_parts.oeil_ferme.visible = false
 	_pose(0.0, 0.0)
 
@@ -137,6 +143,11 @@ func _process(delta: float) -> void:
 	_pose(_walked / STRIDE * TAU, _t)
 
 
+## Hauteur du genou sur la pièce du haut (fraction), selon la planche.
+func _knee() -> float:
+	return float(_anchors.get("genou", 0.78))
+
+
 ## Place toutes les pièces pour la phase de marche (phi) et le temps (t).
 func _pose(phi: float, t: float) -> void:
 	var walking := anim == "marche"
@@ -148,11 +159,14 @@ func _pose(phi: float, t: float) -> void:
 	# hauteur du tronc : posé sur les pattes avant tendues
 	var up: Dictionary = _meta.avant_haut
 	var low_m: Dictionary = _meta.avant_bas
-	var leg_len: float = up.size[1] * 0.78 - up.pivot[1] + low_m.size[1] - low_m.pivot[1]
-	tronc.position = Vector2(0, -leg_len - th * 0.55 + bob)
+	var leg_len: float = up.size[1] * _knee() - up.pivot[1] + low_m.size[1] - low_m.pivot[1]
+	# attaches des pattes sur le tronc (fraction de la hauteur sous le centre)
+	var sy: float = _anchors.get("epaule_y", 0.05)
+	var lift: float = _anchors.get("pieds", 0.55) - 0.05 + sy
+	tronc.position = Vector2(0, -leg_len - th * lift + bob)
 	tronc.scale = Vector2(1.0, breath)
-	var shoulder := tronc.position + Vector2(tw * 0.28, th * 0.05)
-	var hip := tronc.position + Vector2(-tw * 0.3, th * 0.02)
+	var shoulder := tronc.position + Vector2(tw * 0.28, th * sy)
+	var hip := tronc.position + Vector2(-tw * 0.3, th * (sy - 0.03))
 	# pattes : angles de la cuisse (haut) et du bas, phases opposées en diagonale
 	var legs := {
 		"avant": [shoulder, 0.0, 1.0], "arriere": [hip, PI, -1.0],
@@ -172,7 +186,8 @@ func _pose(phi: float, t: float) -> void:
 				low.rotation = 0.0
 	# tête : légère oscillation, petits mouvements au repos
 	var head: Sprite2D = _parts.tete
-	head.position = tronc.position + Vector2(tw * 0.4, -th * 0.1) + Vector2(0, bob * 0.5)
+	var neck: Array = _anchors.get("cou", [0.4, -0.1])
+	head.position = tronc.position + Vector2(tw * neck[0], th * neck[1]) + Vector2(0, bob * 0.5)
 	head.rotation = deg_to_rad(4.0 * sin(phi * 2.0) if walking else 5.0 * sin(t * 0.6) * sin(t * 0.23))
 	# queue : courbe qui monte puis se recourbe, balancement
 	var base_t := tronc.position + Vector2(-tw * 0.47, -th * 0.2)

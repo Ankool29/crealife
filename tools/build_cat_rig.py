@@ -167,6 +167,48 @@ GEMINI = {
 }
 
 
+# Deuxième planche Gemini : têtes de profil avec l'œil dessiné (effacé ici,
+# l'œil est une pièce à part pour cligner), pattes déjà en deux morceaux.
+# Tailles : échelle commune (SCALE) sauf pour les pièces que Gemini a grossies.
+GEMINI2 = {
+    "src": "art/pixel/rig/gemini_pieces2.jpg", "out": "assets/chat_rig_gemini2", "scale": 0.15,
+    # nom : (rang dans la planche, hauteur imposée ou None, région)
+    "parts": {"tete": (2, None, 1), "tete_miaule": (3, None, 1), "oreille_proche": (4, 9, 1),
+              "oreille_loin": (1, 8, 1), "oeil": (5, 3, 1), "oeil_ferme": (6, 2, 1), "tronc": (7, 19, 0),
+              "avant_haut": (9, None, 3), "avant_bas": (13, None, 3)},
+    # pattes d'un seul morceau à couper à la ligne magenta : (rang, nom)
+    "split": {10: "arriere"},
+    # repères sur la tête (fractions largeur, hauteur)
+    "anchors": {"oeil": [0.67, 0.37], "oreille_proche": [0.52, 0.1], "oreille_loin": [0.68, 0.1],
+                "tete_pivot": [0.25, 0.8], "cou": [0.47, -0.32], "genou": 0.9, "epaule_y": 0.28, "pieds": 0.05},
+}
+
+
+def erase_eye(rgba):
+    """Efface l'œil dessiné (vert ou très sombre au milieu de la tête)."""
+    a = rgba[..., 3] > 0
+    r, g, b = rgba[..., 0], rgba[..., 1], rgba[..., 2]
+    lum = rgba[..., :3] @ [0.299, 0.587, 0.114]
+    inner = ndimage.binary_erosion(a, iterations=2)
+    h, w = a.shape
+    yy, xx = np.mgrid[:h, :w]
+    zone = (xx > w * 0.5) & (xx < w * 0.85) & (yy > h * 0.2) & (yy < h * 0.55)
+    eye = inner & zone & ((g > r + 0.08) | (lum < 0.2))
+    eye = ndimage.binary_dilation(eye, iterations=1) & inner & zone
+    fur = np.median(rgba[a & (lum > 0.3)][:, :3], axis=0)
+    rgba[eye, :3] = fur
+    return rgba
+
+
+def split_row(sub, key):
+    """Ligne de coupe : la rangée la plus « magenta » dans le tiers central."""
+    h = key.shape[0]
+    r, g, b = sub[..., 0], sub[..., 1], sub[..., 2]
+    pink = (r - g > 35) & (b - g > 35)
+    rows = range(h // 3, 2 * h // 3)
+    return max(rows, key=lambda y: pink[y].sum() + (~key[y]).sum() * 0.2)
+
+
 def gemini_order(boxes):
     """Rangs : par ligne (centre vertical par paquets de 110 px), puis x."""
     return sorted(boxes, key=lambda s: ((s[0].start + s[0].stop) // 2 // 110, s[1].start))
@@ -186,7 +228,7 @@ def fill_sockets(rgba):
 
 
 def main():
-    plan = GEMINI if "gemini" in sys.argv else None
+    plan = GEMINI2 if "gemini2" in sys.argv else GEMINI if "gemini" in sys.argv else None
     src = plan["src"] if plan else SRC
     out = plan["out"] if plan else OUT
     os.makedirs(out, exist_ok=True)
@@ -196,8 +238,14 @@ def main():
     if plan:
         boxes = gemini_order(boxes)
         todo = [(n, h, r, boxes[i]) for n, (i, h, r) in plan["parts"].items()]
-        for leg, (i, total) in plan["legs"].items():
+        for leg, (i, total) in plan.get("legs", {}).items():
             todo.append((leg, total, 3, boxes[i]))
+        for i, leg in plan.get("split", {}).items():
+            sy, sx = boxes[i]
+            sub = img[sy, sx]
+            cut = split_row(sub, ~magenta[sy, sx])
+            todo.append((leg + "_haut", None, 3, (slice(sy.start, sy.start + cut), sx)))
+            todo.append((leg + "_bas", None, 3, (slice(sy.start + cut + 1, sy.stop), sx)))
     else:
         todo = [(n, h, r, b) for (n, h, r), b in zip(PARTS, boxes) if h is not None]
     for name, out_h, reg, (sy, sx) in todo:
@@ -205,11 +253,15 @@ def main():
         ys, xs = np.where(key)
         sub = sub[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
         key = key[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
+        if out_h is None:
+            out_h = max(2, round(sub.shape[0] * plan["scale"]))
         rgba = light(resample(sub, key, out_h)) if not name.startswith("oeil") else resample(sub, key, out_h)
-        if plan and name.startswith("tete"):
+        if plan is GEMINI and name.startswith("tete"):
             rgba = fill_sockets(rgba)
+        elif plan is GEMINI2 and name == "tete":
+            rgba = erase_eye(rgba)
         pieces = [(name, rgba)]
-        if plan and name in plan["legs"]:
+        if plan and name in plan.get("legs", {}):
             # patte entière -> cuisse (haut) et bas, qui se chevauchent un peu
             cut = int(round(rgba.shape[0] * 0.5))
             top = rgba[:cut + 1].copy()
@@ -224,6 +276,13 @@ def main():
     save(rgba, f"{out}/queue.png")
     save(m1, f"{out}/queue_m1.png")
     save(m2, f"{out}/queue_m2.png")
+    if plan and "anchors" in plan:
+        meta["anchors"] = plan["anchors"]
+        tw, th = meta["parts"]["tete"]["size"]
+        px, py = plan["anchors"]["tete_pivot"]
+        for n in ("tete", "tete_miaule"):
+            w, h = meta["parts"][n]["size"]
+            meta["parts"][n]["pivot"] = [round(px * w, 1), round(py * h, 1)]
     json.dump(meta, open(f"{out}/rig.json", "w"), indent=1)
 
 
