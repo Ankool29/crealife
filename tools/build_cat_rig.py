@@ -182,7 +182,8 @@ GEMINI2 = {
     "split": {10: "arriere"},
     # repères sur la tête (fractions largeur, hauteur)
     "anchors": {"oeil": [0.67, 0.37], "oreille_proche": [0.52, 0.1], "oreille_loin": [0.68, 0.1],
-                "tete_pivot": [0.25, 0.8], "cou": [0.47, -0.32], "genou": 0.9, "epaule_y": 0.28, "pieds": 0.05},
+                "tete_pivot": [0.25, 0.8], "cou": [0.47, -0.32], "genou": 0.9, "epaule_y": 0.38, "pieds": 0.05,
+                "pas": 22.0, "pli": 20.0, "queue": [-0.44, -0.05]},
 }
 
 

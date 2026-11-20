@@ -179,8 +179,8 @@ func _pose(phi: float, t: float) -> void:
 			var low: Sprite2D = top.get_child(0)
 			top.position = base + (Vector2(-2, 0) if side == "_loin" else Vector2.ZERO)
 			if walking:
-				top.rotation = deg_to_rad(28.0 * sin(ph))
-				low.rotation = deg_to_rad(legs[leg][2] * 30.0 * maxf(0.0, sin(ph + PI * 0.5)))
+				top.rotation = deg_to_rad(_anchors.get("pas", 28.0) * sin(ph))
+				low.rotation = deg_to_rad(legs[leg][2] * _anchors.get("pli", 30.0) * maxf(0.0, sin(ph + PI * 0.5)))
 			else:
 				top.rotation = 0.0
 				low.rotation = 0.0
@@ -190,7 +190,8 @@ func _pose(phi: float, t: float) -> void:
 	head.position = tronc.position + Vector2(tw * neck[0], th * neck[1]) + Vector2(0, bob * 0.5)
 	head.rotation = deg_to_rad(4.0 * sin(phi * 2.0) if walking else 5.0 * sin(t * 0.6) * sin(t * 0.23))
 	# queue : courbe qui monte puis se recourbe, balancement
-	var base_t := tronc.position + Vector2(-tw * 0.47, -th * 0.2)
+	var a_tail: Array = _anchors.get("queue", [-0.47, -0.2])
+	var base_t := tronc.position + Vector2(tw * a_tail[0], th * a_tail[1])
 	var pts := PackedVector2Array()
 	var n := 8
 	var length := 27.0 * tail_length
