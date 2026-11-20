@@ -1,0 +1,114 @@
+{
+ "parts": {
+  "tete": {
+   "size": [
+    18,
+    15
+   ],
+   "pivot": [
+    5.4,
+    11.2
+   ]
+  },
+  "oreille_proche": {
+   "size": [
+    8,
+    9
+   ],
+   "pivot": [
+    4.0,
+    8.5
+   ]
+  },
+  "oreille_loin": {
+   "size": [
+    7,
+    9
+   ],
+   "pivot": [
+    3.5,
+    8.5
+   ]
+  },
+  "oeil": {
+   "size": [
+    6,
+    4
+   ],
+   "pivot": [
+    3.0,
+    2.0
+   ]
+  },
+  "oeil_ferme": {
+   "size": [
+    5,
+    2
+   ],
+   "pivot": [
+    2.5,
+    1.0
+   ]
+  },
+  "tete_miaule": {
+   "size": [
+    18,
+    16
+   ],
+   "pivot": [
+    5.4,
+    12.0
+   ]
+  },
+  "tronc": {
+   "size": [
+    38,
+    22
+   ],
+   "pivot": [
+    19.0,
+    11.0
+   ]
+  },
+  "avant_haut": {
+   "size": [
+    12,
+    15
+   ],
+   "pivot": [
+    6.6,
+    1.8
+   ]
+  },
+  "avant_bas": {
+   "size": [
+    10,
+    14
+   ],
+   "pivot": [
+    4.5,
+    1.4
+   ]
+  },
+  "arriere_haut": {
+   "size": [
+    10,
+    15
+   ],
+   "pivot": [
+    5.0,
+    1.8
+   ]
+  },
+  "arriere_bas": {
+   "size": [
+    11,
+    14
+   ],
+   "pivot": [
+    5.5,
+    1.4
+   ]
+  }
+ }
+}

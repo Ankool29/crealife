@@ -59,7 +59,7 @@ PIVOTS = {
 
 def segment(img):
     r, g, b = img[..., 0], img[..., 1], img[..., 2]
-    magenta = (r > 170) & (b > 170) & (g < 110)
+    magenta = (r > 150) & (b > 150) & (g < 120)          # tolérant (images JPEG)
     lab, _ = ndimage.label(ndimage.binary_dilation(~magenta, iterations=3))
     boxes = [s for s in ndimage.find_objects(lab) if (s[0].stop - s[0].start) * (s[1].stop - s[1].start) > 150]
     boxes.sort(key=lambda s: (s[0].start // 120, s[1].start))
@@ -154,32 +154,89 @@ def save(arr, path):
     Image.fromarray(np.uint8(np.clip(arr, 0, 1) * 255), "RGBA").save(path, optimize=True)
 
 
+# Planche Gemini (art/pixel/rig/gemini_pieces.jpg) : pattes entières (coupées
+# ici en haut et bas), têtes avec orbites vides (comblées), queue tracée par
+# le jeu. Pièces repérées par leur position (ligne, puis gauche à droite).
+GEMINI = {
+    "src": "art/pixel/rig/gemini_pieces.jpg", "out": "assets/chat_rig_gemini",
+    # nom : (rang dans la planche, hauteur dans le jeu, région)
+    "parts": {"tete": (1, 15, 1), "oreille_proche": (2, 9, 1), "oreille_loin": (3, 9, 1),
+              "oeil": (4, 4, 1), "oeil_ferme": (5, 2, 1), "tete_miaule": (6, 16, 1), "tronc": (7, 22, 0)},
+    # pattes entières : (rang, hauteur totale) ; coupées au genou
+    "legs": {"avant": (10, 27), "arriere": (11, 27)},
+}
+
+
+def gemini_order(boxes):
+    """Rangs : par ligne (centre vertical par paquets de 110 px), puis x."""
+    return sorted(boxes, key=lambda s: ((s[0].start + s[0].stop) // 2 // 110, s[1].start))
+
+
+def fill_sockets(rgba):
+    """Orbites vides (trous sombres dans la tête) : remplies de pelage,
+    l'œil est une pièce à part posée par-dessus."""
+    a = rgba[..., 3] > 0
+    lum = rgba[..., :3] @ [0.299, 0.587, 0.114]
+    inner = ndimage.binary_erosion(a, iterations=2)
+    hole = inner & (lum < 0.18)
+    hole = ndimage.binary_dilation(hole, iterations=1) & inner
+    fur = np.median(rgba[a & (lum > 0.3)][:, :3], axis=0)
+    rgba[hole, :3] = fur
+    return rgba
+
+
 def main():
-    os.makedirs(OUT, exist_ok=True)
-    img = np.asarray(Image.open(SRC).convert("RGB")).astype(int)
+    plan = GEMINI if "gemini" in sys.argv else None
+    src = plan["src"] if plan else SRC
+    out = plan["out"] if plan else OUT
+    os.makedirs(out, exist_ok=True)
+    img = np.asarray(Image.open(src).convert("RGB")).astype(int)
     boxes, magenta = segment(img)
     meta = {"parts": {}}
-    for (name, out_h, reg), (sy, sx) in zip(PARTS, boxes):
-        if out_h is None:
-            continue
+    if plan:
+        boxes = gemini_order(boxes)
+        todo = [(n, h, r, boxes[i]) for n, (i, h, r) in plan["parts"].items()]
+        for leg, (i, total) in plan["legs"].items():
+            todo.append((leg, total, 3, boxes[i]))
+    else:
+        todo = [(n, h, r, b) for (n, h, r), b in zip(PARTS, boxes) if h is not None]
+    for name, out_h, reg, (sy, sx) in todo:
         sub, key = img[sy, sx], ~magenta[sy, sx]
         ys, xs = np.where(key)
         sub = sub[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
         key = key[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
         rgba = light(resample(sub, key, out_h)) if not name.startswith("oeil") else resample(sub, key, out_h)
+        if plan and name.startswith("tete"):
+            rgba = fill_sockets(rgba)
+        pieces = [(name, rgba)]
+        if plan and name in plan["legs"]:
+            # patte entière -> cuisse (haut) et bas, qui se chevauchent un peu
+            cut = int(round(rgba.shape[0] * 0.5))
+            top = rgba[:cut + 1].copy()
+            low = rgba[cut - 1:].copy()
+            def trim(r):
+                cols = np.where(r[..., 3].any(0))[0]
+                return r[:, cols.min():cols.max() + 1]
+            pieces = [(name + "_haut", trim(top)), (name + "_bas", trim(low))]
+        for pname, prgba in pieces:
+            _write(out, meta, pname, prgba, reg)
+    rgba, m1, m2 = tail_strip()
+    save(rgba, f"{out}/queue.png")
+    save(m1, f"{out}/queue_m1.png")
+    save(m2, f"{out}/queue_m2.png")
+    json.dump(meta, open(f"{out}/rig.json", "w"), indent=1)
+
+
+def _write(out, meta, name, rgba, reg):
+    if True:
         m1, m2 = masks(name, rgba, reg)
-        save(rgba, f"{OUT}/{name}.png")
-        save(m1, f"{OUT}/{name}_m1.png")
-        save(m2, f"{OUT}/{name}_m2.png")
+        save(rgba, f"{out}/{name}.png")
+        save(m1, f"{out}/{name}_m1.png")
+        save(m2, f"{out}/{name}_m2.png")
         h, w = rgba.shape[:2]
         px, py = PIVOTS[name]
         meta["parts"][name] = {"size": [w, h], "pivot": [round(px * w, 1), round(py * h, 1)]}
         print(name, w, "x", h)
-    rgba, m1, m2 = tail_strip()
-    save(rgba, f"{OUT}/queue.png")
-    save(m1, f"{OUT}/queue_m1.png")
-    save(m2, f"{OUT}/queue_m2.png")
-    json.dump(meta, open(f"{OUT}/rig.json", "w"), indent=1)
 
 
 if __name__ == "__main__":
