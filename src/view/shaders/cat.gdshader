@@ -20,7 +20,8 @@ uniform float white = 0.0;            // part de blanc (0 à 1)
 uniform vec3 eye_color : source_color = vec3(0.4, 0.75, 0.3);
 uniform float desaturate = 0.0;
 uniform float seed = 0.0;
-uniform bool blink = false;      // paupières fermées (clignement)        // propre à chaque chat : ses rayures sont uniques
+uniform bool blink = false;
+uniform float tint = 1.0;        // assombrit (pattes et oreille du côté opposé, pièces détachées)      // paupières fermées (clignement)        // propre à chaque chat : ses rayures sont uniques
 
 
 float hash(vec2 p) {
@@ -122,5 +123,5 @@ void fragment() {
 	rgb = mix(rgb, vec3(grey) * 0.85, desaturate);
 	// (pas « * COLOR » : en Godot 4, COLOR contient déjà la texture, ce qui
 	// assombrissait tout le pelage d'environ 40 %)
-	COLOR = vec4(rgb, c.a);
+	COLOR = vec4(rgb * tint, c.a);
 }
