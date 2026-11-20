@@ -110,18 +110,49 @@ Tout le contenu est original : aucun fichier ni code du jeu Creatures n'est util
 
 ## Feuille de route
 
-Prochaines étapes, dans l'ordre proposé :
+Cap : un **vrai jeu d'élevage de chats**. La génétique réelle et des chats
+qui apprennent restent le cœur du jeu.
 
-1. **Soins et santé** : litière, brossage des poils longs, maladies,
-   vétérinaire ; handicaps (membre en moins, aveugle, sourd) avec
+Décisions prises :
+- **Argent** : gagné avec les adoptions (puis les expositions), dépensé
+  au magasin, chez le vétérinaire et pour acquérir des chats.
+- **Langage simplifié** : plus de vocabulaire ni de bulles de mots ; un chat
+  apprend **son nom et quelques ordres** (viens, non, descends...),
+  miaule, ronronne, crache. Le cerveau qui apprend reste. La salle
+  d'apprentissage devient une salle de dressage ; le critère d'adoption
+  « mots connus » devient « obéissant ».
+
+Étapes, dans l'ordre :
+
+1. **Nouveau style des chats** (concept « sprites 2D vue de côté ») : essai
+   avec une planche de marche en gris uni, validation, puis toutes les
+   planches. Plus d'images par animation, nouvelles animations (course,
+   toilette, jeu).
+2. **Interface refaite** dans le style pixel art : boutons plus petits,
+   panneaux bois et papier, police pixel.
+3. **Argent et magasin** : croquettes de plus ou moins bonne qualité (prix,
+   goût, effet sur la santé), pâtée, litière, objets de confort (paniers,
+   coussins), litière automatique, distributeur de croquettes, jouets.
+4. **Soins par le joueur** : remplir les gamelles, changer les litières.
+   Les chats font leurs besoins (déchets de la chimie) et apprennent la
+   litière ; une litière sale stresse et rend malade. Distributeur et
+   litière automatiques en confort payant.
+5. **Langage simplifié** (voir plus haut).
+6. **Chats de départ au choix** parmi une liste tirée au hasard ; refuge
+   ou éleveur pour en acquérir d'autres plus tard.
+7. **Maladies et vétérinaire** : maladies contagieuses (coryza, puces),
+   héréditaires selon les lignées, système immunitaire existant ;
+   diagnostic, soins, vaccins. Brossage des poils longs. Handicaps avec
    adaptation naturelle.
-2. **Outils d'éleveur** : stérilisation, test génétique, prédiction des
-   portées, races reconnues, consanguinité.
-3. **Chatterie** : la réputation débloque des choses (étage avec escalier,
-   expositions, meilleures familles).
-4. **Animations plus fluides** : transitions (s'asseoir, se coucher, se
-   relever, sauter) et planches avec plus d'images (8 au lieu de 2 à 4).
-5. Dessins à venir : formes de tête, queue courte (Manx), chat qui se roule dans l'herbe à chat.
+8. **Jouets et arbres à chats** (grimper, se percher, sauter), avec leurs
+   animations.
+9. **Outils d'éleveur** : stérilisation, test génétique, prédiction des
+   portées, races reconnues, consanguinité ; expositions.
+10. **Chatterie** : la réputation et l'argent débloquent des choses (étage
+    avec escalier, meilleures familles).
+
+Les animations s'ajoutent au fur et à mesure que les chats gagnent de
+nouveaux comportements.
 
 ### Commandes
 
