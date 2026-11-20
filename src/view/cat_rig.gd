@@ -9,7 +9,7 @@ extends Node2D
 ## La queue est tracée (bande texturée sur une courbe) : sa longueur et sa
 ## forme peuvent varier (bobtail, Manx...) sans dessin.
 
-const DIR := "res://assets/chat_rig/"
+var dir := "res://assets/chat_rig/"   # pièces (à choisir avant d'ajouter le nœud)
 const VIEW := Vector2i(112, 84)       # image basse résolution
 const FEET := Vector2(56, 80)         # sol, au milieu de l'image
 const PIXEL := 3.0                    # agrandissement (comme les chats actuels)
@@ -33,7 +33,7 @@ var _coat := {}
 
 
 func _ready() -> void:
-	_meta = JSON.parse_string(FileAccess.get_file_as_string(DIR + "rig.json")).parts
+	_meta = JSON.parse_string(FileAccess.get_file_as_string(dir + "rig.json")).parts
 	_vp = SubViewport.new()
 	_vp.size = VIEW
 	_vp.transparent_bg = true
@@ -63,7 +63,7 @@ func set_coat(params: Dictionary) -> void:
 
 func _part(name: String, parent: Node2D, z := 0, tint := 1.0) -> Sprite2D:
 	var s := Sprite2D.new()
-	s.texture = load(DIR + name + ".png")
+	s.texture = load(dir + name + ".png")
 	s.centered = false
 	s.offset = -Vector2(_meta[name].pivot[0], _meta[name].pivot[1])
 	s.z_index = z
@@ -77,8 +77,8 @@ func _part(name: String, parent: Node2D, z := 0, tint := 1.0) -> Sprite2D:
 func _material(name: String, tint: float) -> ShaderMaterial:
 	var m := ShaderMaterial.new()
 	m.shader = load("res://src/view/shaders/cat.gdshader")
-	m.set_shader_parameter("mask1", load(DIR + name + "_m1.png"))
-	m.set_shader_parameter("mask2", load(DIR + name + "_m2.png"))
+	m.set_shader_parameter("mask1", load(dir + name + "_m1.png"))
+	m.set_shader_parameter("mask2", load(dir + name + "_m2.png"))
 	m.set_shader_parameter("tint", tint)
 	_materials.append(m)
 	return m
@@ -94,7 +94,7 @@ func _build() -> void:
 			low.position = Vector2(0, _meta[leg + "_haut"].size[1] * 0.78 - _meta[leg + "_haut"].pivot[1])
 	var tronc := _part("tronc", _root, 0)
 	_tail = Line2D.new()
-	_tail.texture = load(DIR + "queue.png")
+	_tail.texture = load(dir + "queue.png")
 	_tail.texture_mode = Line2D.LINE_TEXTURE_STRETCH
 	_tail.width = 5.0
 	_tail.joint_mode = Line2D.LINE_JOINT_ROUND
