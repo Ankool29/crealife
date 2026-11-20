@@ -172,6 +172,8 @@ GEMINI = {
 # Tailles : échelle commune (SCALE) sauf pour les pièces que Gemini a grossies.
 GEMINI2 = {
     "src": "art/pixel/rig/gemini_pieces2.jpg", "out": "assets/chat_rig_gemini2", "scale": 0.15,
+    # pièces refaites à part : nom -> (image, hauteur, région)
+    "extra": {"tronc": ("art/pixel/rig/gemini_tronc.jpg", 18, 0, 1.25)},
     # nom : (rang dans la planche, hauteur imposée ou None, région)
     "parts": {"tete": (2, None, 1), "tete_miaule": (3, None, 1), "oreille_proche": (4, 9, 1),
               "oreille_loin": (1, 8, 1), "oeil": (5, 3, 1), "oeil_ferme": (6, 2, 1), "tronc": (7, 19, 0),
@@ -248,8 +250,19 @@ def main():
             todo.append((leg + "_bas", None, 3, (slice(sy.start + cut + 1, sy.stop), sx)))
     else:
         todo = [(n, h, r, b) for (n, h, r), b in zip(PARTS, boxes) if h is not None]
+    sources = {}
+    if plan:
+        for n, (path, h, r, stretch) in plan.get("extra", {}).items():
+            pil = Image.open(path).convert("RGB")      # étiré en largeur (corps plus long)
+            pil = pil.resize((round(pil.width * stretch), pil.height), Image.NEAREST)
+            im2 = np.asarray(pil).astype(int)
+            b2, m2 = segment(im2)
+            big = max(b2, key=lambda b: (b[0].stop - b[0].start) * (b[1].stop - b[1].start))
+            todo = [t for t in todo if t[0] != n] + [(n, h, r, big)]
+            sources[n] = (im2, m2)
     for name, out_h, reg, (sy, sx) in todo:
-        sub, key = img[sy, sx], ~magenta[sy, sx]
+        src_img, src_mag = sources.get(name, (img, magenta))
+        sub, key = src_img[sy, sx], ~src_mag[sy, sx]
         ys, xs = np.where(key)
         sub = sub[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
         key = key[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
